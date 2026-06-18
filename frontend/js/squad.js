@@ -53,8 +53,9 @@ const Squad = (() => {
 
     let rows = "";
     for (const pos of ROW_ORDER) {
+      const slots = Math.max(need[pos], byPos[pos].length);
       let row = `<div class="pitch__row">`;
-      for (let i = 0; i < need[pos]; i++) {
+      for (let i = 0; i < slots; i++) {
         const player = byPos[pos][i];
         row += player ? filledSlot(player) : emptySlot(pos);
       }
@@ -168,16 +169,14 @@ const Squad = (() => {
       show(saveBtn, false);
       show(trBtn, true);
       trBtn.textContent = "Make transfers";
-      trBtn.disabled = State.transfersRemaining() <= 0;
+      const windowOpen = isWindowOpen(State.currentMatchday);
+      trBtn.disabled = !windowOpen || State.transfersRemaining() <= 0;
+      trBtn.title = !windowOpen ? "Transfer window closed for this round" : "";
       show(cancelBtn, false);
     }
     trBtn.classList.toggle("btn--primary", mode === "transfer");
     trBtn.classList.toggle("btn--ghost", mode !== "transfer");
 
-    document.querySelectorAll("#formationSeg .segmented__btn").forEach((b) => {
-      b.disabled = mode === "view";
-      b.classList.toggle("is-active", b.dataset.formation === State.currentSquad.formation);
-    });
   }
 
   /* ----------------------------------------------------------- PlayerPool --- */
@@ -314,10 +313,7 @@ const Squad = (() => {
 
   /* --------------------------------------------------------------- wire --- */
   function init() {
-    document.querySelectorAll("#formationSeg .segmented__btn").forEach((b) => {
-      b.addEventListener("click", () => State.setFormation(b.dataset.formation));
-    });
-    document.querySelectorAll("#posChips .chip").forEach((chip) => {
+document.querySelectorAll("#posChips .chip").forEach((chip) => {
       chip.addEventListener("click", () => {
         document.querySelectorAll("#posChips .chip").forEach((c) => c.classList.remove("is-active"));
         chip.classList.add("is-active");

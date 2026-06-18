@@ -66,7 +66,7 @@ const State = {
 
   /* --- render bus --- */
   subscribe(fn) { this._subs.push(fn); },
-  emit() { this.save(); this._subs.forEach((fn) => fn()); },
+  emit() { if (this.mode !== "transfer") this.save(); this._subs.forEach((fn) => fn()); },
 
   /* --- derived --- */
   budgetUsed() {
@@ -116,17 +116,6 @@ const State = {
   },
   removePlayer(id) {
     this.currentSquad.players = this.currentSquad.players.filter((p) => p.player_id !== id);
-    this.emit();
-  },
-  setFormation(f) {
-    this.currentSquad.formation = f;
-    // drop players that no longer fit the new formation's position caps
-    const need = FORMATIONS[f];
-    const kept = { GK: [], DEF: [], MID: [], FWD: [] };
-    for (const p of this.currentSquad.players) {
-      if (kept[p.position].length < need[p.position]) kept[p.position].push(p);
-    }
-    this.currentSquad.players = [].concat(kept.GK, kept.DEF, kept.MID, kept.FWD);
     this.emit();
   },
   setMatchday(md) { this.currentMatchday = md; this.currentSquad.matchday = md; this.emit(); },

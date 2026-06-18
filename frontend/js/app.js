@@ -163,9 +163,13 @@ function renderMatchdayStrip() {
     const isCompleted = r.matchday < State.currentMatchday;
     let sub = `<span class="round__date">${fmtShortDate(r.date)}</span>`;
     if (isActive) {
-      sub = isWindowOpen(r.matchday)
-        ? `<span class="round__sub round__sub--open">Transfers open</span>`
-        : `<span class="round__sub round__sub--locked">Transfers locked</span>`;
+      if (isWindowOpen(r.matchday)) {
+        sub = `<span class="round__sub round__sub--open">Transfers open</span>`;
+      } else if (Object.prototype.hasOwnProperty.call(_scoreByMd, r.matchday)) {
+        sub = `<span class="pill pill--pts">${_scoreByMd[r.matchday]} pts</span>`;
+      } else {
+        sub = `<span class="round__sub round__sub--locked">Transfers locked</span>`;
+      }
     }
     // Only show a pts pill when a REAL score exists for that round — never a fabricated "0 pts".
     else if (isCompleted && Object.prototype.hasOwnProperty.call(_scoreByMd, r.matchday)) {
@@ -204,6 +208,13 @@ async function selectMatchday(md) {
 /* Matchday workflow (UI-contract §9): load saved squad if it exists.
    Backfills team_id from the players list (the GET /squad payload historically
    omitted it → flags rendered as placeholders until re-added). */
+function inferFormation(players) {
+  const mids = players.filter((p) => p.position === "MID").length;
+  const fwds = players.filter((p) => p.position === "FWD").length;
+  if (mids === 4 && fwds === 2) return "4-4-2";
+  return "4-3-3";
+}
+
 function hydrate(p) {
   let team_id = p.team_id, team_name = p.team_name;
   if (!team_id) {
@@ -216,6 +227,7 @@ async function loadSquadForMatchday(md) {
   try {
     const squad = await Api.getSquad(md);
     State.currentSquad.players = squad.players.map(hydrate);
+    State.currentSquad.formation = inferFormation(State.currentSquad.players);
     State.squadSaved = true;
     State.transfersUsed = await Transfers.fetchUsed(md);
     State.setBaseline();              // saved state is the baseline for "Cancel"
@@ -301,6 +313,7 @@ async function boot() {
   // apply the already-fetched squad instead of making another network call
   if (rawSquad && rawSquad.players && rawSquad.players.length) {
     State.currentSquad.players = rawSquad.players.map(hydrate);
+    State.currentSquad.formation = inferFormation(State.currentSquad.players);
     State.squadSaved = true;
     State.transfersUsed = transfersUsed;
     State.setBaseline();

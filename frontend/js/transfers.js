@@ -18,9 +18,7 @@ const Transfers = (() => {
     } catch (e) { return 0; }
   }
 
-  // view → transfer: refresh the remaining-transfers count, then flip mode.
-  async function enter() {
-    State.transfersUsed = await fetchUsed(State.currentMatchday);
+  function enter() {
     if (State.transfersRemaining() <= 0) {
       Toast.show("No transfers left this round.", "info");
       return;
