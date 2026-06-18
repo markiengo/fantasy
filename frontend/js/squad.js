@@ -215,7 +215,7 @@ const Squad = (() => {
       const btnClass = "player-row__add" + (hardDisabled ? "" : reason ? " is-blocked" : "");
       html += `<div class="player-row ${selected ? "is-selected" : ""}" data-pos="${p.position}" data-pid="${p.player_id}">
         <span class="player-row__accent"></span>
-        <span class="player-row__id">${faceHtml(p, true)}<span>
+        <span class="player-row__id">${faceHtml(p, true)}<span class="player-row__info">
           <span class="player-row__name">${p.name}</span>
           <span class="player-row__team">${flagImg(p.team_id)} ${p.team_name}</span></span></span>
         <span class="player-row__pos">${p.position}</span>

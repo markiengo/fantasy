@@ -9,7 +9,9 @@
    names, per ui-spec §4. UI-contract §8's /fixtures and /scores are stale.
    ============================================================================ */
 
-const API_BASE = "http://127.0.0.1:8000/api";
+const API_BASE = (location.hostname === "127.0.0.1" || location.hostname === "localhost")
+  ? "http://127.0.0.1:8000/api"
+  : "/api";
 
 const Api = (() => {
   let useMock = false; // trips to true on first backend failure
