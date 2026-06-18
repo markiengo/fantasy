@@ -1,6 +1,9 @@
 # create the fastapi instance
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
+import os
 from app.routers import player
 from app.routers import match
 from app.routers import playerstat
@@ -9,7 +12,6 @@ from app.routers import squad
 from app.routers import team
 from app.routers import transfer
 from app.core.validation import SquadValidationError
-from fastapi.responses import JSONResponse
 
 app = FastAPI()
 
@@ -23,6 +25,7 @@ app.add_middleware(
         "http://127.0.0.1:8001",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        os.getenv("FRONTEND_URL", ""),
     ],
     allow_methods=["*"],
     allow_headers=["*"],
@@ -36,10 +39,8 @@ app.include_router(squad.router, prefix = "/api")
 app.include_router(team.router, prefix = "/api")
 app.include_router(transfer.router, prefix = "/api")
 
-
-@app.get("/")
-def root():
-    return {"message": "Welcome to the Fantasy World Cup API"}
+# Serve static frontend files at root
+app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 
 @app.exception_handler(SquadValidationError)
 async def validation_error_handler(request: Request, exc: SquadValidationError):
