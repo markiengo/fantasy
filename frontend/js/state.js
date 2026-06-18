@@ -144,16 +144,13 @@ const State = {
     const base = JSON.parse(this._baseline).p;
     const curIds = new Set(this.currentSquad.players.map((p) => p.player_id));
     const baseIds = new Set(base.map((p) => p.player_id));
-    const outsByPos = { GK: [], DEF: [], MID: [], FWD: [] };
-    const insByPos = { GK: [], DEF: [], MID: [], FWD: [] };
-    for (const p of base) if (!curIds.has(p.player_id)) outsByPos[p.position].push(p);
-    for (const p of this.currentSquad.players) if (!baseIds.has(p.player_id)) insByPos[p.position].push(p);
+    const outs = [];
+    const ins = [];
+    for (const p of base) if (!curIds.has(p.player_id)) outs.push(p);
+    for (const p of this.currentSquad.players) if (!baseIds.has(p.player_id)) ins.push(p);
     const pairs = [];
-    for (const pos of POSITIONS) {
-      const outs = outsByPos[pos], ins = insByPos[pos];
-      const n = Math.min(outs.length, ins.length);
-      for (let i = 0; i < n; i++) pairs.push({ out: outs[i], in: ins[i] });
-    }
+    const n = Math.min(outs.length, ins.length);
+    for (let i = 0; i < n; i++) pairs.push({ out: outs[i], in: ins[i] });
     pairs.sort((a, b) => (a.in.base_price - a.out.base_price) - (b.in.base_price - b.out.base_price));
     return pairs;
   },
