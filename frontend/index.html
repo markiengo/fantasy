@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>World Cup Fantasy 2026</title>
+
+  <!-- Fonts: Anton (display) + EB Garamond (body, serif — warm/editorial) + JetBrains Mono (numbers). Inter is BANNED. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+
+  <link rel="icon" href="assets/logo.png" />
+  <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/squad.css" />
+  <link rel="stylesheet" href="css/fixtures.css" />
+  <link rel="stylesheet" href="css/scores.css" />
+</head>
+<body>
+  <div class="app-bg" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <div class="shell">
+
+    <!-- ================= NavigationBar ================= -->
+    <header class="panel nav" role="banner">
+      <a class="nav__brand" href="#" aria-label="World Cup Fantasy home">
+        <img class="nav__logo" src="assets/logo.png" alt="FIFA World Cup 26" />
+      </a>
+      <button class="icon-btn nav__menu-btn" id="menuBtn" type="button" aria-label="Menu" aria-expanded="false">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M3 12h18M3 18h18" stroke-linecap="round"/></svg>
+      </button>
+      <nav class="nav__links" id="navLinks" aria-label="Primary">
+        <a class="nav__link is-active" href="#" data-screen="team">My Team</a>
+        <a class="nav__link" href="#" data-screen="fixtures">Fixtures</a>
+        <a class="nav__link" href="#" data-screen="scores">Scores</a>
+      </nav>
+      <div class="nav__right">
+        <div class="nav__user">
+          <span class="nav__username">markiengo</span>
+          <span class="avatar" role="img" aria-label="User avatar"></span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ================= MatchdayNavigation ================= -->
+    <nav class="panel matchday" id="matchdayNav" aria-label="Matchday">
+      <button class="icon-btn" id="mdPrev" type="button" aria-label="Previous round">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="matchday__track" id="matchdayTrack" role="tablist"></div>
+      <button class="icon-btn" id="mdNext" type="button" aria-label="Next round">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </nav>
+
+    <main role="main">
+      <!-- ---------- Screen: My Team ---------- -->
+      <section class="screen is-active" id="screen-team" aria-label="My Team">
+
+        <!-- Formation + squad stats + actions, right under the rounds -->
+        <div class="panel topbar">
+          <div class="topbar__group">
+            <span class="label">Formation</span>
+            <div class="segmented" id="formationSeg" role="group" aria-label="Formation">
+              <button class="segmented__btn is-active" type="button" data-formation="4-3-3">4-3-3</button>
+              <button class="segmented__btn" type="button" data-formation="4-4-2">4-4-2</button>
+            </div>
+          </div>
+
+          <div class="topbar__stats">
+            <div class="stat-chip"><span class="stat-chip__val mono" id="statSelected">0/11</span><span class="label">Selected</span></div>
+            <div class="stat-chip"><span class="stat-chip__val mono" id="statUsed">$0.0m</span><span class="label">Budget used</span></div>
+            <div class="stat-chip">
+              <span class="stat-chip__val mono" id="statRemaining">$50.0m</span><span class="label">Remaining</span>
+              <div class="meter"><div class="meter__fill" id="budgetMeter" style="width:0%"></div></div>
+            </div>
+            <div class="stat-chip"><span class="stat-chip__val mono" id="statTransfers">—</span><span class="label">Transfers left</span></div>
+            <div class="stat-chip"><span class="stat-chip__val mono" id="statPoints">—</span><span class="label">Points</span></div>
+          </div>
+
+          <div class="topbar__actions">
+            <button class="btn btn--danger btn--sm" id="cancelBtn" type="button" disabled>Cancel changes</button>
+            <button class="btn btn--ghost btn--sm" id="makeTransfersBtn" type="button">Transfers</button>
+            <button class="btn btn--primary btn--sm" id="saveSquadBtn" type="button" disabled>Save Squad</button>
+          </div>
+        </div>
+
+        <!-- Pitch (left) + Player pool & search (right) -->
+        <div class="main-grid" style="margin-top:var(--sp-4)">
+          <div class="panel pitch-panel">
+            <div class="pitch" id="pitch" aria-label="Squad pitch"></div>
+          </div>
+
+          <aside class="panel pool" aria-label="Player pool">
+            <!-- Toggle: the player pool vs. the scoring guide -->
+            <div class="segmented pool__toggle" id="poolToggle" role="tablist" aria-label="Right panel">
+              <button class="segmented__btn is-active" type="button" data-pane="players" role="tab" aria-selected="true">Add Players</button>
+              <button class="segmented__btn" type="button" data-pane="score" role="tab" aria-selected="false">How to Score</button>
+            </div>
+
+            <!-- Pane: Add players -->
+            <div class="pool__pane is-active" id="pane-players">
+            <div class="pool__filters">
+              <!-- filters laid out per app/queries/player.py: name, position, team_id, max_price -->
+              <label class="field">
+                <span class="label">Search name</span>
+                <span class="search">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/></svg>
+                  <input type="search" id="playerSearch" placeholder="e.g. Haaland" aria-label="Search players by name" />
+                </span>
+              </label>
+
+              <div class="field">
+                <span class="label">Position</span>
+                <div class="filter-chips" id="posChips" role="group" aria-label="Filter by position">
+                  <button class="chip is-active" type="button" data-pos="">All</button>
+                  <button class="chip" type="button" data-pos="GK">GK</button>
+                  <button class="chip" type="button" data-pos="DEF">DEF</button>
+                  <button class="chip" type="button" data-pos="MID">MID</button>
+                  <button class="chip" type="button" data-pos="FWD">FWD</button>
+                </div>
+              </div>
+
+              <div class="field">
+                <span class="label">Teams</span>
+                <div class="teamsearch">
+                  <span class="search">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/></svg>
+                    <input type="search" id="teamSearch" placeholder="Filter teams…" aria-label="Search teams" />
+                  </span>
+                  <div class="teamsearch__chips" id="teamChips" hidden></div>
+                  <div class="teamsearch__list" id="teamList" role="group" aria-label="Select teams"></div>
+                </div>
+              </div>
+
+              <div class="filter-row">
+                <label class="field" style="flex:1 1 200px">
+                  <span class="label">Max price</span>
+                  <span class="price">
+                    <input type="range" id="priceRange" min="0" max="8" step="0.5" value="8" aria-label="Maximum price" />
+                    <span class="price__val" id="priceVal">Any</span>
+                  </span>
+                </label>
+
+                <label class="field">
+                  <span class="label">Sort by</span>
+                  <div class="dropdown" id="sortDropdown" data-value="default">
+                    <button class="dropdown__trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Sort players">
+                      <span class="dropdown__current">Featured</span>
+                      <svg class="icon chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <div class="dropdown__panel" role="listbox"></div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div class="pool__count" id="poolCount"></div>
+            <div class="pool__list" id="poolList"></div>
+            </div>
+
+            <!-- Pane: How to Score (values mirror app/core/scoring.py) -->
+            <div class="pool__pane" id="pane-score">
+              <div class="scoretabs" id="scoreTabs" role="tablist" aria-label="Scoring by position">
+                <button class="scoretab is-active" type="button" data-scope="all" role="tab" aria-selected="true">All Players</button>
+                <button class="scoretab" type="button" data-scope="gkdef" role="tab" aria-selected="false">GK &amp; DEF</button>
+                <button class="scoretab" type="button" data-scope="midfwd" role="tab" aria-selected="false">MID &amp; FWD</button>
+              </div>
+              <ul class="scorelist" id="scoreList"></ul>
+              <p class="scorenote muted" id="scoreNote"></p>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ---------- Screen: Fixtures ---------- -->
+      <section class="screen" id="screen-fixtures" aria-label="Fixtures and results">
+        <div class="panel">
+          <div class="fixtures__head">
+            <h1 class="section-title">Fixtures &amp; Results</h1>
+            <div class="fixtures__round-nav">
+              <button class="icon-btn" id="fxPrev" type="button" aria-label="Previous round">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <span class="fixtures__round-label" id="fxRoundLabel">Round 1</span>
+              <button class="icon-btn" id="fxNext" type="button" aria-label="Next round">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+          </div>
+          <div id="fixturesList"></div>
+        </div>
+      </section>
+
+      <!-- ---------- Screen: Scores ---------- -->
+      <section class="screen" id="screen-scores" aria-label="Scores and analytics">
+        <div class="panel">
+          <h1 class="section-title" style="margin-bottom:var(--sp-5)">Scores</h1>
+          <div class="scores__total">
+            <span class="label">Total points</span>
+            <span class="scores__total-val mono" id="scoreTotal">0</span>
+          </div>
+          <div class="scores-grid">
+            <div class="viz-card">
+              <h2 class="viz-card__title">Points by round</h2>
+              <div class="chart"><div class="bars" id="scoreBars"></div></div>
+            </div>
+            <div class="viz-card">
+              <h2 class="viz-card__title">Contribution by position</h2>
+              <div class="donut-wrap">
+                <div class="donut" id="scoreDonut"><span class="donut__center mono" id="donutCenter">0</span></div>
+                <div class="legend" id="donutLegend"></div>
+              </div>
+            </div>
+          </div>
+          <div class="viz-card" style="margin-top:var(--sp-4)">
+            <h2 class="viz-card__title">Top contributors</h2>
+            <table class="contrib"><thead>
+              <tr><th>Player</th><th>Pos</th><th>Price</th><th>Points</th></tr>
+            </thead><tbody id="contribBody"></tbody></table>
+          </div>
+          <div class="viz-card" style="margin-top:var(--sp-4)">
+            <h2 class="viz-card__title">Value for Money</h2>
+            <p class="muted" style="font-size:var(--fs-sm);margin-bottom:var(--sp-4)">Price paid → points generated this round. Bar = pts per $m, best in squad.</p>
+            <div id="valueRows"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="modalMount"></div>
+  <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="false"></div>
+
+  <!-- ================= Welcome overlay (first launch — see js/onboarding.js) ================= -->
+  <div class="welcome" id="welcome" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" hidden>
+    <div class="welcome__card glass" role="document">
+      <span class="welcome__sheen" aria-hidden="true"></span>
+
+      <header class="welcome__head">
+        <span class="welcome__kicker label">World Cup Fantasy · 2026</span>
+        <h1 class="welcome__title display" id="welcomeTitle">How it works</h1>
+        <p class="welcome__lede muted">Build your XI, ride every matchday, and chase the points. Here's the game in five.</p>
+      </header>
+
+      <ul class="welcome__list">
+        <li class="welcome__item">
+          <span class="welcome__ico" aria-hidden="true">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3l8 4v5c0 4.5-3.2 7.6-8 9-4.8-1.4-8-4.5-8-9V7l8-4z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <div>
+            <b>Pick your XI</b>
+            <span class="muted">11 players in a 4-3-3 or 4-4-2, all under a <span class="mono">$50.0m</span> budget.</span>
+          </div>
+        </li>
+        <li class="welcome__item">
+          <span class="welcome__ico" aria-hidden="true">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5" stroke-linecap="round"/></svg>
+          </span>
+          <div>
+            <b>Spread the talent</b>
+            <span class="muted">No more than <b>3 players</b> from any single nation.</span>
+          </div>
+        </li>
+        <li class="welcome__item">
+          <span class="welcome__ico" aria-hidden="true">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 9h13l-3-3M20 15H7l3 3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <div>
+            <b>Make transfers</b>
+            <span class="muted">Swap up to <b>5 players</b> each round, while the transfer window is open.</span>
+          </div>
+        </li>
+        <li class="welcome__item">
+          <span class="welcome__ico" aria-hidden="true">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.9L12 17l-5.3 2.7 1-5.9L3.5 9.7l5.9-.9L12 3.5z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <div>
+            <b>Score points</b>
+            <span class="muted">Your picks bank points from their real World Cup performances each matchday.</span>
+          </div>
+        </li>
+        <li class="welcome__item">
+          <span class="welcome__ico" aria-hidden="true">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19V5M4 19h16M8 19v-6M13 19V9M18 19v-9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <div>
+            <b>Track your run</b>
+            <span class="muted">Follow fixtures, results, and your points round by round.</span>
+          </div>
+        </li>
+      </ul>
+
+      <footer class="welcome__foot">
+        <button class="btn btn--primary btn--block" id="welcomeStart" type="button">Let's play</button>
+      </footer>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/squad.js"></script>
+  <script src="js/transfers.js"></script>
+  <script src="js/fixtures.js"></script>
+  <script src="js/scores.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/onboarding.js"></script>
+  <script src="js/howtoscore.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

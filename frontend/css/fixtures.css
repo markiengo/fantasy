@@ -1,0 +1,59 @@
+/* ============================================================================
+   fixtures.css — Fixtures & Results screen (ref: fixtures.png)
+   ============================================================================ */
+
+.fixtures__head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--sp-4); margin-bottom: var(--sp-5); flex-wrap: wrap;
+}
+.fixtures__round-nav { display: flex; align-items: center; gap: var(--sp-4); }
+.fixtures__round-label { font-family: var(--font-body); font-weight: 600; font-size: var(--fs-h2); letter-spacing: .01em; }
+
+/* softer, editorial title for this screen (serif, not the loud condensed display) */
+.fixtures__head .section-title { font-family: var(--font-body); font-weight: 700; text-transform: none; letter-spacing: -.01em; }
+
+.fixtures__daygroup + .fixtures__daygroup { margin-top: var(--sp-5); }
+.fixtures__date {
+  background: var(--surface-2);
+  text-align: center;
+  font-family: var(--font-body);
+  font-weight: 600;
+  padding: var(--sp-3);
+  border-radius: var(--r-md);
+  margin-bottom: 2px;
+}
+
+.match-row {
+  display: grid;
+  /* symmetric: equal 110px rails both sides so the kickoff column sits at the
+     true panel center, aligned with the centered date header */
+  grid-template-columns: 110px 1fr auto 1fr 110px;
+  align-items: center; gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-4);
+  border-bottom: 1px solid var(--surface-line);
+}
+.match-row:hover { background: var(--surface-2); }
+.match-row__team {
+  display: flex; align-items: center; gap: var(--sp-3);
+  /* serif team names read warmer than the all-caps condensed display */
+  font-family: var(--font-body); font-weight: 600; letter-spacing: .01em;
+  font-size: calc(var(--fs-body) * 1.45);
+}
+.match-row__team--home { justify-content: flex-end; text-align: right; }
+.match-row__team--away { justify-content: flex-start; }
+.match-row__kick {
+  font-family: var(--font-display); font-size: var(--fs-body);
+  border: 1px solid var(--surface-line); border-radius: var(--r-sm);
+  padding: 6px 12px; min-width: 72px; text-align: center;
+}
+.match-row__score {
+  font-family: var(--font-display); font-size: var(--fs-h2);
+  background: var(--surface); border-radius: var(--r-sm); padding: 4px 14px; min-width: 72px; text-align: center;
+}
+/* +30% flags, scoped to fixtures match rows (30x20 -> 39x26) */
+.match-row .flag { width: 39px; height: 26px; }
+
+@media (max-width: 767px) {
+  .match-row { grid-template-columns: 1fr; gap: var(--sp-1); text-align: center; }
+  .match-row__team--home, .match-row__team--away { justify-content: center; text-align: center; }
+}

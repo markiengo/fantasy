@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WC Fantasy 2026 — Components</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Noto+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/squad.css" />
+  <link rel="stylesheet" href="css/fixtures.css" />
+  <link rel="stylesheet" href="css/scores.css" />
+  <style>
+    .sg { max-width: 1080px; margin: 0 auto; padding: var(--sp-8); display: flex; flex-direction: column; gap: var(--sp-8); }
+    .sg h1 { font-family: var(--font-display); font-size: var(--fs-display); text-transform: uppercase; }
+    .sg h2 { font-family: var(--font-display); font-size: var(--fs-h2); text-transform: uppercase; margin-bottom: var(--sp-3); color: var(--text-muted); }
+    .sg__block { background: var(--surface); border-radius: var(--r-lg); padding: var(--sp-6); box-shadow: var(--shadow-2); }
+    .sg__row { display: flex; gap: var(--sp-4); flex-wrap: wrap; align-items: center; }
+    .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: var(--sp-3); }
+    .sw { border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--surface-line); }
+    .sw__chip { height: 56px; }
+    .sw__name { font-size: var(--fs-label); letter-spacing: .06em; text-transform: uppercase; padding: 6px 8px; }
+  </style>
+</head>
+<body>
+  <div class="app-bg" aria-hidden="true"></div>
+  <div class="sg">
+    <h1>Components</h1>
+    <p class="muted">Phase 1 styleguide — every component state, driven by the same tokens as the app.</p>
+
+    <section class="sg__block">
+      <h2>Palette (sampled from style.png)</h2>
+      <div class="swatches" id="swatches"></div>
+    </section>
+
+    <section class="sg__block">
+      <h2>Stat cards</h2>
+      <div class="sg__row">
+        <div class="stat-card"><div class="stat-card__value">$0.2m</div><div class="stat-card__label">Budget</div></div>
+        <div class="stat-card"><div class="stat-card__value">11/11</div><div class="stat-card__label">Selected</div></div>
+        <div class="stat-card"><div class="stat-card__value">UNL</div><div class="stat-card__label">Free transfers</div></div>
+      </div>
+    </section>
+
+    <section class="sg__block">
+      <h2>Pills &amp; flags</h2>
+      <div class="sg__row">
+        <span class="pill pill--pts">12 pts</span>
+        <span class="pill pill--group" data-group="A">Group A</span>
+        <span class="pill pill--group" data-group="B">Group B</span>
+        <span class="pill pill--group" data-group="C">Group C</span>
+        <span class="pill pill--group" data-group="D">Group D</span>
+        <span class="pill pill--group" data-group="E">Group E</span>
+        <span class="pill pill--group" data-group="F">Group F</span>
+        <span class="pill pill--group" data-group="G">Group G</span>
+        <span class="pill pill--group" data-group="H">Group H</span>
+        <img class="flag flag--lg" src="https://flagcdn.com/w40/br.png" alt="" />
+        <img class="flag flag--lg" src="https://flagcdn.com/w40/ar.png" alt="" />
+        <span class="flag flag--placeholder" title="placeholder"></span>
+      </div>
+    </section>
+
+    <section class="sg__block">
+      <h2>Buttons</h2>
+      <div class="sg__row">
+        <button class="btn btn--primary">Make Transfers</button>
+        <button class="btn btn--ghost">Cancel</button>
+        <button class="btn btn--primary" disabled>Disabled</button>
+        <button class="btn btn--danger">Remove</button>
+      </div>
+    </section>
+
+    <section class="sg__block">
+      <h2>Position chips</h2>
+      <div class="filter-chips">
+        <button class="chip is-active">All</button>
+        <button class="chip" data-pos="GK">GK</button>
+        <button class="chip" data-pos="DEF">DEF</button>
+        <button class="chip" data-pos="MID">MID</button>
+        <button class="chip" data-pos="FWD">FWD</button>
+      </div>
+    </section>
+
+    <section class="sg__block">
+      <h2>Player slots — empty &amp; filled</h2>
+      <div class="sg__row" id="slotDemo"></div>
+    </section>
+
+    <section class="sg__block">
+      <h2>Toasts</h2>
+      <div style="position:relative">
+        <div class="toast toast--error" style="margin-bottom:8px"><span>Squad value exceeds $70m budget.</span><button class="toast__close" aria-label="x">✕</button></div>
+        <div class="toast toast--success" style="margin-bottom:8px"><span>Squad saved for Round 1.</span><button class="toast__close" aria-label="x">✕</button></div>
+        <div class="toast toast--info"><span>Backend offline — showing demo data.</span><button class="toast__close" aria-label="x">✕</button></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // palette swatches
+    const HUES = ["red","orange","gold","yellow","lime","green","teal","cyan","azure","blue","indigo","aqua","purple","orchid","magenta","lavender","salmon","pink","pitch"];
+    document.getElementById("swatches").innerHTML = HUES.map((h) =>
+      `<div class="sw"><div class="sw__chip" style="background:var(--c-${h})"></div><div class="sw__name">${h}</div></div>`).join("");
+
+    // slot demo (empty + filled across positions)
+    function filled(pos, name, price) {
+      return `<div class="slot slot--filled" data-pos="${pos}"><div class="slot__card" tabindex="0">
+        <span class="slot__jersey">●</span><span class="slot__name">${name}</span>
+        <span class="slot__meta"><img class="flag" src="https://flagcdn.com/w40/br.png" alt=""/><span class="slot__price">$${price}m</span></span>
+      </div></div>`;
+    }
+    function empty(pos) {
+      return `<div class="slot slot--empty" data-pos="${pos}"><div class="slot__card"><span class="slot__plus">+</span><span class="slot__pos label">${pos}</span></div></div>`;
+    }
+    document.getElementById("slotDemo").innerHTML =
+      empty("GK") + filled("GK","Silva","5.0") + filled("DEF","Costa","6.5") +
+      filled("MID","Rice","7.5") + filled("FWD","Haaland","12.5") + empty("FWD");
+  </script>
+</body>
+</html>
