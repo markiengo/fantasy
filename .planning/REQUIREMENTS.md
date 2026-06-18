@@ -1,141 +1,140 @@
 # Requirements: World Cup Fantasy 2026 Frontend Redesign
 
 **Defined:** 2026-06-18
-**Core Value:** The user can confidently build, save, review, and transfer a valid World Cup fantasy squad without losing track of matchday state, budget, rules, or backend/demo status.
+**Core Value:** The user can confidently build, review, transfer, and score a legal World Cup fantasy squad without losing track of matchday state, budget, transfer limits, or whether the app is connected to real backend data.
 
 ## v1 Requirements
 
 ### App Shell
 
-- [ ] **SHELL-01**: User can navigate between My Team, Fixtures, and Scores without a page reload.
-- [ ] **SHELL-02**: User can see the active matchday, budget, selected count, transfers remaining, and backend/demo status from the primary app shell.
-- [ ] **SHELL-03**: User can use the app on desktop and mobile widths without broken layout, overlapping text, or inaccessible controls.
-- [ ] **SHELL-04**: Keyboard users can reach all interactive controls with visible focus states.
+- [ ] **SHELL-01**: User can open the app and immediately see the primary fantasy workspace, not a landing page.
+- [ ] **SHELL-02**: User can navigate between My Team, Fixtures, and Scores without a page reload.
+- [ ] **SHELL-03**: User can switch matchdays and see the active matchday reflected consistently across relevant screens.
+- [ ] **SHELL-04**: User can tell whether the app is using real backend data, loading data, or running in demo/mock mode.
+- [ ] **SHELL-05**: User can use the app at desktop and mobile widths without incoherent overlap or horizontal overflow.
 
 ### Design System
 
-- [ ] **DSGN-01**: The frontend uses a coherent tokenized visual system for colors, typography, spacing, radius, elevation, and motion.
-- [ ] **DSGN-02**: The redesigned UI avoids stale contract assumptions such as 15-player squads, `/fixtures`, and `/scores`.
-- [ ] **DSGN-03**: Loading, empty, error, disabled, hover, active, and success states are designed for every primary workflow.
-- [ ] **DSGN-04**: UI copy is direct, game-specific, and avoids placeholder or misleading messages.
+- [ ] **DSGN-01**: User sees a cohesive World Cup fantasy visual system with clear typography, color, spacing, and component rules.
+- [ ] **DSGN-02**: User sees consistent loading, empty, error, success, hover, active, disabled, and focus states across screens.
+- [ ] **DSGN-03**: User sees football-specific information hierarchy for matchday, budget, transfers, formation, fixtures, and points.
+- [ ] **DSGN-04**: User can operate all interactive controls with visible keyboard focus and accessible labels.
+
+### Data And API
+
+- [ ] **DATA-01**: User can load players, teams, matches, squads, transfers, and scores from the live `/api` backend paths.
+- [ ] **DATA-02**: User sees meaningful backend validation errors instead of generic failures.
+- [ ] **DATA-03**: User can recover from network failure without confusing failed real requests with saved game state.
+- [ ] **DATA-04**: User can refresh the browser without losing the active matchday or an unsaved squad draft.
 
 ### Squad Builder
 
-- [ ] **SQUAD-01**: User can browse, search, filter, and sort players by name, position, team, and price.
-- [ ] **SQUAD-02**: User can add and remove players while seeing immediate validation feedback for duplicate players, squad size, formation slots, team limit, and budget.
-- [ ] **SQUAD-03**: User can intentionally choose a valid formation, either 4-3-3 or 4-4-2.
-- [ ] **SQUAD-04**: User can save a complete valid 11-player squad through `POST /api/squad`.
-- [ ] **SQUAD-05**: User can recover an unsaved squad draft for the active matchday after refresh.
-- [ ] **SQUAD-06**: User can distinguish a saved squad from an editable local draft.
-
-### Matchdays
-
-- [ ] **MATCH-01**: User can switch matchdays and see the correct squad, draft, transfer state, fixtures, and scores for that matchday.
-- [ ] **MATCH-02**: User can tell whether transfers are open or locked for the active matchday using backend-compatible timing rules.
-- [ ] **MATCH-03**: User can see completed-round point summaries only when score data exists.
+- [ ] **SQUAD-01**: User can view the player pool with search, position, team, price, and sort controls.
+- [ ] **SQUAD-02**: User can build exactly 11 players into a legal 4-3-3 or 4-4-2 squad.
+- [ ] **SQUAD-03**: User receives immediate client-side feedback for duplicate players, position limits, team limit, budget limit, and incomplete squad state.
+- [ ] **SQUAD-04**: User can see selected count, budget used, budget remaining, and formation status while editing.
+- [ ] **SQUAD-05**: User can save a complete legal squad through `POST /api/squad`.
+- [ ] **SQUAD-06**: User can review a saved squad in read-only mode without accidentally editing it.
 
 ### Transfers
 
-- [ ] **TRNF-01**: User can enter transfer mode from a saved squad when transfers remain and the window is open.
-- [ ] **TRNF-02**: User can create explicit one-for-one player swaps instead of relying on hidden list-order diff pairing.
-- [ ] **TRNF-03**: User can review pending swaps, budget impact, remaining transfers, and rule violations before confirming.
-- [ ] **TRNF-04**: User can confirm transfers through `POST /api/transfer` and then reload authoritative squad state from the backend.
-- [ ] **TRNF-05**: User can cancel pending transfer edits and return to the saved baseline.
-- [ ] **TRNF-06**: User can see transfer history for the active matchday.
+- [ ] **TRAN-01**: User can enter transfer mode from a saved squad when transfers are available.
+- [ ] **TRAN-02**: User can stage one-for-one swaps while seeing transfer count, budget impact, and validation status.
+- [ ] **TRAN-03**: User can cancel staged transfers and return to the saved baseline squad.
+- [ ] **TRAN-04**: User can confirm staged transfers through `POST /api/transfer` calls and then reload backend state.
+- [ ] **TRAN-05**: User can understand partial success, total rejection, or complete success after transfer confirmation.
+- [ ] **TRAN-06**: User can see when the transfer window is locked for a matchday.
 
 ### Fixtures
 
-- [ ] **FIXT-01**: User can browse fixtures grouped by matchday and date using `GET /api/matches`.
-- [ ] **FIXT-02**: User can see team names, flags or stable team identifiers, stage labels, kickoff/date, and scoreline when available.
-- [ ] **FIXT-03**: User can move between fixture rounds without losing the global app matchday context unexpectedly.
+- [ ] **FIXT-01**: User can browse fixtures by matchday.
+- [ ] **FIXT-02**: User can see teams, dates, kickoff information when available, stages, groups, and scorelines when available.
+- [ ] **FIXT-03**: User can distinguish upcoming, live/played, and completed fixture states from the UI.
 
 ### Scores
 
-- [ ] **SCOR-01**: User can see cumulative score across matchdays using `GET /api/score`.
-- [ ] **SCOR-02**: User can see active-matchday score breakdown by player using `GET /api/score?matchday=N`.
-- [ ] **SCOR-03**: User can see helpful empty states when no score data or no saved squad exists.
-- [ ] **SCOR-04**: User can open a scoring guide that mirrors `app/core/scoring.py`.
-
-### API and State
-
-- [ ] **API-01**: Frontend API access is centralized in one client module that uses the `/api` prefix consistently.
-- [ ] **API-02**: Backend `400`, `404`, and `500` responses are handled differently and shown with actionable UI states.
-- [ ] **API-03**: Network failure and demo/mock mode are explicit to the user and cannot be mistaken for live backend state.
-- [ ] **API-04**: Frontend state separates persisted draft data, saved squad baseline, active matchday, transfer edits, cached players, cached teams, fixtures, and scores.
-
-### Verification
-
-- [ ] **VERF-01**: Redesign work can be verified locally through the FastAPI static mount or a simple static server.
-- [ ] **VERF-02**: Core frontend rule helpers have lightweight automated tests or documented manual checks before final release.
-- [ ] **VERF-03**: Final visual verification includes desktop and mobile browser screenshots for the primary workflows.
+- [ ] **SCOR-01**: User can see cumulative score across matchdays.
+- [ ] **SCOR-02**: User can see current matchday score breakdown by player.
+- [ ] **SCOR-03**: User can see clear empty states when stats or scores are not available yet.
+- [ ] **SCOR-04**: User can open a scoring guide that mirrors backend scoring rules.
 
 ## v2 Requirements
 
-### Future Game Features
+### Product Expansion
 
-- **FUTR-01**: User can choose captain and vice-captain multipliers.
-- **FUTR-02**: User can view leaderboards or multiplayer leagues.
-- **FUTR-03**: User can see live score updates during matches.
-- **FUTR-04**: User can use dynamic player pricing.
-- **FUTR-05**: User can authenticate with a real account.
+- **V2-01**: User can compare performance on a leaderboard.
+- **V2-02**: User can use authentication for multiple users.
+- **V2-03**: User can see live score updates.
+- **V2-04**: User can use captain or vice-captain multipliers.
+- **V2-05**: User can see dynamic player pricing.
+
+### Engineering
+
+- **V2-06**: Developer can run automated frontend tests for critical flows.
+- **V2-07**: Developer can run visual regression checks for the redesign.
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Backend rewrite | The redesign is frontend-first and should consume the existing FastAPI API. |
-| Frontend framework migration | Vanilla browser delivery is an explicit repo convention. |
-| Multiplayer and auth UI | Current backend is single-user with no auth. |
-| Captain and dynamic pricing UI | Not supported by v1 backend rules. |
-| Bulk transfer endpoint | Current API performs one transfer per `POST /api/transfer`. |
+| Frontend framework migration | Current repo contract is vanilla HTML, CSS, and JavaScript |
+| Backend endpoint redesign | Redesign should work with the existing FastAPI API |
+| Auth screens | Single-user mode is intentional for v1 |
+| Multiplayer and leaderboards | SRS defers multiplayer beyond v1 |
+| Live score streaming | Backend currently stores and reads computed scores |
+| Captain system | Existing docs mark it as v2 |
+| Dynamic pricing | Existing game rules keep prices static |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SHELL-01 | Phase 1 | Pending |
-| SHELL-02 | Phase 1 | Pending |
-| SHELL-03 | Phase 1 | Pending |
-| SHELL-04 | Phase 1 | Pending |
+| SHELL-01 | Phase 2 | Pending |
+| SHELL-02 | Phase 3 | Pending |
+| SHELL-03 | Phase 4 | Pending |
+| SHELL-04 | Phase 4 | Pending |
+| SHELL-05 | Phase 6 | Pending |
 | DSGN-01 | Phase 1 | Pending |
 | DSGN-02 | Phase 1 | Pending |
 | DSGN-03 | Phase 1 | Pending |
-| DSGN-04 | Phase 1 | Pending |
-| API-01 | Phase 2 | Pending |
-| API-02 | Phase 2 | Pending |
-| API-03 | Phase 2 | Pending |
-| API-04 | Phase 2 | Pending |
+| DSGN-04 | Phase 6 | Pending |
+| DATA-01 | Phase 4 | Pending |
+| DATA-02 | Phase 4 | Pending |
+| DATA-03 | Phase 4 | Pending |
+| DATA-04 | Phase 3 | Pending |
 | SQUAD-01 | Phase 3 | Pending |
 | SQUAD-02 | Phase 3 | Pending |
 | SQUAD-03 | Phase 3 | Pending |
 | SQUAD-04 | Phase 3 | Pending |
-| SQUAD-05 | Phase 3 | Pending |
-| SQUAD-06 | Phase 3 | Pending |
-| MATCH-01 | Phase 2 | Pending |
-| MATCH-02 | Phase 2 | Pending |
-| MATCH-03 | Phase 5 | Pending |
-| TRNF-01 | Phase 4 | Pending |
-| TRNF-02 | Phase 4 | Pending |
-| TRNF-03 | Phase 4 | Pending |
-| TRNF-04 | Phase 4 | Pending |
-| TRNF-05 | Phase 4 | Pending |
-| TRNF-06 | Phase 4 | Pending |
-| FIXT-01 | Phase 5 | Pending |
-| FIXT-02 | Phase 5 | Pending |
-| FIXT-03 | Phase 5 | Pending |
-| SCOR-01 | Phase 5 | Pending |
-| SCOR-02 | Phase 5 | Pending |
-| SCOR-03 | Phase 5 | Pending |
-| SCOR-04 | Phase 5 | Pending |
-| VERF-01 | Phase 6 | Pending |
-| VERF-02 | Phase 6 | Pending |
-| VERF-03 | Phase 6 | Pending |
+| SQUAD-05 | Phase 4 | Pending |
+| SQUAD-06 | Phase 4 | Pending |
+| TRAN-01 | Phase 5 | Pending |
+| TRAN-02 | Phase 5 | Pending |
+| TRAN-03 | Phase 5 | Pending |
+| TRAN-04 | Phase 5 | Pending |
+| TRAN-05 | Phase 5 | Pending |
+| TRAN-06 | Phase 5 | Pending |
+| FIXT-01 | Phase 4 | Pending |
+| FIXT-02 | Phase 4 | Pending |
+| FIXT-03 | Phase 4 | Pending |
+| SCOR-01 | Phase 4 | Pending |
+| SCOR-02 | Phase 4 | Pending |
+| SCOR-03 | Phase 4 | Pending |
+| SCOR-04 | Phase 6 | Pending |
 
 **Coverage:**
-- v1 requirements: 37 total
-- Mapped to phases: 37
+- v1 requirements: 32 total
+- Mapped to phases: 32
 - Unmapped: 0
+
+## Definition of Done
+
+- The frontend runs without a build step.
+- The app uses live `/api` endpoints where backend data is available.
+- Manual browser verification covers desktop and mobile widths.
+- Core game flows have visible loading, empty, error, and success states.
+- No frontend rewrite phase regresses backend validation behavior.
 
 ---
 *Requirements defined: 2026-06-18*
-*Last updated: 2026-06-18 after initial frontend redesign scoping*
+*Last updated: 2026-06-18 after frontend redesign project initialization*

@@ -4,46 +4,52 @@
 
 See: `.planning/PROJECT.md` (updated 2026-06-18)
 
-**Core value:** The user can confidently build, save, review, and transfer a valid World Cup fantasy squad without losing track of matchday state, budget, rules, or backend/demo status.
-**Current focus:** Phase 1 - Product Shell and Visual Direction
+**Core value:** The user can confidently build, review, transfer, and score a legal World Cup fantasy squad without losing track of matchday state, budget, transfer limits, or whether the app is connected to real backend data.
 
-## Current Phase
+**Current focus:** Phase 1 - Design Contract And Rewrite Plan
 
-| Field | Value |
-|-------|-------|
-| Phase | 1 |
-| Name | Product Shell and Visual Direction |
-| Status | Ready for discussion |
-| Mode | mvp |
-| UI hint | yes |
+## Workflow State
 
-## Workflow Status
+| Item | Status |
+|------|--------|
+| Project initialized | Complete |
+| Codebase map | Complete |
+| Requirements defined | Complete |
+| Roadmap created | Complete |
+| Active phase | Phase 1 |
+| Active phase UI-SPEC | Complete |
+| Active phase plan | Pending |
+| Active phase implementation | Pending |
+| Verification | Pending |
 
-- Project initialized from existing codebase map and docs.
-- GSD local shim could not run because `C:\Users\marki\.codex\gsd-core\bin\gsd-tools.cjs` failed to load its expected `package.json`.
-- Artifacts were created inline instead of through the shim.
-- Next recommended command: `$gsd-ui-phase 1`, then `$gsd-plan-phase 1`.
+## Active Phase
 
-## Important Context
+### Phase 1: Design Contract And Rewrite Plan
 
-- The repo has an existing `frontend/` implementation despite older instructions saying frontend does not exist yet.
-- The redesign should rebuild from scratch but preserve proven behavior from `docs/use-case.md`.
-- Use `docs/API.md` live endpoint names, including `/api/matches` and `/api/score`.
-- `docs/logic.md` is missing even though repo guidance references it.
-- Frontend and backend transfer-lock timing may disagree and needs resolution before transfer UX is finalized.
+**Goal:** Lock the redesign direction, information architecture, component inventory, and rewrite boundaries before touching the app shell.
 
-## Open Risks
+**UI design contract:** `.planning/phase-01-product-shell-and-visual-direction/01-UI-SPEC.md`
 
-- GSD tool installation is incomplete or incompatible with the current local Node/runtime layout.
-- Current `.planning/codebase/` files and `AGENTS.md` are untracked in git.
-- Existing frontend docs contain stale paths and design assumptions; implementation phases must verify against code and live API docs.
-- No automated frontend tests exist yet.
+**Next recommended command:** `$gsd-plan-phase 1`
 
-## Next Up
+**Alternative command:** `$gsd-discuss-phase 1`
 
-1. Run `$gsd-ui-phase 1` to create a UI design contract for Phase 1.
-2. Run `$gsd-plan-phase 1` to produce the implementation plan.
-3. During Phase 1, audit current frontend files before deleting or replacing behavior.
+## Known Risks
+
+- GSD local tool shim failed during initialization because `C:\Users\marki\.codex\gsd-core\bin\gsd-tools.cjs` could not resolve its expected `package.json`.
+- `docs/logic.md` is referenced by repo guidance but missing.
+- Current frontend contract docs contain stale endpoint names (`/fixtures`, `/scores`) that conflict with live `/api/matches` and `/api/score`.
+- Existing frontend mock mode can mask backend availability problems.
+- There are no automated frontend tests or visual regression checks yet.
+
+## Recent Decisions
+
+| Date | Decision | Reason |
+|------|----------|--------|
+| 2026-06-18 | Initialize GSD project manually from existing docs and codebase map | The GSD shim failed, but planning artifacts were still needed to start the redesign |
+| 2026-06-18 | Treat current frontend as behavior reference, not implementation constraint | User asked for a frontend redesign from scratch |
+| 2026-06-18 | Start with UI contract work before code rewrite | Redesign needs a stable visual and interaction target |
+| 2026-06-18 | Approve Phase 1 UI-SPEC inline | GSD subagent tooling was unavailable, but the design contract is required before planning |
 
 ---
-*State initialized: 2026-06-18*
+*Last updated: 2026-06-18 after Phase 1 UI-SPEC approval*

@@ -1,115 +1,126 @@
 # Roadmap: World Cup Fantasy 2026 Frontend Redesign
 
-**Created:** 2026-06-18
-**Mode:** Vertical MVP
+## Overview
 
-## Phase Overview
+The redesign is structured as vertical MVP phases. Each phase should leave the app reviewable in-browser and preserve the existing backend contract. Current frontend files can be replaced or reorganized, but existing behavior in `docs/use-case.md` is the reference for flows that must survive.
 
-| # | Phase | Goal | Requirements |
-|---|-------|------|--------------|
-| 1 | Product Shell and Visual Direction | Replace the current UI foundation with a responsive app shell and design system | SHELL-01, SHELL-02, SHELL-03, SHELL-04, DSGN-01, DSGN-02, DSGN-03, DSGN-04 |
-| 2 | Frontend State and API Backbone | Build the app state model and centralized `/api` client before feature screens depend on them | API-01, API-02, API-03, API-04, MATCH-01, MATCH-02 |
-| 3 | Squad Builder MVP | Let the user build, validate, save, and recover an 11-player squad | SQUAD-01, SQUAD-02, SQUAD-03, SQUAD-04, SQUAD-05, SQUAD-06 |
-| 4 | Transfer Workflow | Replace hidden diff-based transfer behavior with explicit swap review and confirmation | TRNF-01, TRNF-02, TRNF-03, TRNF-04, TRNF-05, TRNF-06 |
-| 5 | Fixtures and Scores | Ship the non-squad screens and score explanations against live endpoints | FIXT-01, FIXT-02, FIXT-03, SCOR-01, SCOR-02, SCOR-03, SCOR-04, MATCH-03 |
-| 6 | Verification and Release Hardening | Verify responsive UI, state transitions, API errors, and release readiness | VERF-01, VERF-02, VERF-03 |
+### Phase 1: Design Contract And Rewrite Plan
 
-## Phase Details
-
-### Phase 1: Product Shell and Visual Direction
-**Goal:** Establish the redesigned frontend foundation before rebuilding workflows.
+**Goal:** Lock the redesign direction, information architecture, component inventory, and rewrite boundaries before touching the app shell.
 **Mode:** mvp
+
 **UI hint:** yes
-**Requirements:** SHELL-01, SHELL-02, SHELL-03, SHELL-04, DSGN-01, DSGN-02, DSGN-03, DSGN-04
 
-**Success Criteria**:
-1. The first screen is the usable fantasy app shell, not a marketing or placeholder page.
-2. My Team, Fixtures, and Scores navigation renders responsively with no text overlap on desktop or mobile widths.
-3. The design system defines tokens for color, typography, spacing, motion, focus, and component states.
-4. Loading, empty, error, disabled, hover, active, and success states are represented in the component plan.
-5. Stale assumptions from older frontend docs are removed from visible UI and implementation notes.
+**Requirements:** DSGN-01, DSGN-02, DSGN-03
 
-**Notes**:
-- Audit current `frontend/index.html`, `frontend/css/`, and `frontend/js/` before deleting or replacing behavior.
-- Preserve useful assets only if they serve the new design direction.
+**Success Criteria:**
+1. A refreshed UI specification defines the app screens, layout rules, visual tokens, and component states for the redesign.
+2. Stale endpoint names and stale frontend contract notes are reconciled against `docs/API.md`.
+3. The rewrite boundary is explicit: what current code can be reused, what must be replaced, and what behavior must be preserved.
+4. The first implementation plan can cite exact files, components, and browser verification steps.
 
-### Phase 2: Frontend State and API Backbone
-**Goal:** Create the state and backend access layer that all redesigned screens share.
+### Phase 2: Static App Shell
+
+**Goal:** Build the new first-screen app shell with navigation, matchday context, pitch area, side panel, and responsive structure.
 **Mode:** mvp
+
 **UI hint:** yes
-**Requirements:** API-01, API-02, API-03, API-04, MATCH-01, MATCH-02
 
-**Success Criteria**:
-1. All backend calls go through one API client that consistently uses `/api`.
-2. `400`, `404`, `500`, and network failures produce distinct UI states.
-3. Live backend mode and demo/mock mode are visually explicit.
-4. Matchday selection updates shared state predictably.
-5. Transfer lock status uses backend-compatible matchday timing rules or clearly documents any remaining mismatch.
+**Requirements:** SHELL-01, SHELL-02
 
-**Notes**:
-- Current docs mention a frontend lock rule based on kickoff minus one hour, while backend notes are date-based. Resolve before wiring transfer UX.
+**Success Criteria:**
+1. Opening `frontend/index.html` shows the redesigned app workspace immediately.
+2. My Team, Fixtures, and Scores navigation is visible, keyboard reachable, and visually active.
+3. The shell includes stable regions for matchday navigation, pitch/squad workspace, side panel, and status/toast messages.
+4. The shell renders without content overlap at desktop and mobile widths.
 
-### Phase 3: Squad Builder MVP
-**Goal:** Deliver the core app value: build and save a valid fantasy squad.
+### Phase 3: Local Squad Builder
+
+**Goal:** Rebuild local squad editing with explicit state, player pool controls, formation rules, budget feedback, and draft persistence.
 **Mode:** mvp
+
 **UI hint:** yes
-**Requirements:** SQUAD-01, SQUAD-02, SQUAD-03, SQUAD-04, SQUAD-05, SQUAD-06
 
-**Success Criteria**:
-1. Player pool search, filters, and sorting work against loaded player data.
-2. The pitch shows selected players, empty slots, formation, budget, team-limit, and selected-count feedback.
-3. The user can choose 4-3-3 or 4-4-2 intentionally.
-4. Save is enabled only for a complete legal squad and posts to `POST /api/squad`.
-5. Refreshing the browser can restore an unsaved draft without confusing it for a saved squad.
+**Requirements:** DATA-04, SQUAD-01, SQUAD-02, SQUAD-03, SQUAD-04
 
-**Notes**:
-- Client validation should improve feedback, but backend validation remains authoritative.
+**Success Criteria:**
+1. Player pool search, filter, and sort controls work against loaded or demo player data.
+2. The user can assemble a local 4-3-3 or 4-4-2 squad with immediate rule feedback.
+3. The app exposes the current squad mode and validity instead of hiding it in DOM-side effects.
+4. Refreshing preserves active matchday and unsaved draft state.
 
-### Phase 4: Transfer Workflow
-**Goal:** Make transfers explicit, reviewable, and aligned with the current one-transfer-per-request backend contract.
+### Phase 4: Backend Wiring And Read Modes
+
+**Goal:** Wire the redesigned shell to live backend data for loading, saving, saved-squad review, fixtures, scores, and explicit API status.
 **Mode:** mvp
+
 **UI hint:** yes
-**Requirements:** TRNF-01, TRNF-02, TRNF-03, TRNF-04, TRNF-05, TRNF-06
 
-**Success Criteria**:
-1. Transfer mode can start only from a saved squad when rules allow it.
-2. Pending transfers are represented as explicit swap objects, not hidden list-order diffs.
-3. The review UI shows outgoing player, incoming player, budget delta, remaining transfers, and validation errors.
-4. Confirm submits each swap through `POST /api/transfer` and reloads backend squad state afterward.
-5. Cancel restores the saved baseline.
-6. Transfer history is visible for the active matchday.
+**Requirements:** SHELL-03, SHELL-04, DATA-01, DATA-02, DATA-03, SQUAD-05, SQUAD-06, FIXT-01, FIXT-02, FIXT-03, SCOR-01, SCOR-02, SCOR-03
 
-### Phase 5: Fixtures and Scores
-**Goal:** Complete the user-facing tournament context and scoring views.
+**Success Criteria:**
+1. The app fetches players, teams, matches, score, saved squad, and transfer history through live `/api` paths.
+2. Saving a complete squad through `POST /api/squad` moves the UI into read-only saved-squad review.
+3. Fixtures and scores screens render real backend states, including empty score states.
+4. Backend validation errors surface as direct UI messages without triggering demo mode.
+5. Demo/mock mode, if retained, is visibly distinct from connected backend mode.
+
+### Phase 5: Transfer Flow
+
+**Goal:** Rebuild transfer mode as a clear staged-swap flow that respects transfer count, budget, window lock, cancel, confirm, and backend reload.
 **Mode:** mvp
+
 **UI hint:** yes
-**Requirements:** FIXT-01, FIXT-02, FIXT-03, SCOR-01, SCOR-02, SCOR-03, SCOR-04, MATCH-03
 
-**Success Criteria**:
-1. Fixtures render from `GET /api/matches`, grouped by matchday and date.
-2. Fixture navigation does not unexpectedly mutate the global active matchday.
-3. Score views render cumulative score and active-round breakdown from `GET /api/score`.
-4. Empty score states are explicit and do not look like broken loading.
-5. The scoring guide mirrors `app/core/scoring.py`.
+**Requirements:** TRAN-01, TRAN-02, TRAN-03, TRAN-04, TRAN-05, TRAN-06
 
-### Phase 6: Verification and Release Hardening
-**Goal:** Prove the redesigned frontend works across key workflows and viewports.
+**Success Criteria:**
+1. A saved squad can enter transfer mode only when the UI has enough backend state to evaluate transfer availability.
+2. Staged swaps are visible as explicit pending changes with budget and transfer-count impact.
+3. Cancel restores the saved baseline squad.
+4. Confirm sends transfer requests, handles partial failure, and reloads the authoritative squad from the backend.
+5. Locked transfer windows are clearly disabled with a reason.
+
+### Phase 6: Polish, Accessibility, And Verification
+
+**Goal:** Hardening pass for responsive layout, accessibility, scoring guide accuracy, visual polish, and manual verification evidence.
 **Mode:** mvp
-**UI hint:** yes
-**Requirements:** VERF-01, VERF-02, VERF-03
 
-**Success Criteria**:
-1. The frontend runs locally through the agreed serving path.
-2. Manual verification covers boot, matchday switch, squad save, transfer confirm, fixture browsing, score empty state, and backend failure.
-3. Lightweight automated checks or documented manual checks cover frontend rule helpers.
-4. Desktop and mobile screenshots verify primary workflows and no overlapping UI.
-5. Remaining known risks are documented before release.
+**UI hint:** yes
+
+**Requirements:** SHELL-05, DSGN-04, SCOR-04
+
+**Success Criteria:**
+1. Desktop and mobile browser checks show no incoherent overlap, clipped controls, or unreadable text.
+2. Keyboard navigation and focus states cover every interactive control.
+3. The scoring guide matches `app/core/scoring.py`.
+4. Loading, empty, error, success, disabled, hover, active, and focus states are present for all major flows.
+5. Manual verification notes document the exact commands, URLs, and viewports used.
+
+## Phase Summary
+
+| # | Phase | Goal | Requirements | Success Criteria |
+|---|-------|------|--------------|------------------|
+| 1 | Design Contract And Rewrite Plan | Lock direction and boundaries | 3 | 4 |
+| 2 | Static App Shell | Build new first screen | 2 | 4 |
+| 3 | Local Squad Builder | Rebuild local editing | 5 | 4 |
+| 4 | Backend Wiring And Read Modes | Connect live data and read views | 13 | 5 |
+| 5 | Transfer Flow | Rebuild staged transfers | 6 | 5 |
+| 6 | Polish, Accessibility, And Verification | Harden and verify | 3 | 5 |
 
 ## Coverage
 
-- v1 requirements mapped: 37/37
-- UI phases: 6/6
-- Backend contract changes required: none planned
+- v1 requirements: 32 total
+- Mapped to phases: 32
+- Unmapped: 0
+
+## Notes For Phase Planning
+
+- Start with `$gsd-ui-phase 1` before implementation planning, because Phase 1 is visual and interaction-contract heavy.
+- Use `docs/use-case.md` as the current behavior map.
+- Use `docs/API.md` as the live API source of truth.
+- Use `.planning/codebase/` as the current architecture and risk map.
+- Verify in browser after each implementation phase.
 
 ---
 *Roadmap created: 2026-06-18*
