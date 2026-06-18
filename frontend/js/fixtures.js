@@ -63,13 +63,14 @@ const Fixtures = (() => {
       return;
     }
 
-    // group by date
+    // group by date, sorted ascending
     const groups = {};
-    const order = [];
     for (const m of matches) {
-      if (!groups[m.date]) { groups[m.date] = []; order.push(m.date); }
+      if (!groups[m.date]) groups[m.date] = [];
       groups[m.date].push(m);
     }
+    const order = Object.keys(groups).sort();
+    for (const date of order) groups[date].sort((a, b) => a.match_id - b.match_id);
 
     let html = "";
     for (const date of order) {
