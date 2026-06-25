@@ -167,8 +167,8 @@ const Mock = (() => {
       POS_PLAN.forEach((pos, j) => {
         const surname = SURNAMES[(ti * 5 + j) % SURNAMES.length];
         // price seeded by position + a deterministic wobble — kept within the 0–8M band
-        const base = pos === "FWD" ? 6 : pos === "MID" ? 5 : pos === "DEF" ? 4 : 3.5;
-        const price = +(base + ((ti * 3 + j * 7) % 9) * 0.25).toFixed(1);
+        const base = pos === "FWD" ? 5.5 : pos === "MID" ? 4.5 : pos === "DEF" ? 3.5 : 3;
+        const price = +(base + ((ti * 3 + j * 7) % 7) * 0.2).toFixed(1);
         _players.push({
           player_id: pid++, name: `${surname}`, position: pos,
           team_id: team.team_id, team_name: team.name, base_price: price,

@@ -242,12 +242,9 @@
   position: fixed;
   inset: 0;
   z-index: 200;
-  background: rgba(8, 9, 10, 0.55);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 200ms var(--ease);
+  transition: opacity 180ms var(--ease);
 }
 
 .tour-overlay.is-visible {
@@ -255,25 +252,41 @@
   pointer-events: auto;
 }
 
+.tour-matte {
+  position: fixed;
+  background: rgba(8, 9, 10, 0.62);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
 .tour-spotlight {
-  position: absolute;
+  position: fixed;
   border-radius: var(--r-lg);
-  border: 2px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 0 20px rgba(198, 242, 74, 0.35);
+  border: 1px solid rgba(198, 242, 74, 0.7);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 18px 48px rgba(0, 0, 0, 0.42),
+    0 0 32px rgba(198, 242, 74, 0.2);
   pointer-events: none;
   z-index: 201;
 }
 
 .tour-card {
-  position: absolute;
+  position: fixed;
   max-width: 320px;
   background: var(--panel-strong);
-  border: 1px solid var(--stroke-mid);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-panel);
+  background: color-mix(in srgb, var(--panel-strong) 88%, #0f1412 12%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
   padding: 20px;
-  animation: tourCardIn 280ms var(--ease) both;
+  opacity: 0;
+  transition: opacity 160ms var(--ease);
   z-index: 202;
+}
+
+.tour-card.is-ready {
+  opacity: 1;
 }
 
 .tour-card__title {
@@ -328,22 +341,21 @@
   margin-left: auto;
 }
 
-@keyframes tourCardIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: none; }
-}
-
 @keyframes tourSheetIn {
   from { transform: translateY(100%); }
   to { transform: none; }
 }
 
 @media (max-width: 760px) {
+  .tour-matte {
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+  }
+
   .tour-card {
-    position: fixed;
-    bottom: 0;
     left: 0;
     right: 0;
+    bottom: 0;
     max-width: none;
     border-radius: var(--r-2xl) var(--r-2xl) 0 0;
     animation: tourSheetIn 280ms var(--ease) both;

@@ -109,11 +109,38 @@ function matchDateOnly(iso) {
 function currentRoundMeta(md = State.currentMatchday) {
   return _roundMeta.find((r) => r.matchday === md) || null;
 }
+function parseDateTime(value) {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed;
+}
+
+function roundLockTime(meta) {
+  if (!meta) return null;
+  const kickoff = parseDateTime(meta.firstKickoff);
+  if (kickoff) return new Date(kickoff.getTime() - 60 * 60 * 1000);
+  if (meta.date) return matchDateOnly(meta.date);
+  return null;
+}
+
+function currentTransferMatchday() {
+  if (!_roundMeta.length) return State.currentMatchday || 1;
+
+  const now = new Date();
+  for (const round of _roundMeta) {
+    const lock = roundLockTime(round);
+    if (!lock || now < lock) return round.matchday;
+  }
+
+  return _roundMeta[_roundMeta.length - 1].matchday;
+}
 
 function isWindowOpen(md) {
   const meta = currentRoundMeta(md);
-  if (!meta || !meta.date) return true;
-  return todayDateOnly() < matchDateOnly(meta.date);
+  const lock = roundLockTime(meta);
+  if (!lock) return true;
+  return new Date() < lock;
 }
 window.isWindowOpen = isWindowOpen;
 
@@ -171,10 +198,16 @@ function buildRoundMeta() {
         matchday: match.matchday,
         stage: match.stage,
         date: match.date,
+        firstKickoff: match.kickoff || null,
       };
     }
-    if (match.date < map[match.matchday].date) {
+    if (match.date && (!map[match.matchday].date || match.date < map[match.matchday].date)) {
       map[match.matchday].date = match.date;
+    }
+    const kickoff = parseDateTime(match.kickoff);
+    const currentKickoff = parseDateTime(map[match.matchday].firstKickoff);
+    if (kickoff && (!currentKickoff || kickoff < currentKickoff)) {
+      map[match.matchday].firstKickoff = match.kickoff;
     }
   }
   // Allow squad/transfer for Round of 32 before fixtures are loaded.
@@ -300,6 +333,15 @@ function hydrate(player) {
     base_price: player.base_price,
   };
 }
+function applySquadForMatchday(squad, md, transfersUsed) {
+  State.currentSquad.players = squad.players.map(hydrate);
+  State.currentSquad.formation = inferFormation(State.currentSquad.players);
+  State.squadSaved = squad.matchday === md;
+  State.transfersUsed = State.squadSaved ? transfersUsed : 0;
+  State.setBaseline();
+  State.mode = State.squadSaved ? "view" : "build";
+  State.emit();
+}
 
 async function loadSquadForMatchday(md) {
   try {
@@ -307,13 +349,7 @@ async function loadSquadForMatchday(md) {
       Api.getSquad(md),
       Transfers.fetchUsed(md),
     ]);
-    State.currentSquad.players = squad.players.map(hydrate);
-    State.currentSquad.formation = inferFormation(State.currentSquad.players);
-    State.squadSaved = true;
-    State.transfersUsed = transfersUsed;
-    State.setBaseline();
-    State.mode = "view";
-    State.emit();
+    applySquadForMatchday(squad, md, transfersUsed);
   } catch (e) {
     if (State.currentSquad.matchday !== md) State.currentSquad.players = [];
     const draft = State.currentSquad.players;
@@ -624,7 +660,7 @@ async function boot() {
   async function enterGuestMode() {
     showAppScreen();
     showGuestBanner();
-    Toast.show("Continuing as guest — data may be limited.", "info");
+    Toast.show("Continuing as guest - data may be limited.", "info");
     _booted = false;
     await continueBoot();
   }
@@ -812,7 +848,7 @@ async function continueBoot() {
   window.addEventListener("backend-mode-changed", updateBackendState);
 
   Squad.showSkeleton();
-  const md = State.currentMatchday;
+  let md = State.currentMatchday;
 
   let players = [];
   let teams = [];
@@ -822,13 +858,11 @@ async function continueBoot() {
   let transfersUsed = 0;
 
   try {
-    [players, teams, matches, cumulative, rawSquad, transfersUsed] = await Promise.all([
+    [players, teams, matches, cumulative] = await Promise.all([
       Api.getPlayers(),
       Api.getTeams(),
       Api.getMatches(),
       Api.getScore().catch(() => ({})),
-      Api.getSquad(md).catch(() => null),
-      Transfers.fetchUsed(md),
     ]);
   } catch (e) {
     Toast.show("Could not load data. Retry the request.", "error");
@@ -844,19 +878,26 @@ async function continueBoot() {
   }
 
   buildRoundMeta();
+  md = currentTransferMatchday();
+  State.setMatchday(md);
+
+  try {
+    [rawSquad, transfersUsed] = await Promise.all([
+      Api.getSquad(md).catch(() => null),
+      Transfers.fetchUsed(md),
+    ]);
+  } catch (e) {
+    rawSquad = null;
+    transfersUsed = 0;
+  }
+
   renderMatchdayStrip();
   updatePointsChip(md);
   updateBackendState();
   Squad.buildTeamSearch();
 
   if (rawSquad && rawSquad.players && rawSquad.players.length) {
-    State.currentSquad.players = rawSquad.players.map(hydrate);
-    State.currentSquad.formation = inferFormation(State.currentSquad.players);
-    State.squadSaved = true;
-    State.transfersUsed = transfersUsed;
-    State.setBaseline();
-    State.mode = "view";
-    State.emit();
+    applySquadForMatchday(rawSquad, md, transfersUsed);
   } else {
     State.currentSquad.players = [];
     State.setBaseline();

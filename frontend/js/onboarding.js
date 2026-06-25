@@ -1,15 +1,34 @@
 const Onboarding = (() => {
   const KEY = "gaffer_onboarding_done";
+  const CLOSE_MS = 320;
 
-  function close(skipTour) {
+  function close(options) {
+    const settings = options || {};
     const overlay = document.getElementById("welcome");
-    if (!overlay || overlay.hidden) return;
+
+    if (!overlay || overlay.hidden) {
+      if (settings.startTour && window.Tour) {
+        requestAnimationFrame(() => Tour.start());
+      }
+      return Promise.resolve();
+    }
+
     overlay.classList.remove("is-open");
-    setTimeout(() => { overlay.hidden = true; }, 300);
     localStorage.setItem(KEY, "1");
-    if (skipTour) {
+
+    if (settings.skipTour) {
       localStorage.setItem("gaffer_tour_done", "1");
     }
+
+    return new Promise((resolve) => {
+      window.setTimeout(() => {
+        overlay.hidden = true;
+        if (settings.startTour && window.Tour) {
+          requestAnimationFrame(() => Tour.start());
+        }
+        resolve();
+      }, CLOSE_MS);
+    });
   }
 
   function open() {
@@ -22,26 +41,31 @@ const Onboarding = (() => {
     const showMeHow = document.getElementById("welcomeShowMeHow");
     const gotIt = document.getElementById("welcomeGotIt");
 
-    if (showMeHow) {
-      showMeHow.hidden = true;
+    if (showMeHow && !showMeHow.dataset.bound) {
+      showMeHow.dataset.bound = "1";
+      showMeHow.addEventListener("click", () => {
+        close({ startTour: true });
+      });
     }
 
     if (gotIt && !gotIt.dataset.bound) {
       gotIt.dataset.bound = "1";
-      gotIt.addEventListener("click", () => close(true));
+      gotIt.addEventListener("click", () => {
+        close({ skipTour: true });
+      });
     }
 
     if (!overlay.dataset.bound) {
       overlay.dataset.bound = "1";
       overlay.addEventListener("click", (e) => {
-        if (e.target === overlay) close(true);
+        if (e.target === overlay) close({ skipTour: true });
       });
       document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") close(true);
+        if (e.key === "Escape") close({ skipTour: true });
       });
     }
 
-    if (gotIt) gotIt.focus();
+    if (showMeHow) showMeHow.focus();
   }
 
   function maybeShow() {
@@ -51,4 +75,5 @@ const Onboarding = (() => {
 
   return { maybeShow, open, close };
 })();
+
 window.Onboarding = Onboarding;

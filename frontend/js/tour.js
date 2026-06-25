@@ -1,25 +1,31 @@
 const Tour = (() => {
   const MOBILE_BREAK = 760;
+  const CARD_GAP = 18;
+  const EDGE_MARGIN = 16;
+  const DEFAULT_PAD = 8;
 
   const BUILD_STEPS = [
     {
       target: "#pitch",
+      preferred: ".pitch-panel",
       title: "Build your XI",
       body: "This is your pitch. You need 11 players in a 4-3-3 or 4-4-2 shape. Tap any empty slot to filter the pool by position.",
       mobileTab: "pitch",
     },
     {
       target: ".pool",
+      preferred: ".pool.team-shell__rail",
       title: "Pick your players",
       body: "Browse and filter players here. Click the + button on any row to add them to your squad.",
       mobileTab: "players",
+      pad: 10,
     },
     {
       target: "#statRemaining",
+      preferred: ".stat-tile--accent",
       title: "Watch the budget",
       body: "You have $50m to spend. This meter tracks how much you've used and what's left.",
       mobileTab: "summary",
-      preferred: ".stat-tile--accent",
     },
     {
       target: "#formationSwitch",
@@ -30,7 +36,7 @@ const Tour = (() => {
     {
       target: "#scoreHelpBtn",
       title: "How points work",
-      body: "Tap this icon anytime to see how fantasy points are calculated for each position — goals, assists, clean sheets, cards.",
+      body: "Tap this icon anytime to see how fantasy points are calculated for each position - goals, assists, clean sheets, cards.",
       mobileTab: null,
     },
     {
@@ -51,14 +57,18 @@ const Tour = (() => {
     {
       target: ".player-token:not(.player-token--empty)",
       title: "Remove a player",
-      body: "Click the × on any player token to remove them from your squad. This frees up a slot and budget.",
+      body: "Click the x on any player token to remove them from your squad. This frees up a slot and budget.",
       mobileTab: "pitch",
+      multi: true,
+      pad: 10,
     },
     {
       target: ".pool",
+      preferred: ".pool.team-shell__rail",
       title: "Add a replacement",
       body: "Pick a new player from the pool. They must fit the same position slot and stay within budget.",
       mobileTab: "players",
+      pad: 10,
     },
     {
       target: "#confirmBtn",
@@ -73,11 +83,37 @@ const Tour = (() => {
   let _overlay = null;
   let _spotlight = null;
   let _card = null;
+  let _mattes = null;
   let _active = false;
   let _isTransfer = false;
+  let _listenersBound = false;
+  let _hasShownStep = false;
+  let _pendingSync = false;
 
   function isMobile() {
     return window.innerWidth <= MOBILE_BREAK;
+  }
+
+  function px(value) {
+    return `${Math.max(0, Math.round(value))}px`;
+  }
+
+  function fixedPx(value) {
+    const zoom = parseFloat(window.getComputedStyle(document.documentElement).zoom) || 1;
+    return px(value / zoom);
+  }
+
+  function nextFrame(fn) {
+    requestAnimationFrame(() => requestAnimationFrame(fn));
+  }
+
+  function scheduleSync() {
+    if (_pendingSync) return;
+    _pendingSync = true;
+    requestAnimationFrame(() => {
+      _pendingSync = false;
+      if (_active) syncCurrentStep(false);
+    });
   }
 
   function ensureDOM() {
@@ -85,6 +121,20 @@ const Tour = (() => {
 
     _overlay = document.createElement("div");
     _overlay.className = "tour-overlay";
+
+    _mattes = {
+      top: document.createElement("div"),
+      right: document.createElement("div"),
+      bottom: document.createElement("div"),
+      left: document.createElement("div"),
+    };
+
+    Object.keys(_mattes).forEach((key) => {
+      const matte = _mattes[key];
+      matte.className = `tour-matte tour-matte--${key}`;
+      matte.dataset.matte = key;
+      _overlay.appendChild(matte);
+    });
 
     _spotlight = document.createElement("div");
     _spotlight.className = "tour-spotlight";
@@ -99,124 +149,193 @@ const Tour = (() => {
     document.body.appendChild(_overlay);
 
     _overlay.addEventListener("click", (e) => {
-      if (e.target === _overlay) skip();
+      if (e.target === _overlay || e.target.dataset.matte) skip();
     });
+
+    if (_listenersBound) return;
+    _listenersBound = true;
 
     document.addEventListener("keydown", (e) => {
       if (!_active) return;
       if (e.key === "Escape") skip();
-      else if (e.key === "ArrowRight") next();
-      else if (e.key === "ArrowLeft") prev();
+      if (e.key === "ArrowRight") next();
+      if (e.key === "ArrowLeft") prev();
     });
 
     window.addEventListener("resize", () => {
-      if (_active) positionSpotlight();
+      if (_active) scheduleSync();
     }, { passive: true });
 
     window.addEventListener("scroll", () => {
-      if (_active) positionSpotlight();
+      if (_active) scheduleSync();
     }, { passive: true });
   }
 
-  function resolveTarget(step) {
-    let el = null;
+  function selectElements(selector) {
+    if (!selector) return [];
+    try {
+      return Array.from(document.querySelectorAll(selector));
+    } catch (err) {
+      return [];
+    }
+  }
+
+  function getFallbackElements(step) {
+    if (step.target === "#saveSquadBtn") {
+      return selectElements(".summary-actions .btn--primary");
+    }
+    if (step.target === "#confirmBtn") {
+      return selectElements("#confirmBtn");
+    }
+    return [];
+  }
+
+  function getVisibleElements(step) {
+    let elements = [];
+
     if (step.preferred) {
-      el = document.querySelector(step.preferred);
+      elements = selectElements(step.preferred);
     }
-    if (!el) {
-      el = document.querySelector(step.target);
+    if (!elements.length) {
+      elements = selectElements(step.target);
     }
-    if (!el && step.target === "#saveSquadBtn") {
-      el = document.querySelector(".summary-actions .btn--primary");
+    if (!elements.length) {
+      elements = getFallbackElements(step);
     }
-    if (!el && step.target === "#confirmBtn") {
-      el = document.querySelector(".summary-actions .btn--primary");
-    }
-    return el;
+
+    return elements.filter((el) => {
+      if (!el || !el.isConnected) return false;
+      const rect = el.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    });
   }
 
-  let _firstShow = true;
+  function getFrame(step) {
+    const elements = getVisibleElements(step);
+    if (!elements.length) return null;
 
-  function positionSpotlight() {
-    const step = _steps[_index];
-    if (!step) return;
-    const target = resolveTarget(step);
-    if (!target) return;
+    const pad = step.pad || DEFAULT_PAD;
+    const source = step.multi ? elements : [elements[0]];
 
-    const rect = target.getBoundingClientRect();
-    const pad = 4;
+    let top = Infinity;
+    let left = Infinity;
+    let right = -Infinity;
+    let bottom = -Infinity;
 
-    const top = rect.top - pad;
-    const left = rect.left - pad;
-    const right = rect.right + pad;
-    const bottom = rect.bottom + pad;
+    source.forEach((el) => {
+      const rect = el.getBoundingClientRect();
+      if (rect.top < top) top = rect.top;
+      if (rect.left < left) left = rect.left;
+      if (rect.right > right) right = rect.right;
+      if (rect.bottom > bottom) bottom = rect.bottom;
+    });
 
-    if (_firstShow) {
-      _spotlight.style.transition = "none";
-      _firstShow = false;
-    } else {
-      _spotlight.style.transition = "";
-    }
-
-    _spotlight.style.top = top + "px";
-    _spotlight.style.left = left + "px";
-    _spotlight.style.width = (right - left) + "px";
-    _spotlight.style.height = (bottom - top) + "px";
-    _spotlight.style.borderRadius = window.getComputedStyle(target).borderRadius;
-
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const w = right - left;
-    const h = bottom - top;
-    const radius = parseFloat(window.getComputedStyle(target).borderRadius) || 0;
-    const svg =
-      '<svg xmlns="http://www.w3.org/2000/svg" width="' + vw + '" height="' + vh + '" viewBox="0 0 ' + vw + ' ' + vh + '">' +
-      '<defs><mask id="tourHole">' +
-      '<rect width="100%" height="100%" fill="white"/>' +
-      '<rect x="' + left + '" y="' + top + '" width="' + w + '" height="' + h + '" rx="' + radius + '" fill="black"/>' +
-      '</mask></defs>' +
-      '<rect width="100%" height="100%" fill="white" mask="url(#tourHole)"/>' +
-      '</svg>';
-    const maskUrl = "url('data:image/svg+xml;utf8," + encodeURIComponent(svg) + "')";
-    _overlay.style.maskImage = maskUrl;
-    _overlay.style.webkitMaskImage = maskUrl;
-    _overlay.style.maskRepeat = "no-repeat";
-    _overlay.style.webkitMaskRepeat = "no-repeat";
-    _overlay.style.maskSize = "100% 100%";
-    _overlay.style.webkitMaskSize = "100% 100%";
-    _overlay.style.clipPath = "none";
-    _overlay.style.webkitClipPath = "none";
-
-    if (!isMobile()) {
-      positionCardDesktop(rect);
-    }
-  }
-
-  function positionCardDesktop(targetRect) {
-    const cardRect = _card.getBoundingClientRect();
-    const margin = 16;
-    const viewportH = window.innerHeight;
     const viewportW = window.innerWidth;
-    const cardW = cardRect.width || 280;
-    const cardH = cardRect.height || 140;
+    const viewportH = window.innerHeight;
 
-    let top;
-    const spaceBelow = viewportH - (targetRect.bottom + margin + cardH);
-    const spaceAbove = targetRect.top - margin - cardH;
+    top = Math.max(0, top - pad);
+    left = Math.max(0, left - pad);
+    right = Math.min(viewportW, right + pad);
+    bottom = Math.min(viewportH, bottom + pad);
 
-    if (spaceBelow >= 0) {
-      top = targetRect.bottom + margin;
-    } else if (spaceAbove >= 0) {
-      top = targetRect.top - margin - cardH;
-    } else {
-      top = Math.max(margin, (viewportH - cardH) / 2);
+    let radius = 22;
+    if (!step.multi && source[0]) {
+      radius = parseFloat(window.getComputedStyle(source[0]).borderRadius) || 22;
     }
 
-    let left = targetRect.left + (targetRect.width / 2) - (cardW / 2);
-    left = Math.max(margin, Math.min(left, viewportW - cardW - margin));
+    return {
+      elements: source,
+      top,
+      left,
+      right,
+      bottom,
+      width: Math.max(1, right - left),
+      height: Math.max(1, bottom - top),
+      radius,
+    };
+  }
 
-    _card.style.top = top + "px";
-    _card.style.left = left + "px";
+  function updateMattes(frame) {
+    if (!_overlay || !_mattes || !_spotlight) return;
+
+    _spotlight.style.top = fixedPx(frame.top);
+    _spotlight.style.left = fixedPx(frame.left);
+    _spotlight.style.width = fixedPx(frame.width);
+    _spotlight.style.height = fixedPx(frame.height);
+    _spotlight.style.borderRadius = fixedPx(Math.max(14, frame.radius));
+
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+
+    _mattes.top.style.top = "0px";
+    _mattes.top.style.left = "0px";
+    _mattes.top.style.width = fixedPx(viewportW);
+    _mattes.top.style.height = fixedPx(frame.top);
+
+    _mattes.right.style.top = fixedPx(frame.top);
+    _mattes.right.style.left = fixedPx(frame.right);
+    _mattes.right.style.width = fixedPx(viewportW - frame.right);
+    _mattes.right.style.height = fixedPx(frame.height);
+
+    _mattes.bottom.style.top = fixedPx(frame.bottom);
+    _mattes.bottom.style.left = "0px";
+    _mattes.bottom.style.width = fixedPx(viewportW);
+    _mattes.bottom.style.height = fixedPx(viewportH - frame.bottom);
+
+    _mattes.left.style.top = fixedPx(frame.top);
+    _mattes.left.style.left = "0px";
+    _mattes.left.style.width = fixedPx(frame.left);
+    _mattes.left.style.height = fixedPx(frame.height);
+  }
+
+  function positionCardDesktop(frame) {
+    if (!_card) return;
+
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+    const cardW = _card.offsetWidth || 320;
+    const cardH = _card.offsetHeight || 180;
+
+    const placements = [];
+    const centerTop = frame.top + (frame.height / 2) - (cardH / 2);
+    const centerLeft = frame.left + (frame.width / 2) - (cardW / 2);
+
+    if (viewportW - frame.right >= cardW + CARD_GAP + EDGE_MARGIN) {
+      placements.push({ top: centerTop, left: frame.right + CARD_GAP });
+    }
+    if (frame.left >= cardW + CARD_GAP + EDGE_MARGIN) {
+      placements.push({ top: centerTop, left: frame.left - cardW - CARD_GAP });
+    }
+    if (viewportH - frame.bottom >= cardH + CARD_GAP + EDGE_MARGIN) {
+      placements.push({ top: frame.bottom + CARD_GAP, left: centerLeft });
+    }
+    if (frame.top >= cardH + CARD_GAP + EDGE_MARGIN) {
+      placements.push({ top: frame.top - cardH - CARD_GAP, left: centerLeft });
+    }
+    if (!placements.length) {
+      placements.push({ top: centerTop, left: centerLeft });
+    }
+
+    const chosen = placements[0];
+    const maxLeft = viewportW - cardW - EDGE_MARGIN;
+    const maxTop = viewportH - cardH - EDGE_MARGIN;
+
+    const left = Math.min(Math.max(EDGE_MARGIN, chosen.left), Math.max(EDGE_MARGIN, maxLeft));
+    const top = Math.min(Math.max(EDGE_MARGIN, chosen.top), Math.max(EDGE_MARGIN, maxTop));
+
+    _card.style.top = fixedPx(top);
+    _card.style.left = fixedPx(left);
+  }
+
+  function setCardMode() {
+    if (!_card) return;
+    if (isMobile()) {
+      _card.classList.add("is-mobile");
+      _card.style.top = "";
+      _card.style.left = "";
+    } else {
+      _card.classList.remove("is-mobile");
+    }
   }
 
   function switchMobileTab(tab) {
@@ -227,6 +346,7 @@ const Tour = (() => {
   }
 
   function renderCard() {
+    _card.classList.remove("is-ready");
     const step = _steps[_index];
     const total = _steps.length;
 
@@ -257,49 +377,66 @@ const Tour = (() => {
     });
   }
 
+  function syncCurrentStep(animate) {
+    const step = _steps[_index];
+    if (!step) return false;
+
+    const frame = getFrame(step);
+    if (!frame) return false;
+
+    updateMattes(frame);
+    setCardMode();
+
+    if (!isMobile()) {
+      positionCardDesktop(frame);
+    }
+
+    return true;
+  }
+
   function showStep() {
     const step = _steps[_index];
     if (!step) return;
 
     switchMobileTab(step.mobileTab);
 
-    requestAnimationFrame(() => {
-      const target = resolveTarget(step);
-      if (!target) {
+    nextFrame(() => {
+      const frame = getFrame(step);
+      if (!frame) {
         if (_index < _steps.length - 1) {
           _index = _index + 1;
           showStep();
-          return;
         } else {
           finish();
-          return;
         }
+        return;
       }
 
-      target.scrollIntoView({ behavior: "auto", block: "center", inline: "center" });
+      frame.elements[0].scrollIntoView({ behavior: "auto", block: "center", inline: "center" });
 
-      requestAnimationFrame(() => {
-        positionSpotlight();
+      nextFrame(() => {
         renderCard();
+        setCardMode();
+        _card.style.visibility = "hidden";
 
-        if (isMobile()) {
-          _card.classList.add("is-mobile");
-          _card.style.top = "";
-          _card.style.left = "";
-        } else {
-          _card.classList.remove("is-mobile");
+        if (!syncCurrentStep(_hasShownStep)) {
+          _card.style.visibility = "";
+          return;
         }
 
         _overlay.classList.add("is-visible");
 
         requestAnimationFrame(() => {
-          positionSpotlight();
+          _card.style.visibility = "";
+          syncCurrentStep(_hasShownStep);
+          _card.classList.add("is-ready");
+          _hasShownStep = true;
         });
       });
     });
   }
 
-  const ENABLED = false;
+  const ENABLED = true;
 
   function start(steps) {
     if (!ENABLED || _active) return;
@@ -307,7 +444,7 @@ const Tour = (() => {
     _isTransfer = _steps === TRANSFER_STEPS;
     _index = 0;
     _active = true;
-    _firstShow = true;
+    _hasShownStep = false;
     ensureDOM();
     showStep();
   }
@@ -326,6 +463,31 @@ const Tour = (() => {
     if (!_active || _index === 0) return;
     _index = _index - 1;
     showStep();
+  }
+
+  function cleanup() {
+    _active = false;
+    _index = 0;
+    _isTransfer = false;
+    _hasShownStep = false;
+
+    if (_overlay) {
+      _overlay.classList.remove("is-visible");
+    }
+    if (_spotlight) {
+      _spotlight.style.top = "";
+      _spotlight.style.left = "";
+      _spotlight.style.width = "";
+      _spotlight.style.height = "";
+      _spotlight.style.borderRadius = "";
+    }
+    if (_card) {
+      _card.innerHTML = "";
+      _card.style.visibility = "";
+      _card.style.top = "";
+      _card.style.left = "";
+      _card.classList.remove("is-mobile", "is-ready");
+    }
   }
 
   function skip() {
@@ -348,23 +510,7 @@ const Tour = (() => {
     cleanup();
   }
 
-  function cleanup() {
-    _active = false;
-    _index = 0;
-    _isTransfer = false;
-    if (_overlay) {
-      _overlay.classList.remove("is-visible");
-      setTimeout(() => {
-        if (_overlay && _overlay.parentNode) {
-          _overlay.parentNode.removeChild(_overlay);
-        }
-        _overlay = null;
-        _spotlight = null;
-        _card = null;
-      }, 200);
-    }
-  }
-
   return { start, next, prev, skip, finish, BUILD_STEPS, TRANSFER_STEPS };
 })();
+
 window.Tour = Tour;
