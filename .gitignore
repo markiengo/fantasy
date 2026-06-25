@@ -1,7 +1,33 @@
-.env
-.venv
+# ── Python ────────────────────────────────────────────────────────────────────
+.venv/
 **/__pycache__/
 *.pyc
-CLAUDE.md
+.coverage
+htmlcov/
+.pytest_cache/
+pytest-cache-files-*/
+*.log
+
+# ── Secrets ───────────────────────────────────────────────────────────────────
+.env
+
+# ── Personal / local-only docs ────────────────────────────────────────────────
 personal/
+memory.md
+CLAUDE.md
+AGENTS.md
+PRODUCT.md
+
+# ── AI tooling ────────────────────────────────────────────────────────────────
+.agents
+.codex
+.impeccable
+.planning
+claude-design/
+skills-lock.json
+.mcp.json
+.claude
+
+# ── Design assets (large, not source) ────────────────────────────────────────
 frontend/moodboard
+frontend/docs

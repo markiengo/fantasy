@@ -1,8 +1,3 @@
-/* ============================================================================
-   charts.js — tiny dependency-free chart renderers (bar + donut) used by the
-   Scores & Analytics screen. Pure DOM/CSS; no external chart library.
-   ============================================================================ */
-
 const Charts = (() => {
   /* Vertical bar chart: data = [{label, value}] into a .bars container */
   function bars(container, data) {
@@ -14,32 +9,45 @@ const Charts = (() => {
       const h = Math.max(2, (d.value / max) * 100);
       html += `<div class="bar">
         <span class="bar__val">${d.value}</span>
-        <div class="bar__fill" style="height:${h}%"></div>
+        <div class="bar__fill" style="height:0%;transition:height var(--dur-slow) var(--ease-spring)" data-target="${h}"></div>
         <span class="bar__label">${d.label}</span>
       </div>`;
     }
     container.innerHTML = html;
+    requestAnimationFrame(() => {
+      container.querySelectorAll(".bar__fill").forEach((fill) => {
+        fill.style.height = fill.dataset.target + "%";
+      });
+    });
   }
 
-  /* Donut via conic-gradient: data = [{label, value, color}] */
+  /* Donut via SVG: data = [{label, value, color}] */
   function donut(el, centerEl, legendEl, data) {
     let total = 0;
     for (const d of data) total += d.value;
     if (total <= 0) {
-      el.style.background = "var(--surface-2)";
+      el.innerHTML = '';
+      el.style.background = "rgba(255,255,255,.06)";
       if (centerEl) centerEl.textContent = "0";
       if (legendEl) legendEl.innerHTML = `<p class="empty-note">No contributions yet.</p>`;
       return;
     }
+    const size = 112;
+    const stroke = 13;
+    const r = (size - stroke) / 2;
+    const circ = 2 * Math.PI * r;
     let acc = 0;
-    const stops = [];
+    let segments = "";
     for (const d of data) {
-      const start = (acc / total) * 360;
+      const frac = d.value / total;
+      const dash = frac * circ;
+      const offset = (acc / total) * circ;
+      segments += `<circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${d.color}" stroke-width="${stroke}" stroke-dasharray="${dash} ${circ - dash}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${size/2} ${size/2})" style="transition: stroke-dasharray var(--dur-slow) var(--ease-spring)"/>`;
       acc += d.value;
-      const end = (acc / total) * 360;
-      stops.push(`${d.color} ${start}deg ${end}deg`);
     }
-    el.style.background = `conic-gradient(${stops.join(", ")})`;
+    el.style.background = "transparent";
+    el.style.boxShadow = "none";
+    el.innerHTML = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="overflow:visible">${segments}</svg>`;
     if (centerEl) centerEl.textContent = total;
 
     if (legendEl) {
@@ -48,7 +56,7 @@ const Charts = (() => {
         const pct = Math.round((d.value / total) * 100);
         html += `<div class="legend__item">
           <span class="legend__swatch" style="background:${d.color}"></span>
-          ${d.label} — ${d.value} (${pct}%)
+          ${d.label} \u2014 ${d.value} (${pct}%)
         </div>`;
       }
       legendEl.innerHTML = html;

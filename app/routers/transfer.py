@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from app.database import get_db
+from app.auth import get_current_user
 from app.queries.transfer import get_transfers, post_transfer, count_transfers
 from app.queries.player import get_player
 from app.queries.squad import get_effective_squad
@@ -11,13 +12,21 @@ from app.core.validation import validate_transfer_window, simulate_transfer, val
 router = APIRouter()
 
 @router.get("/transfers")
-def get_transfers_route(conn = Depends(get_db), matchday: int = None):
-    result = get_transfers(conn, matchday)
+def get_transfers_route(
+    conn = Depends(get_db),
+    matchday: int = None,
+    current_user = Depends(get_current_user),
+):
+    result = get_transfers(conn, current_user["user_id"], matchday)
     return result
 
 @router.post("/transfer", status_code = 201)
-def post_transfer_route(body: TransferCreate, conn = Depends(get_db)):
-    user_id = 1
+def post_transfer_route(
+    body: TransferCreate,
+    conn = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    user_id = current_user["user_id"]
 
     player_in = get_player(conn, body.player_in_id)
     if not player_in:
@@ -27,7 +36,7 @@ def post_transfer_route(body: TransferCreate, conn = Depends(get_db)):
         raise HTTPException(status_code=404, detail=f"Player {body.player_out_id} not found")
 
     first_kickoff = get_matchday_start(conn, body.matchday)
-    if first_kickoff:
+    if first_kickoff is not None:
         now_utc = datetime.now(timezone.utc)
         validate_transfer_window(now_utc, first_kickoff)
 

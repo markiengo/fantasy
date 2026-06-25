@@ -1,8 +1,3 @@
-/* ============================================================================
-   ui.js — small reusable UI primitives. Custom dropdown (replaces native
-   <select>) with glass panel, keyboard support, and outside-click close.
-   ============================================================================ */
-
 const Dropdown = (() => {
   const open = new Set();
 
@@ -44,6 +39,7 @@ const Dropdown = (() => {
     });
 
     panel.addEventListener("click", (e) => {
+      e.stopPropagation();
       const opt = e.target.closest(".dropdown__opt");
       if (!opt) return;
       value = opt.dataset.value;

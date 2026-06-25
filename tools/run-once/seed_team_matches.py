@@ -1,7 +1,7 @@
 """
-seed_foundation.py — populate users, team, and match from ESPN; build tools/maps/matchmap.json.
+seed_team_matches.py — populate users, team, and match from ESPN; build tools/maps/matchmap.json.
 
-    python tools/seed_foundation.py [--dry-run]
+    python tools/run-once/seed_team_matches.py [--dry-run]
 
 Idempotent: teams upsert on team_id; matches skip if (team1, team2, stage) already exists.
 Re-run after knockout draws to back-fill fixtures once teams are known.
@@ -17,7 +17,8 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+tools_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, tools_dir)
 import espn_client as espn
 
 tournament_start = date(2026, 6, 11)
@@ -31,7 +32,7 @@ knockout_matchday = {
     "final":        8,
 }
 
-maps_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "maps")
+maps_dir = os.path.join(tools_dir, "maps")
 
 
 def date_strings():

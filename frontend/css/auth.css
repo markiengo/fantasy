@@ -1,0 +1,294 @@
+.login-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.login-screen__ambient {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.login-screen__ambient .glow {
+  position: absolute;
+  width: 520px;
+  height: 520px;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: .22;
+}
+
+.login-screen__ambient .glow--lime {
+  top: -180px;
+  right: 8%;
+  background: rgba(198, 242, 74, .36);
+}
+
+.login-screen__ambient .glow--blue {
+  bottom: 5%;
+  left: 10%;
+  background: rgba(122, 162, 255, .24);
+}
+
+.login-screen__ambient .glow--warm {
+  top: 45%;
+  right: 4%;
+  background: rgba(255, 176, 108, .14);
+}
+
+.login-screen__card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 380px;
+  border-radius: var(--r-2xl);
+  background: var(--panel-strong);
+  border: 1px solid var(--stroke-strong);
+  box-shadow: var(--shadow-panel), 0 0 60px -16px rgba(198, 242, 74, .14);
+  overflow: hidden;
+  animation: loginCardIn 400ms var(--ease-spring);
+}
+
+.login-screen__card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 0%, rgba(198, 242, 74, .10) 0%, transparent 50%),
+    radial-gradient(circle at 70% 100%, rgba(122, 162, 255, .06) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+@keyframes loginCardIn {
+  from { opacity: 0; transform: translateY(12px) scale(.98); }
+  to { opacity: 1; transform: none; }
+}
+
+.login-screen__content {
+  position: relative;
+  z-index: 1;
+  padding: 32px 32px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.login-screen__brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 0;
+}
+
+.login-screen__brand .brand__mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.login-screen__brand .brand__mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.login-screen__brand .brand__name {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -.5px;
+}
+
+.login-screen__brand .brand__sub {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.login-screen__title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: center;
+  letter-spacing: -.4px;
+}
+
+.login-screen__subtitle {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.45;
+  max-width: 300px;
+  margin: 0 auto;
+  display: none;
+}
+
+.login-screen__mode {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.login-screen__mode .auth-form__link {
+  font-weight: 600;
+}
+
+.input-with-toggle {
+  position: relative;
+  width: 100%;
+}
+
+.input-with-toggle .input--auth {
+  padding-right: 42px;
+}
+
+.input-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: var(--r-xs);
+  transition: color var(--dur-fast) var(--ease);
+}
+
+.input-toggle:hover {
+  color: var(--ink);
+}
+
+.input-toggle .icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* Guest banner inside app screen */
+.guest-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: rgba(198, 242, 74, .08);
+  border-bottom: 1px solid rgba(198, 242, 74, .2);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.guest-banner .icon-btn {
+  position: absolute;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+}
+
+/* Auth overlay (check-email / reset-sent) */
+.auth-overlay {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 380px;
+  animation: loginCardIn 400ms var(--ease-spring);
+}
+
+.auth-overlay__card {
+  overflow: hidden;
+}
+
+.auth-overlay__content {
+  position: relative;
+  z-index: 1;
+  padding: 32px 32px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.auth-overlay__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent-12);
+  border: 1px solid rgba(198, 242, 74, .25);
+  color: var(--accent);
+}
+
+.auth-overlay__icon .icon {
+  width: 26px;
+  height: 26px;
+}
+
+.auth-overlay__title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -.4px;
+}
+
+.auth-overlay__body {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+  max-width: 300px;
+}
+
+.auth-overlay__body strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* Loading state for auth buttons */
+.btn--loading {
+  pointer-events: none;
+  opacity: .65;
+}
+
+@media (max-width: 480px) {
+  .login-screen {
+    padding: 16px;
+  }
+
+  .login-screen__content {
+    padding: 24px 20px 20px;
+  }
+
+  .login-screen__title {
+    font-size: 18px;
+  }
+
+  .login-screen__ambient .glow {
+    width: 300px;
+    height: 300px;
+  }
+}

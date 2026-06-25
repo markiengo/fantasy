@@ -1,7 +1,9 @@
 # UI Spec — Phase 1: App Shell (Layout · Navigation · Pitch · Sidebar)
 
-**Status:** Locked screen/component contract for **Phase 1** of `UI-contract.md` build order.
-**Consumes:** [`design-system.md`](./design-system.md) (all tokens). **Architecture:** [`UI-contract.md`](../../docs/frontend/UI-contract.md).
+**Status:** historical Phase 1 planning contract. The current runtime app has moved beyond this
+static shell; verify live behavior against `frontend/index.html`, `frontend/js/*`, and
+`docs/API.md`.
+**Consumes:** [`design-system.md`](./design-system.md) (all tokens). **Architecture:** [`UI-contract.md`](./UI-contract.md).
 
 Phase 1 delivers the **static app shell** — structure, layout, and styling of every region, with empty/stub
 content. **No data fetching, no formation logic, no interactivity beyond hover/focus.** Data binding lands
@@ -152,7 +154,7 @@ Terse and sporty. **UPPERCASE** for nav, round names, stat micro-labels, buttons
 - Empty PlayerSlots have `aria-label="Empty {position} slot"`.
 
 ### 3.3 Asset notes
-- Logo: `docs/frontend/moodboard/logo.png` → move/optimize into `frontend/assets/` during build.
+- Logo: runtime asset is `frontend/assets/logo.avif`.
 - Fonts: load **Anton** + **Noto Sans** via `@font-face` or Google Fonts. **Never** load or reference Inter.
 - Team flags: emoji or a small flag sprite/SVG set keyed by `team_id` (e.g. `ARG`, `BRA`) — sourcing decided in Phase 2.
 
@@ -160,9 +162,8 @@ Terse and sporty. **UPPERCASE** for nav, round names, stat micro-labels, buttons
 
 ## 4. Open issues (flag before later phases)
 
-- **Backend endpoint naming (resolve before Phase 4 wiring):** `UI-contract.md` §8 lists `GET /fixtures` and
-  `GET /scores`, but the **live API is `GET /api/matches` and `GET /api/score`** (singular, `/api` prefix).
-  This spec binds to the **live** names. Confirm with backend and reconcile `UI-contract.md`.
+- **Backend endpoint naming:** the live API is `GET /api/matches` for fixtures and
+  `GET /api/score` for scoring. `POST /api/load-stats` supports the Update Data flow.
 - **"Selected 15/15" in `navbar.png`** is from a generic fantasy mock; **this game's squad is 11** (GR-02).
   The stat card reads **`11/11`**, not 15.
 - **Captain/multiplier** appears in some references (`clone.png`) but is **V2** (`UI-contract.md` §12) — **out of scope**, no UI in Phase 1.

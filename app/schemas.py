@@ -72,19 +72,11 @@ class TransferCreate(BaseModel):
     player_out_id: int
     matchday: int
 
-class PlayerStatCreate(BaseModel):
-    player_id: int
-    match_id: int
-    goals: int
-    assists: int 
-    minutes_played: int 
-    yellow_cards: int 
-    red_cards: int
-    clean_sheet: int 
-
-class PlayerStatCreateBulk(BaseModel):
-    stats: list[PlayerStatCreate] 
-
+class LoadStatsRequest(BaseModel):
+    date: Optional[str] = None
+    from_date: Optional[str] = None
+    to_date: Optional[str] = None
+    dry_run: bool = False
 
 
 

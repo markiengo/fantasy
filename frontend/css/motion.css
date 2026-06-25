@@ -1,0 +1,356 @@
+/* --- 1. SCREEN TRANSITIONS ----------------------------------------------- */
+
+@keyframes screenEnter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+.screen.is-active .squad__row--top > .panel:nth-child(1) {
+  animation: panelEnter 340ms var(--ease) both;
+  animation-delay: 60ms;
+}
+.screen.is-active .squad__row--top > .panel:nth-child(2) {
+  animation: panelEnter 340ms var(--ease) both;
+  animation-delay: 120ms;
+}
+.screen.is-active .squad__row--bottom > .panel:nth-child(1) {
+  animation: panelEnter 340ms var(--ease) both;
+  animation-delay: 180ms;
+}
+.screen.is-active .squad__row--bottom > .panel:nth-child(2) {
+  animation: panelEnter 340ms var(--ease) both;
+  animation-delay: 240ms;
+}
+@keyframes panelEnter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+.screen.is-active .fixtures-layout > *:nth-child(1) {
+  animation: panelEnter 340ms var(--ease) both;
+  animation-delay: 60ms;
+}
+.screen.is-active .fixtures-layout > *:nth-child(2) {
+  animation: panelEnter 340ms var(--ease) both;
+  animation-delay: 140ms;
+}
+
+.screen.is-active .dash__row--metrics > .panel:nth-child(1) {
+  animation: panelEnter 340ms var(--ease) both;
+  animation-delay: 40ms;
+}
+.screen.is-active .dash__row--metrics > .panel:nth-child(2) {
+  animation: panelEnter 340ms var(--ease) both;
+  animation-delay: 120ms;
+}
+.screen.is-active .dash__row--metrics > .panel:nth-child(3) {
+  animation: panelEnter 340ms var(--ease) both;
+  animation-delay: 200ms;
+}
+.screen.is-active .dash__row--three > .panel:nth-child(1) {
+  animation: panelEnter 340ms var(--ease) both;
+  animation-delay: 280ms;
+}
+.screen.is-active .dash__row--three > .panel:nth-child(2) {
+  animation: panelEnter 340ms var(--ease) both;
+  animation-delay: 340ms;
+}
+.screen.is-active .dash__row--three > .panel:nth-child(3) {
+  animation: panelEnter 340ms var(--ease) both;
+  animation-delay: 400ms;
+}
+
+/* --- 2. MICRO-INTERACTIONS ----------------------------------------------- */
+
+.chip {
+  transition: background 120ms var(--ease-spring), color 120ms var(--ease-spring), transform 100ms var(--ease-spring);
+}
+.chip:active {
+  transform: scale(0.93);
+}
+
+.seg__btn,
+.segmented__btn {
+  transition: background 120ms var(--ease-spring), color 120ms var(--ease-spring);
+}
+
+.stepper__btn {
+  transition: background var(--dur-fast) var(--ease), transform 100ms var(--ease-spring);
+}
+.stepper__btn:active:not(:disabled) {
+  transform: scale(0.88);
+}
+
+.round {
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), transform 100ms var(--ease-spring);
+}
+.round:active {
+  transform: scale(0.97);
+}
+
+.pool-row {
+  transition: background var(--dur-fast) var(--ease), transform 160ms var(--ease);
+}
+.pool-row:hover {
+  transform: translateX(3px);
+}
+
+.player-token:not(.player-token--empty) {
+  transition: transform 160ms var(--ease);
+}
+.player-token:not(.player-token--empty):hover {
+  transform: translateY(-2px) scale(1.04);
+}
+
+.player-token--empty {
+  transition: transform 100ms var(--ease-spring);
+}
+.player-token--empty:active {
+  transform: scale(0.92);
+}
+
+.meter__fill {
+  transition: width 500ms var(--ease);
+}
+
+.btn-update {
+  transition: opacity var(--dur-fast) var(--ease), transform 100ms var(--ease-spring);
+}
+.btn-update:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.btn-update.is-loading .btn-update__icon {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.dropdown__panel {
+  transition: opacity 160ms var(--ease), transform 160ms var(--ease-spring);
+}
+.dropdown.is-open .dropdown__panel {
+  transform: scale(1) translateY(0);
+}
+
+/* --- 3. LOGIN SCREEN ----------------------------------------------------- */
+
+.login-screen__ambient .glow--lime {
+  animation: glowDriftA 14s ease-in-out infinite alternate;
+}
+.login-screen__ambient .glow--blue {
+  animation: glowDriftB 18s ease-in-out infinite alternate;
+}
+.login-screen__ambient .glow--warm {
+  animation: glowDriftC 16s ease-in-out infinite alternate;
+}
+@keyframes glowDriftA {
+  from { transform: translate(0, 0); }
+  to { transform: translate(-50px, 35px); }
+}
+@keyframes glowDriftB {
+  from { transform: translate(0, 0); }
+  to { transform: translate(60px, -25px); }
+}
+@keyframes glowDriftC {
+  from { transform: translate(0, 0); }
+  to { transform: translate(-35px, -45px); }
+}
+
+.login-screen__content > * {
+  animation: formFieldIn 380ms var(--ease) both;
+}
+.login-screen__content > *:nth-child(1) { animation-delay: 80ms; }
+.login-screen__content > *:nth-child(2) { animation-delay: 140ms; }
+.login-screen__content > *:nth-child(3) { animation-delay: 200ms; }
+.login-screen__content > *:nth-child(4) { animation-delay: 260ms; }
+.login-screen__content > *:nth-child(5) { animation-delay: 320ms; }
+.login-screen__content > *:nth-child(6) { animation-delay: 380ms; }
+.login-screen__content > *:nth-child(7) { animation-delay: 440ms; }
+.login-screen__content > *:nth-child(8) { animation-delay: 500ms; }
+@keyframes formFieldIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.auth-overlay {
+  animation: authOverlayIn 300ms var(--ease) both;
+}
+@keyframes authOverlayIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+.app__ambient .glow--lime {
+  animation: glowDriftA 22s ease-in-out infinite alternate;
+}
+.app__ambient .glow--blue {
+  animation: glowDriftB 26s ease-in-out infinite alternate;
+}
+.app__ambient .glow--warm {
+  animation: glowDriftC 24s ease-in-out infinite alternate;
+}
+
+/* --- 4. DATA LOADING ----------------------------------------------------- */
+
+.toast {
+  transition: opacity 200ms var(--ease), transform 280ms var(--ease-spring);
+}
+.toast.is-hidden {
+  opacity: 0;
+  transform: translateY(16px) scale(0.95);
+}
+
+.rule-alert {
+  transition: opacity 200ms var(--ease), transform 280ms var(--ease-spring);
+}
+.rule-alert.is-hidden {
+  opacity: 0;
+  transform: translateY(-12px) scale(0.95);
+}
+
+.pool-list .pool-row {
+  animation: poolRowIn 200ms var(--ease) both;
+  animation-delay: calc(min(var(--i, 0), 12) * 25ms);
+}
+@keyframes poolRowIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.pitch--intro .player-token {
+  animation: tokenIn 320ms var(--ease-spring) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+@keyframes tokenIn {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: none; }
+}
+
+.player-token.is-new {
+  animation: tokenPop 360ms var(--ease-spring) both;
+}
+@keyframes tokenPop {
+  0% { opacity: 0; transform: scale(0.6); }
+  60% { transform: scale(1.08); }
+  100% { opacity: 1; transform: none; }
+}
+
+/* --- 5. GUIDED TOUR ------------------------------------------------------- */
+
+.tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(8, 9, 10, 0.55);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms var(--ease);
+}
+
+.tour-overlay.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.tour-spotlight {
+  position: absolute;
+  border-radius: var(--r-lg);
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 20px rgba(198, 242, 74, 0.35);
+  pointer-events: none;
+  z-index: 201;
+}
+
+.tour-card {
+  position: absolute;
+  max-width: 320px;
+  background: var(--panel-strong);
+  border: 1px solid var(--stroke-mid);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-panel);
+  padding: 20px;
+  animation: tourCardIn 280ms var(--ease) both;
+  z-index: 202;
+}
+
+.tour-card__title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+
+.tour-card__body {
+  font-size: 13px;
+  color: var(--ink-2);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.tour-card__nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tour-card__back {
+  margin-right: auto;
+}
+
+.tour-card__dots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.tour-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--stroke-mid);
+  transition: background 160ms var(--ease);
+}
+
+.tour-dot.is-active {
+  background: var(--accent);
+}
+
+.tour-card__skip {
+  color: var(--faint);
+  font-size: var(--fs-xs);
+}
+
+.tour-card__next {
+  margin-left: auto;
+}
+
+@keyframes tourCardIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes tourSheetIn {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}
+
+@media (max-width: 760px) {
+  .tour-card {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-width: none;
+    border-radius: var(--r-2xl) var(--r-2xl) 0 0;
+    animation: tourSheetIn 280ms var(--ease) both;
+  }
+
+  .tour-card.is-mobile {
+    top: auto;
+    left: auto;
+  }
+}

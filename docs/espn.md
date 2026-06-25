@@ -126,50 +126,70 @@ by each team's appearance order; knockouts are 4 (R32), 5 (R16), 6 (QF), 7 (SF),
 
 ---
 
-## 5. The scripts in `tools/`
+## 5. The scripts and backend loader
 
-All four are plain scripts — no changes to the `app/` backend. They connect to the same
-Supabase database as the app (via `DATABASE_URL` in `.env`) and reuse the app's HTTP API where
-it helps. IDs that ESPN assigns are saved to small JSON files in `tools/maps/` so the scripts
-can talk to each other.
+The seed scripts connect to the same Supabase database as the app (via `DATABASE_URL` in `.env`).
+IDs that ESPN assigns are saved to small JSON files in `tools/maps/` so the loaders can translate
+external IDs to local database IDs.
 
 | Script               | Does                                                                                                                                                        | Run when                                                    |
 | ----------------------| -------------------------------------------------------------------------------------------------------------------------------------------------------------| -------------------------------------------------------------|
 | `espn_client.py`     | thin wrapper over the four ESPN endpoints (the only file that knows ESPN's JSON shape)                                                                      | imported by the others                                      |
-| `seed_foundation.py` | inserts `users` (id 1), all `team`, all `match`; writes `maps/matchmap.json` (ESPN event id → our `match_id`)                                               | once, up front (re-runnable to back-fill knockout fixtures) |
+| `seed_team_matches.py` | inserts `users` (id 1), all `team`, all `match`; writes `maps/matchmap.json` (ESPN event id → our `match_id`)                                               | once, up front (re-runnable to back-fill knockout fixtures) |
 | `seed_players.py`    | inserts every squad into `player`, assigns a `base_price`; writes `maps/idmap.json` (ESPN player id → our `player_id`)                                      | once, up front                                              |
-| `load_stats.py`      | for a finished match, pulls per-player stats and match scores, **POSTs to `/api/playerstats/bulk`** so the real scoring engine computes & stores each score | after each matchday                                         |
+| `scrape_wikipedia_squads.py` | scrapes the Wikipedia "2026 FIFA World Cup squads" page; writes `maps/tournament_squad.json` (48 teams × 26 players — the canonical roster) | once, after FIFA publishes final squads; re-run if injury replacements are announced |
+| `activate_tournament_squads.py` | matches `tournament_squad.json` against the live `player` table by team_id + normalized name (exact + fuzzy), sets `in_tournament = true`, inserts missing players with position-based default prices | after `scrape_wikipedia_squads.py`; re-run when the Wikipedia map changes |
+| `load_stats.py`      | CLI loader for finished matches; pulls per-player stats and POSTs each row to `/api/playerstats` | after each matchday, when running manually                 |
+| `POST /api/load-stats` | backend loader route for the frontend Update Data flow when enabled; updates scorelines and inserts stats through `app/services/stat_loader.py` | when triggering refresh from the app or API                |
 
-`load_stats.py` deliberately posts through the live API instead of writing `playerstat` directly,
-so scores are always computed by `app/core/scoring.py` — never duplicated in the tool. Re-running
-is safe: a stat that already exists comes back as HTTP 400 and is skipped.
+Both stat-loading paths use the existing scoring path, so scores are computed by
+`app/core/scoring.py` and stored in `playerstat.score`. Re-running is safe: a stat that already
+exists is skipped.
 
 ### Typical first run
 
 ```bash
 # 1. preview what would be written (no DB changes)
-python tools/seed_foundation.py --dry-run
+python tools/run-once/seed_team_matches.py --dry-run
 
 # 2. write teams + matches
-python tools/seed_foundation.py
+python tools/run-once/seed_team_matches.py
 
-# 3. write squads
-python tools/seed_players.py
+# 3. write squads from ESPN rosters
+python tools/run-once/seed_players.py
 
-# 4. start the API, then load a finished matchday's stats
+# 4. mark the canonical tournament roster from Wikipedia
+python tools/run-once/scrape_wikipedia_squads.py
+python tools/run-once/activate_tournament_squads.py
+
+# 5. start the API, then load a finished matchday's stats from the CLI
 uvicorn app.main:app --reload
-python tools/load_stats.py --date 20260613
+python tools/repeat/load_stats.py --date 20260613
+
+# or trigger the backend loader endpoint
+curl -X POST http://127.0.0.1:8000/api/load-stats \
+  -H "Content-Type: application/json" \
+  -d "{\"date\":\"20260613\"}"
 ```
 
 `base_price` is assigned by the loader (no data source supplies fantasy prices): a per-position
 base plus a small bonus for stronger nations, clamped to a 4.0–8.5 band so valid squads always
 fit the budget. It's a deliberate, tunable convention documented inline in `seed_players.py`.
+Players inserted by `activate_tournament_squads.py` (those in Wikipedia but missing from ESPN) get a
+flat position-based default (GK/DEF $4.0, MID $4.5, FWD $5.0).
 
 ---
 
-## 6. The one caveat
+## 6. The caveats
 
 ESPN's API is unofficial — it could change or disappear without notice. All the knowledge of
 ESPN's JSON shape is isolated in `tools/espn_client.py`, so if ESPN ever changes something, that
 one file is the only thing to fix. As a last resort, stats can always be entered by hand through
 the Swagger UI at `/docs` (the SRS allows manual stat entry).
+
+A second caveat: ESPN's roster endpoint is **not a reliable source for who is actually in the
+tournament**. It misses players from several federations (smaller nations, late callups, post-injury
+replacements). That is why `in_tournament` is sourced from Wikipedia's squad page instead of
+inferred from `espn_id IS NOT NULL`. The ESPN roster is still useful for seeding the initial
+`player` rows and the `idmap.json` translation table, but the canonical "is this player in WC2026"
+answer comes from `tools/maps/tournament_squad.json`.

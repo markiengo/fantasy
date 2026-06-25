@@ -1,22 +1,21 @@
-def get_transfers(conn, matchday = None):
+def get_transfers(conn, user_id, matchday = None):
     cursor = conn.cursor()
     query = '''
         SELECT transfer_id, player_in_id, p_in.name AS player_in_name,
-        player_out_id, p_out.name AS player_out_name, matchday 
+        player_out_id, p_out.name AS player_out_name, matchday
         FROM transfers tr
-        JOIN player as p_in 
+        JOIN player as p_in
             ON tr.player_in_id = p_in.player_id
-        JOIN player as p_out 
+        JOIN player as p_out
             ON tr.player_out_id = p_out.player_id
-            '''
-    filters = []
-    values = []
+        '''
+    filters = ["tr.user_id = %s"]
+    values = [user_id]
 
     if matchday is not None:
         filters.append("matchday = %s")
         values.append(matchday)
-    if filters: 
-        query += " WHERE " + " AND ".join(filters)
+    query += " WHERE " + " AND ".join(filters)
     query += " ORDER BY matchday ASC"
 
     cursor.execute(query, values)

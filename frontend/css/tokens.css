@@ -1,111 +1,95 @@
-/* ============================================================================
-   tokens.css — World Cup Fantasy 2026 design tokens
-   Source: frontend/docs/design-system.md. Brand hues sampled from style.png
-   via tools/extract_palette.py. v2: glassmorphic surfaces over a pastel
-   multi-color mesh (replaces flat cobalt + solid-black panels).
-   ============================================================================ */
-
 :root {
-  /* --- Brand hues (sampled) --- */
-  --c-red:        #D60000;
-  --c-orange:     #FF3C00;
-  --c-gold:       #F4B223;
-  --c-yellow:     #ECFF43;
-  --c-lime:       #B1EA00;   /* electric lime — the action accent */
-  --c-green:      #00C752;
-  --c-teal:       #00A88E;
-  --c-cyan:       #1FC3E0;
-  --c-azure:      #2095F2;
-  --c-blue:       #2F4EFE;
-  --c-indigo:     #19247D;
-  --c-aqua:       #62FED7;
-  --c-purple:     #6101EB;
-  --c-orchid:     #BA68C6;
-  --c-magenta:    #E71E62;
-  --c-lavender:   #B286FF;
-  --c-salmon:     #FE9D80;
-  --c-pink:       #F25CA2;
+  color-scheme: dark;
 
-  /* --- Neutral ramp (no pure black) --- */
-  --c-ink-950:    #0B0D1A;
-  --c-ink-900:    #11142A;
-  --c-ink-800:    #181C36;
-  --c-ink-700:    #2A2F50;
-  --c-grey-500:   #9AA0BE;
-  --c-grey-300:   #C7CBE4;
-  --c-white:      #FFFFFF;
-  --c-pitch-a:    #0E5A36;   /* turf light stripe */
-  --c-pitch-b:    #0A4A2C;   /* turf dark stripe */
+  /* base */
+  --bg: #08090a;
+  --bg-env: radial-gradient(120% 90% at 78% 8%, #16201a 0%, #0c100e 38%, #08090a 72%);
 
-  /* --- Mesh background palette (pastel-ish, multi-color, easy on eyes) --- */
-  --mesh-base:  #14132B;     /* deep indigo base — softer than electric cobalt */
-  --mesh-1: rgba(97, 1, 235, .55);   /* purple   */
-  --mesh-2: rgba(31, 195, 224, .42); /* cyan     */
-  --mesh-3: rgba(231, 30, 98, .40);  /* magenta  */
-  --mesh-4: rgba(0, 199, 82, .34);   /* green    */
-  --mesh-5: rgba(47, 78, 254, .45);  /* blue     */
-  --mesh-6: rgba(244, 178, 35, .26); /* gold     */
+  /* text */
+  --ink: #eef1ec;
+  --ink-2: #cdd2c8;
+  --muted: #9aa28f;
+  --muted-2: #8b9285;
+  --faint: #8a917e;
+  --faint-2: #7a8273;
 
-  /* --- Glass surfaces (Liquid-Glass: fill + blur + inner refraction) --- */
-  --glass:        rgba(20, 22, 44, .55);   /* primary panel glass */
-  --glass-2:      rgba(30, 33, 60, .42);   /* nested rows / inputs */
-  --glass-strong: rgba(14, 16, 34, .72);   /* modals / overlays */
-  --glass-stroke: rgba(255, 255, 255, .12);
-  --glass-inner:  inset 0 1px 0 rgba(255, 255, 255, .14);
-  --glass-blur:   18px;
-  --hairline:     rgba(255, 255, 255, .10);
+  /* accent */
+  --accent: #c6f24a;
+  --accent-2: #a6d92e;
+  --accent-12: rgba(198,242,74,.12);
+  --accent-18: rgba(198,242,74,.18);
+  --accent-glow: 0 8px 22px -10px rgba(198,242,74,.7);
+  --accent-ink: #0c100e;
 
-  /* --- Semantic --- */
-  --surface:      var(--glass);
-  --surface-2:    var(--glass-2);
-  --surface-line: var(--hairline);
+  /* status */
+  --blue: #7aa2ff;
+  --warm: #ffb06c;
+  --danger: #ff8f8f;
+  --danger-soft: rgba(255,143,143,.14);
+  --warning: #ffb06c;
+  --warning-soft: rgba(255,176,108,.14);
 
-  --accent:       var(--c-lime);
-  --accent-ink:   var(--c-ink-950);
-  --positive:     var(--c-green);
-  --warning:      var(--c-gold);
-  --danger:       #FF4D4D;
+  /* position */
+  --pos-GK: #ff7428;
+  --pos-DEF: #7aa2ff;
+  --pos-MID: #a8eddc;
+  --pos-FWD: #ff8fb0;
 
-  --text:         var(--c-white);
-  --text-muted:   var(--c-grey-500);
-  --text-on-card: var(--c-ink-950);
-  --focus-ring:   var(--c-aqua);
+  /* surfaces */
+  --panel: linear-gradient(160deg, rgba(34,38,32,.62), rgba(16,19,15,.55));
+  --panel-flush: linear-gradient(160deg, rgba(34,38,32,.60), rgba(16,19,15,.52));
+  --panel-strong: linear-gradient(150deg, rgba(40,46,38,.78), rgba(20,24,18,.72));
+  --toast: linear-gradient(150deg, rgba(40,46,38,.82), rgba(20,24,18,.78));
+  --tile: rgba(255,255,255,.04);
+  --tile-2: rgba(255,255,255,.035);
+  --inset: rgba(0,0,0,.25);
 
-  /* --- Group-stage hues (WC26 = 12 groups A–L) --- */
-  --grp-A: var(--c-green);  --grp-B: var(--c-red);    --grp-C: var(--c-gold);
-  --grp-D: var(--c-blue);   --grp-E: var(--c-purple); --grp-F: var(--c-orange);
-  --grp-G: var(--c-teal);   --grp-H: var(--c-magenta);--grp-I: var(--c-azure);
-  --grp-J: var(--c-orchid); --grp-K: var(--c-salmon); --grp-L: var(--c-aqua);
+  /* strokes */
+  --stroke: rgba(255,255,255,.085);
+  --stroke-soft: rgba(255,255,255,.06);
+  --stroke-mid: rgba(255,255,255,.1);
+  --stroke-strong: rgba(255,255,255,.14);
+  --hairline: rgba(255,255,255,.085);
+  --inset-hl: inset 0 1px 0 rgba(255,255,255,.06);
 
-  /* --- Position accents --- */
-  --pos-GK:  var(--c-gold); --pos-DEF: var(--c-cyan);
-  --pos-MID: var(--c-green); --pos-FWD: var(--c-magenta);
+  /* shadows */
+  --shadow-panel: 0 24px 60px -30px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.06);
+  --shadow-toast: 0 18px 50px -16px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.1);
 
-  /* --- Typography --- */
-  --font-display: "EB Garamond", "Georgia", "Times New Roman", serif;
-  --font-body:    "EB Garamond", "Georgia", "Times New Roman", serif;
-  --font-mono:    "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  /* type */
+  --font-body: "Hanken Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Hanken Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Hanken Grotesk", "Cascadia Mono", ui-monospace, monospace;
 
-  /* Garamond runs small + low-contrast at UI sizes, so bump body a notch */
-  --fs-display: 52px; --fs-h1: 32px; --fs-h2: 24px; --fs-stat: 28px;
-  --fs-nav: 16px; --fs-body: 17px; --fs-sm: 14px; --fs-label: 12px;
+  /* layout */
+  --sidebar-w: 248px;
+  --content-max: 1140px;
 
-  /* --- Spacing / radius / motion --- */
-  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px;
-  --sp-6:24px; --sp-8:32px; --sp-10:40px; --sp-12:48px; --sp-16:64px;
+  /* radii */
+  --r-xs: 8px;
+  --r-sm: 10px;
+  --r-md: 13px;
+  --r-lg: 16px;
+  --r-xl: 16px;
+  --r-2xl: 22px;
+  --r-pill: 999px;
 
-  --r-sm:10px; --r-md:18px; --r-lg:28px; --r-pill:999px;
+  /* motion */
+  --blur: 24px;
+  --ease: cubic-bezier(.16,1,.3,1);
+  --ease-spring: cubic-bezier(.34,1.56,.64,1);
+  --ease-smooth: cubic-bezier(.4,0,.2,1);
+  --dur-fast: 140ms;
+  --dur-base: 240ms;
+  --dur-mid: 320ms;
+  --dur-slow: 480ms;
+  --dur-enter: 380ms;
 
-  --shadow-1: 0 1px 2px rgba(4,6,20,.4);
-  --shadow-2: 0 10px 30px -10px rgba(4,6,20,.55);
-  --shadow-3: 0 24px 60px -15px rgba(4,6,20,.7);
-
-  --ease-out: cubic-bezier(.16,1,.3,1);     /* enter/exit — starts fast, responsive */
-  --ease: cubic-bezier(.4,0,.2,1);          /* hover / color changes */
-  --ease-in-out: cubic-bezier(.77,0,.175,1);/* on-screen movement / morphs */
-  --ease-spring: cubic-bezier(.32,.72,0,1); /* drawer / toast — gentle settle */
-  --dur-fast:130ms; --dur-base:240ms; --dur-slow:420ms;
-
-  /* --- Layout: wider, less centric --- */
-  --content-max: 1560px;
+  /* type scale */
+  --fs-body: 13px;
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-label: 10px;
+  --fs-h1: 22px;
+  --fs-h2: 14px;
 }

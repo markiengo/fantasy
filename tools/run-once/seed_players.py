@@ -1,7 +1,7 @@
 """
 seed_players.py — populate player from ESPN rosters; build tools/maps/idmap.json.
 
-    python tools/seed_players.py [--dry-run]
+    python tools/run-once/seed_players.py [--dry-run]
 
 Idempotent: upserts on espn_id (refreshes name/position/team; never overwrites base_price).
 Flat prices keep any valid 11-player squad under $50M: GK/DEF $4.0, MID $4.5, FWD $5.0.
@@ -16,10 +16,11 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+tools_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, tools_dir)
 import espn_client as espn
 
-maps_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "maps")
+maps_dir = os.path.join(tools_dir, "maps")
 position_price = {"GK": 4.0, "DEF": 4.0, "MID": 4.5, "FWD": 5.0}
 
 

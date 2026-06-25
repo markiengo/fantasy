@@ -1,13 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.database import get_db
+from app.auth import get_current_user
 from app.queries.score import get_score
 
 router = APIRouter()
 
 @router.get("/score")
-def get_score_route(matchday: int = None, conn = Depends(get_db)):
-    user_id = 1
-    result = get_score(conn, user_id, matchday=matchday)
+def get_score_route(
+    matchday: int = None,
+    conn = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    result = get_score(conn, current_user["user_id"], matchday=matchday)
 
     if not result:
         raise HTTPException(status_code=404, detail="Squad or Stats don't exist")

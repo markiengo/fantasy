@@ -1,14 +1,3 @@
-/* ============================================================================
-   api.js — REST client for the FastAPI backend (/api/*) with a graceful
-   mock-data fallback. There is no seed data in the repo yet, so when the
-   backend is unreachable (or returns an error) we serve a generated mock
-   dataset so the whole UI is reviewable offline.
-
-   API contract: docs/API.md (v2.3). Endpoints live under /api.
-   Note: fixtures = GET /matches, scoring = GET /score (singular) — the live
-   names, per ui-spec §4. UI-contract §8's /fixtures and /scores are stale.
-   ============================================================================ */
-
 const API_BASE = (location.hostname === "127.0.0.1" || location.hostname === "localhost")
   ? "http://127.0.0.1:8000/api"
   : "/api";
@@ -16,10 +5,30 @@ const API_BASE = (location.hostname === "127.0.0.1" || location.hostname === "lo
 const Api = (() => {
   let useMock = false; // trips to true on first backend failure
 
+  function announceMode() {
+    window.dispatchEvent(new CustomEvent("backend-mode-changed", {
+      detail: { isMock: useMock },
+    }));
+  }
+
   async function call(path, opts) {
     if (useMock) throw new Error("mock-mode");
+
+    const headers = { "Content-Type": "application/json" };
+
+    if (window.getAccessToken) {
+      try {
+        const token = await window.getAccessToken();
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+      } catch (e) {
+        console.warn("[Api] getAccessToken failed — sending request without token", e);
+      }
+    }
+
     const res = await fetch(API_BASE + path, {
-      headers: { "Content-Type": "application/json" },
+      headers,
       ...opts,
     });
     if (!res.ok) {
@@ -27,6 +36,12 @@ const Api = (() => {
       try { detail = (await res.json()).detail || detail; } catch (e) {}
       const err = new Error(detail);
       err.status = res.status;
+      // Auth failures are handled by the app shell, not by mock fallback.
+      if (res.status === 401) {
+        window.dispatchEvent(new CustomEvent("auth-unauthorized", { detail: { path } }));
+      } else if (res.status === 403) {
+        window.dispatchEvent(new CustomEvent("auth-forbidden", { detail: { path, detail } }));
+      }
       throw err;
     }
     return res.json();
@@ -44,17 +59,25 @@ const Api = (() => {
 
   // Wrap a real call with a mock fallback. Only fall back on genuine
   // connectivity failures (fetch rejects → no err.status). A real HTTP error
-  // (404/400/500 — the backend responded) is propagated so the caller can
-  // handle it; it must NOT switch the whole app into mock mode.
+  // (401/403/404/400/500 — the backend responded) is propagated so the caller
+  // can handle it; it must NOT switch the whole app into mock mode.
+  // 401/403 are auth failures handled by the app shell via events dispatched
+  // in call(); they propagate as rejections here.
   async function withFallback(realFn, mockFn) {
     try {
       return await realFn();
     } catch (e) {
-      if (e.status) throw e;                 // backend answered with an error → real
+      // Auth failures (backend reachable, identity/permission problem) are
+      // never a reason to switch to demo data. Let them propagate.
+      if (e.status === 401 || e.status === 403) throw e;
+      // Any other HTTP status means the backend responded — propagate.
+      if (e.status) throw e;
+      // No status → genuine connectivity failure → demo fallback.
       if (!useMock) {
         useMock = true;
         console.warn("[Api] backend unreachable — using mock data.", e.message);
         if (window.Toast) Toast.show("Backend offline — showing demo data.", "info");
+        announceMode();
       }
       return mockFn();
     }
@@ -62,7 +85,7 @@ const Api = (() => {
 
   return {
     isMock: () => useMock,
-    forceMock: () => { useMock = true; },
+    forceMock: () => { useMock = true; announceMode(); },
 
     getPlayers: (params = {}) =>
       withFallback(() => call("/players" + qs(params)), () => Mock.getPlayers(params)),
@@ -72,6 +95,8 @@ const Api = (() => {
       withFallback(() => call("/matches" + qs(params)), () => Mock.getMatches(params)),
     getMatch: (id) =>
       withFallback(() => call("/matches/" + id), () => Mock.getMatch(id)),
+    getPlayerStats: (params = {}) =>
+      withFallback(() => call("/playerstats" + qs(params)), () => Mock.getPlayerStats(params)),
     getSquad: (matchday) =>
       withFallback(() => call("/squad" + qs({ matchday })), () => Mock.getSquad(matchday)),
     createSquad: (matchday, player_ids) =>
@@ -88,6 +113,14 @@ const Api = (() => {
       ),
     getScore: (matchday) =>
       withFallback(() => call("/score" + qs({ matchday })), () => Mock.getScore(matchday)),
+    updateData: (body = {}) =>
+      withFallback(
+        () => call("/load-stats", { method: "POST", body: JSON.stringify(body) }),
+        () => Mock.updateData(body)
+      ),
+    getMe: () => call("/me"),
+    getTopStats: (limit = 5) =>
+      withFallback(() => call("/playerstats/top" + qs({ limit })), () => Mock.getTopStats(limit)),
   };
 })();
 
@@ -199,6 +232,34 @@ const Mock = (() => {
       return out;
     },
     getMatch(id) { build(); return clone(_matches.find((m) => m.match_id === +id)); },
+    getPlayerStats(params = {}) {
+      build();
+      const out = [];
+      const matches = params.match_id
+        ? _matches.filter((m) => m.match_id === +params.match_id)
+        : _matches;
+      for (const match of matches) {
+        for (const player of _players) {
+          if (params.player_id && player.player_id !== +params.player_id) continue;
+          if (player.team_id !== match.team1_id && player.team_id !== match.team2_id) continue;
+          out.push({
+            stat_id: out.length + 1,
+            player_id: player.player_id,
+            player_name: player.name,
+            match_id: match.match_id,
+            goals: player.position === "FWD" ? player.player_id % 2 : 0,
+            assists: player.position === "MID" ? player.player_id % 2 : 0,
+            minutes_played: 90,
+            yellow_cards: 0,
+            red_cards: 0,
+            clean_sheet: player.position === "GK" || player.position === "DEF" ? 1 : 0,
+            score: ((player.player_id * 7 + match.match_id * 3) % 13) - 2,
+          });
+          if (out.length > 120) return clone(out);
+        }
+      }
+      return clone(out);
+    },
     getSquad(matchday) {
       build();
       if (_squads[matchday]) return clone(_squads[matchday]);
@@ -271,6 +332,70 @@ const Mock = (() => {
       });
       return { by_matchday: by.sort((a, b) => a.matchday - b.matchday) };
     },
+    updateData() {
+      build();
+      return {
+        dates: [],
+        matches_seen: _matches.length,
+        matches_completed: 0,
+        matches_updated: 0,
+        inserted: 0,
+        skipped_existing: 0,
+        skipped_unmapped_player: 0,
+        skipped_unmapped_match: 0,
+        errors: 0,
+        errors_detail: [],
+        mock: true,
+      };
+    },
+    getTopStats(limit = 5) {
+      build();
+      const stats = _players.map((p) => {
+        const playerStats = Mock.getPlayerStats({ player_id: p.player_id });
+        let goals = 0, assists = 0, minutes = 0, cleanSheet = 0, yc = 0, rc = 0, score = 0;
+        for (const s of playerStats) {
+          goals += s.goals || 0;
+          assists += s.assists || 0;
+          minutes += s.minutes_played || 0;
+          cleanSheet += s.clean_sheet || 0;
+          yc += s.yellow_cards || 0;
+          rc += s.red_cards || 0;
+          score += s.score || 0;
+        }
+        return {
+          player_id: p.player_id, name: p.name, position: p.position,
+          team_name: p.team_name,
+          total_goals: goals, total_assists: assists,
+          total_goal_involvements: goals + assists, total_minutes: minutes,
+          total_clean_sheets: cleanSheet, total_yellow_cards: yc,
+          total_red_cards: rc, total_score: score,
+        };
+      });
+      const top = (key, extra) => {
+        const sorted = stats.slice().sort((a, b) => b[key] - a[key]).slice(0, limit);
+        return sorted.map((r) => ({
+          player_id: r.player_id, name: r.name, position: r.position,
+          team_name: r.team_name, value: r[key], ...extra(r),
+        }));
+      };
+      return {
+        top_fantasy_score: top("total_score", () => ({})),
+        top_scorers: top("total_goals", () => ({})),
+        top_assists: top("total_assists", () => ({})),
+        top_goal_involvements: top("total_goal_involvements", () => ({})),
+        top_clean_sheets: top("total_clean_sheets", () => ({})),
+        top_cards: stats
+          .slice()
+          .sort((a, b) => (b.total_yellow_cards + b.total_red_cards) - (a.total_yellow_cards + a.total_red_cards))
+          .slice(0, limit)
+          .map((r) => ({
+            player_id: r.player_id, name: r.name, position: r.position,
+            team_name: r.team_name,
+            value: r.total_yellow_cards + r.total_red_cards,
+            yellow_cards: r.total_yellow_cards, red_cards: r.total_red_cards,
+          })),
+      };
+    },
   };
 })();
 
@@ -294,8 +419,7 @@ function flagSrc(team_id) {
 function flagImg(team_id, cls) {
   const src = flagSrc(team_id);
   if (src) {
-    return `<img class="flag ${cls || ""}" src="${src}" alt="" loading="lazy"
-      onerror="this.onerror=null;this.classList.add('flag--placeholder');this.removeAttribute('src');" />`;
+    return `<span class="flag ${cls || ""}" style="background-image:url('${src}')" title="${team_id || ""}"></span>`;
   }
   return `<span class="flag flag--placeholder ${cls || ""}" title="${team_id || ""}"></span>`;
 }

@@ -1,13 +1,9 @@
-/* ============================================================================
-   fixtures.js — Fixtures & Results screen (ref: fixtures.png).
-   Group matches by date for the selected round; group pills + flags + kickoff.
-   ============================================================================ */
-
 const Fixtures = (() => {
   let round = 1;
-  const MAX_ROUND = 8;
+  let activeTab = "standings";
+  const maxRound = 8;
 
-  const STAGE_LABEL = {
+  const stageLabel = {
     group_stage: (md) => `Round ${md}`,
     round_of_32: () => "Round of 32",
     round_of_16: () => "Round of 16",
@@ -16,97 +12,404 @@ const Fixtures = (() => {
     final: () => "Final",
   };
 
-  function teamGroup(team_id) {
-    const t = State.teams.find((x) => x.team_id === team_id);
-    return t ? t.group_stage : null;
-  }
+  const bracketStages = ["round_of_32", "round_of_16", "quarter_final", "semi_final", "final"];
 
   function fmtDate(iso) {
-    // iso "2026-06-18" -> "Thursday 18 June 2026" (no Date locale dependency issues)
-    const months = ["January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December"];
-    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const [y, m, d] = iso.split("-").map(Number);
-    const dt = new Date(Date.UTC(y, m - 1, d));
-    return `${days[dt.getUTCDay()]} ${d} ${months[m - 1]} ${y}`;
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const parts = iso.split("-").map(Number);
+    const dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+    return `${days[dt.getUTCDay()]} ${parts[2]} ${months[parts[1] - 1]}`;
   }
 
-  // deterministic mock kickoff time per match (no real schedule in v1)
   function kickoff(match) {
+    if (match.kickoff) {
+      const date = new Date(match.kickoff);
+      if (!Number.isNaN(date.getTime())) {
+        return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+      }
+    }
     const slots = ["18:00", "21:00", "00:00", "03:00"];
     return slots[match.match_id % slots.length];
   }
 
-  function render() {
-    const label = document.getElementById("fxRoundLabel");
-    const list = document.getElementById("fixturesList");
+  function labelForStage(stage, md) {
+    const fn = stageLabel[stage] || stageLabel.group_stage;
+    return fn(md);
+  }
 
-    // If data isn't loaded yet (edge case during initial boot), show skeleton rows
-    if (!State.fixtures.length) {
-      label.textContent = "Loading…";
-      let html = "";
-      for (let i = 0; i < 6; i++) html += `<div class="skeleton" style="height:52px;border-radius:var(--r-md);margin-bottom:8px"></div>`;
-      list.innerHTML = html;
+  function renderOverview(matches) {
+    const stage = matches.length ? matches[0].stage : "group_stage";
+    const roundLabel = document.getElementById("fxRoundLabel");
+    const countLabel = document.getElementById("tournamentMatchCount");
+    const stageText = document.getElementById("tournamentStageLabel");
+    if (roundLabel) roundLabel.textContent = labelForStage(stage, round);
+    if (countLabel) countLabel.textContent = String(matches.length);
+    if (stageText) stageText.textContent = stage === "group_stage" ? "Group stage" : labelForStage(stage, round);
+  }
+
+  function emptyStanding(team) {
+    return {
+      team_id: team.team_id,
+      name: team.name,
+      group: team.group_stage || "-",
+      played: 0,
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      gf: 0,
+      ga: 0,
+      points: 0,
+      form: [],
+      next: null,
+    };
+  }
+
+  function ensureStanding(table, team) {
+    if (!table[team.team_id]) {
+      table[team.team_id] = emptyStanding(team);
+    }
+    return table[team.team_id];
+  }
+
+  function computeStandings() {
+    const byId = {};
+    for (const team of State.teams) {
+      byId[team.team_id] = team;
+    }
+
+    const table = {};
+    for (const team of State.teams) {
+      ensureStanding(table, team);
+    }
+
+    for (const match of State.fixtures) {
+      const t1 = byId[match.team1_id];
+      const t2 = byId[match.team2_id];
+      if (!t1 || !t2) continue;
+      const s1 = ensureStanding(table, t1);
+      const s2 = ensureStanding(table, t2);
+
+      if (match.team1_score == null || match.team2_score == null) {
+        if (!s1.next) s1.next = match.team2_id;
+        if (!s2.next) s2.next = match.team1_id;
+        continue;
+      }
+
+      s1.played = s1.played + 1;
+      s2.played = s2.played + 1;
+      s1.gf = s1.gf + Number(match.team1_score);
+      s1.ga = s1.ga + Number(match.team2_score);
+      s2.gf = s2.gf + Number(match.team2_score);
+      s2.ga = s2.ga + Number(match.team1_score);
+
+      if (match.team1_score > match.team2_score) {
+        s1.wins = s1.wins + 1;
+        s2.losses = s2.losses + 1;
+        s1.points = s1.points + 3;
+        s1.form.push("W");
+        s2.form.push("L");
+      } else if (match.team1_score < match.team2_score) {
+        s2.wins = s2.wins + 1;
+        s1.losses = s1.losses + 1;
+        s2.points = s2.points + 3;
+        s2.form.push("W");
+        s1.form.push("L");
+      } else {
+        s1.draws = s1.draws + 1;
+        s2.draws = s2.draws + 1;
+        s1.points = s1.points + 1;
+        s2.points = s2.points + 1;
+        s1.form.push("D");
+        s2.form.push("D");
+      }
+    }
+
+    const groups = {};
+    for (const teamId in table) {
+      const row = table[teamId];
+      if (!groups[row.group]) groups[row.group] = [];
+      groups[row.group].push(row);
+    }
+    return groups;
+  }
+
+  function sortStandings(rows) {
+    rows.sort((a, b) => {
+      const gdA = a.gf - a.ga;
+      const gdB = b.gf - b.ga;
+      if (b.points !== a.points) return b.points - a.points;
+      if (gdB !== gdA) return gdB - gdA;
+      if (b.gf !== a.gf) return b.gf - a.gf;
+      return a.name.localeCompare(b.name);
+    });
+  }
+
+  function formBadgesHtml(row) {
+    let html = "";
+    const recent = row.form.slice(-3);
+    for (const item of recent) {
+      html += `<i class="form-badge form-badge--${item.toLowerCase()}">${item}</i>`;
+    }
+    return html || `<span style="color:var(--faint)">-</span>`;
+  }
+
+  function nextHtml(row) {
+    if (!row.next) return `<span style="color:var(--faint)">-</span>`;
+    return flagImg(row.next, "flag--sm");
+  }
+
+  function renderGroups() {
+    const grid = document.getElementById("groupGrid");
+    if (!grid) return;
+
+    if (!State.teams.length) {
+      grid.innerHTML = `<p class="empty-note">No group data yet.</p>`;
       return;
     }
 
-    // Filter the already-loaded matches client-side — NO network per round nav.
-    // (Remote DB is ~1.3s/request; re-fetching per click was the slowness + scroll jump.)
-    const matches = [];
-    for (const m of State.fixtures) if (m.matchday === round) matches.push(m);
+    const groups = computeStandings();
+    const order = Object.keys(groups).sort();
+    let html = "";
+    for (const key of order) {
+      const rows = groups[key];
+      sortStandings(rows);
+      let body = "";
+      let rank = 1;
+      for (const row of rows) {
+        const gd = row.gf - row.ga;
+        const gdLabel = gd > 0 ? `+${gd}` : String(gd);
+        const qual = rank <= 2 ? rank : "";
+        const qualAttr = qual ? ` data-qual="${qual}"` : "";
+        const qualClass = rank <= 2 ? " is-qualifying" : "";
+        body += `<div class="table-row${qualClass}"${qualAttr}>
+          <span class="table-row__rank"${qualAttr}><i class="qbar"></i>${rank}</span>
+          <span class="table-row__team">${flagImg(row.team_id)}<b>${row.name}</b></span>
+          <span>${row.played}</span>
+          <span>${row.wins}</span>
+          <span>${row.draws}</span>
+          <span>${row.losses}</span>
+          <span class="dim">${row.gf}-${row.ga}</span>
+          <span>${gdLabel}</span>
+          <b class="pts">${row.points}</b>
+          <span class="form">${formBadgesHtml(row)}</span>
+          <span>${nextHtml(row)}</span>
+        </div>`;
+        rank = rank + 1;
+      }
+      html += `<section class="group">
+        <header class="group__head"><h3>Group ${key}</h3><span class="hr"></span></header>
+        <div class="group__cols">
+          <span>#</span><span>Team</span><span>PL</span><span>W</span><span>D</span>
+          <span>L</span><span>+/-</span><span>GD</span><span>PTS</span><span>Form</span><span>Next</span>
+        </div>
+        ${body}
+      </section>`;
+    }
+    grid.innerHTML = html;
+  }
 
-    const stage = matches.length ? matches[0].stage : "group_stage";
-    label.textContent = (STAGE_LABEL[stage] || STAGE_LABEL.group_stage)(round);
+  function renderFixtures(matches) {
+    const list = document.getElementById("fixturesList");
+    if (!list) return;
+
+    if (!State.fixtures.length) {
+      let html = "";
+      for (let i = 0; i < 5; i++) {
+        html += `<div class="skeleton" style="height:64px;margin-bottom:8px"></div>`;
+      }
+      list.innerHTML = html;
+      return;
+    }
 
     if (!matches.length) {
       list.innerHTML = `<p class="empty-note">No fixtures for this round yet.</p>`;
       return;
     }
 
-    // group by date, sorted ascending
-    const groups = {};
-    for (const m of matches) {
-      if (!groups[m.date]) groups[m.date] = [];
-      groups[m.date].push(m);
+    const byDate = {};
+    for (const match of matches) {
+      if (!byDate[match.date]) byDate[match.date] = [];
+      byDate[match.date].push(match);
     }
-    const order = Object.keys(groups).sort();
-    for (const date of order) groups[date].sort((a, b) => a.match_id - b.match_id);
+
+    const dates = Object.keys(byDate).sort();
+    for (const date of dates) {
+      byDate[date].sort((a, b) => {
+        const aTime = a.kickoff || "";
+        const bTime = b.kickoff || "";
+        if (aTime !== bTime) return aTime.localeCompare(bTime);
+        return a.match_id - b.match_id;
+      });
+    }
 
     let html = "";
-    for (const date of order) {
-      html += `<div class="fixtures__daygroup">
-        <div class="fixtures__date">${fmtDate(date)}</div>`;
-      for (const m of groups[date]) html += matchRow(m);
+    for (const date of dates) {
+      html += `<div class="fixtures__daygroup"><div class="fixtures__date">${fmtDate(date)}</div>`;
+      for (const match of byDate[date]) {
+        html += matchRow(match);
+      }
       html += `</div>`;
     }
     list.innerHTML = html;
   }
 
-  function matchRow(m) {
-    const g = teamGroup(m.team1_id);
-    const groupPill = g ? `<span class="pill pill--group" data-group="${g}">Group ${g}</span>` : "";
-    // Show scores if match has been played, otherwise show kickoff time
-    // Use != null (not !==) so undefined (mock data) also falls through to kickoff
-    const center = (m.team1_score != null && m.team2_score != null)
-      ? `<span class="match-row__score">${m.team1_score} - ${m.team2_score}</span>`
-      : `<span class="match-row__kick">${kickoff(m)}</span>`;
-    return `<div class="match-row">
-      <span>${groupPill}</span>
-      <span class="match-row__team match-row__team--home">${m.team1_name} ${flagImg(m.team1_id, "flag--lg")}</span>
-      ${center}
-      <span class="match-row__team match-row__team--away">${flagImg(m.team2_id, "flag--lg")} ${m.team2_name}</span>
-      <span aria-hidden="true"></span>
+  function matchRow(match) {
+    const hasScore = match.team1_score != null && match.team2_score != null;
+    const center = hasScore
+      ? `<b class="score">${match.team1_score} – ${match.team2_score}</b>`
+      : `<b class="time">${kickoff(match)}</b>`;
+
+    return `<div class="fixture-row">
+      <span class="fixture-row__team fixture-row__team--home">
+        <b>${match.team1_name}</b>${flagImg(match.team1_id)}
+      </span>
+      <span class="fixture-row__mid">${center}</span>
+      <span class="fixture-row__team">
+        ${flagImg(match.team2_id)}<b>${match.team2_name}</b>
+      </span>
     </div>`;
+  }
+
+  function renderKnockout() {
+    const root = document.getElementById("knockoutBracket");
+    if (!root) return;
+
+    const COL_W = 150, GAP = 56, HEIGHT = 1120, TOP = 26;
+    const EXPECTED_NODES = { round_of_32: 16, round_of_16: 8, quarter_final: 4, semi_final: 2, final: 1 };
+    const ROUND_NAMES = {
+      round_of_32: "ROUND OF 32",
+      round_of_16: "ROUND OF 16",
+      quarter_final: "QUARTER-FINALS",
+      semi_final: "SEMI-FINALS",
+      final: "FINAL",
+    };
+
+    // Build round data
+    const roundData = [];
+    for (const stage of bracketStages) {
+      const matches = [];
+      for (const match of State.fixtures) {
+        if (match.stage === stage) matches.push(match);
+      }
+      matches.sort((a, b) => a.matchday - b.matchday || a.match_id - b.match_id);
+      const expectedN = EXPECTED_NODES[stage] || 1;
+      roundData.push({ stage, matches, n: Math.max(expectedN, matches.length) });
+    }
+
+    // Compute Y center for node i of n in a column
+    function nodeY(i, n) {
+      return TOP + (HEIGHT - TOP) * (i + 0.5) / n;
+    }
+
+    // Generate SVG connector paths
+    let paths = "";
+    for (let k = 0; k < roundData.length - 1; k++) {
+      const src = roundData[k];
+      const dst = roundData[k + 1];
+      const rightEdge = k * (COL_W + GAP) + COL_W;
+      const midX = rightEdge + GAP / 2;
+      const dstLeft = (k + 1) * (COL_W + GAP);
+      for (let j = 0; j < dst.n; j++) {
+        const y1 = nodeY(j * 2, src.n);
+        const y2 = nodeY(j * 2 + 1, src.n);
+        const yMid = (y1 + y2) / 2;
+        paths += `<path d="M ${rightEdge} ${y1} H ${midX} V ${y2} H ${rightEdge} M ${midX} ${yMid} H ${dstLeft}" />`;
+      }
+    }
+
+    const totalW = bracketStages.length * COL_W + (bracketStages.length - 1) * GAP + 80;
+
+    // Build rounds HTML
+    let roundsHtml = "";
+    for (let k = 0; k < roundData.length; k++) {
+      const { stage, matches, n } = roundData[k];
+      const isFinalRound = stage === "final";
+      let nodesHtml = "";
+
+      if (!matches.length) {
+        for (let i = 0; i < n; i++) {
+          nodesHtml += `<div class="bracket-node${isFinalRound ? " bracket-node--final" : ""}">
+            <div class="bracket-node__slot"><span class="shield"></span><b>TBD</b></div>
+            <div class="bracket-node__slot"><span class="shield"></span><b>TBD</b></div>
+          </div>`;
+        }
+      } else {
+        for (const match of matches) {
+          const t1 = match.team1_name || (match.team1_id || "TBD");
+          const t2 = match.team2_name || (match.team2_id || "TBD");
+          const dateLabel = match.date ? match.date.slice(5).replace("-", " ") : "";
+          nodesHtml += `<div class="bracket-node${isFinalRound ? " bracket-node--final" : ""}">
+            <div class="bracket-node__slot">${flagImg(match.team1_id)}<b>${t1}</b></div>
+            <div class="bracket-node__slot">${flagImg(match.team2_id)}<b>${t2}</b></div>
+            ${dateLabel ? `<span class="bracket-node__date">${dateLabel}</span>` : ""}
+          </div>`;
+        }
+      }
+
+      roundsHtml += `<div class="bracket-round">
+        <p class="bracket-round__name">${ROUND_NAMES[stage] || stage.toUpperCase()}</p>
+        <div class="bracket-round__nodes">${nodesHtml}</div>
+      </div>`;
+    }
+
+    root.innerHTML = `<div class="bracket__scroll">
+      <div class="bracket" style="width:${totalW}px;height:${HEIGHT}px">
+        <svg class="bracket__connectors" viewBox="0 0 ${totalW} ${HEIGHT}" aria-hidden="true">${paths}</svg>
+        ${roundsHtml}
+        <div class="bracket__champion">
+          <span class="trophy">🏆</span><b>CHAMPION</b>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function render() {
+    const matches = [];
+    for (const match of State.fixtures) {
+      if (match.matchday === round) matches.push(match);
+    }
+    renderOverview(matches);
+    renderGroups();
+    renderFixtures(matches);
+    renderKnockout();
+  }
+
+  function setTab(name) {
+    activeTab = name;
+    document.querySelectorAll(".fixture-tab").forEach((tab) => {
+      const active = tab.dataset.fixtureTab === name;
+      tab.classList.toggle("is-active", active);
+      tab.setAttribute("aria-selected", String(active));
+    });
+    document.getElementById("fixturePaneStandings").classList.toggle("is-active", name === "standings");
+    document.getElementById("fixturePaneKnockout").classList.toggle("is-active", name === "knockout");
   }
 
   function init() {
     document.getElementById("fxPrev").addEventListener("click", () => {
-      if (round > 1) { round--; render(); }
+      if (round > 1) {
+        round = round - 1;
+        render();
+      }
     });
     document.getElementById("fxNext").addEventListener("click", () => {
-      if (round < MAX_ROUND) { round++; render(); }
+      if (round < maxRound) {
+        round = round + 1;
+        render();
+      }
     });
+    document.querySelectorAll(".fixture-tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        setTab(tab.dataset.fixtureTab);
+      });
+    });
+    setTab(activeTab);
   }
 
-  return { init, render, setRound: (r) => { round = r; } };
+  return {
+    init,
+    render,
+    setRound: (value) => { round = value; },
+  };
 })();

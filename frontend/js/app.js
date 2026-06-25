@@ -1,61 +1,39 @@
-/* ============================================================================
-   app.js — bootstrap + cross-cutting: Toast, screen switching, nav menu,
-            MatchdayNavigation strip, initial data load.
-   Loaded last; orchestrates the feature modules.
-   ============================================================================ */
-
-/* ----------------------------------------------------------------- Toast --- */
 const Toast = (() => {
   function show(message, type = "info", ms = 4000) {
     const region = document.getElementById("toastRegion");
     const el = document.createElement("div");
-    el.className = `toast toast--${type} is-hidden`;   // start hidden, then transition in
+    el.className = `toast toast--${type} is-hidden`;
     el.setAttribute("role", type === "error" ? "alert" : "status");
     el.innerHTML = `<span>${message}</span>
       <button class="toast__close" aria-label="Dismiss">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:16px;height:16px"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
       </button>`;
+
     let closed = false;
     const close = () => {
       if (closed) return;
       closed = true;
-      el.classList.add("is-hidden");          // transition out to the same place it entered
+      el.classList.add("is-hidden");
       setTimeout(() => el.remove(), 220);
     };
+
     el.querySelector(".toast__close").addEventListener("click", close);
     region.appendChild(el);
-    // double rAF: let the hidden state paint, then release so the entrance transitions
     requestAnimationFrame(() => requestAnimationFrame(() => el.classList.remove("is-hidden")));
     if (ms) setTimeout(close, ms);
   }
+
   return { show };
 })();
 window.Toast = Toast;
 
-/* --------------------------------------------------------------- RuleAlert --- */
 const RuleAlert = (() => {
   const DETAIL = {
-    "Over budget":      "You don't have enough remaining budget to afford this player.",
-    "Squad full (11)":  "Remove a player from the pitch before adding someone new.",
-    "Already in squad": "This player is already on your team.",
-    "Max 3 from one team": "You can have at most 3 players from the same national team.",
+    "Over budget": "You do not have enough remaining budget to afford this player.",
+    "Squad full (11)": "Remove a player from the pitch before adding someone new.",
+    "Already in squad": "This player is already in your squad.",
+    "Max 3 from one team": "You can only keep three players from the same national team.",
   };
-
-  const ICONS = {
-    budget:   `<circle cx="12" cy="12" r="9"/><path d="M12 6v1.5m0 9V18m2.5-6a2.5 2.5 0 01-2.5 2.5H10a2 2 0 000 4h1m1-10.5a2 2 0 00-2 2"/>`,
-    full:     `<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>`,
-    duplicate:`<path d="M20 6L9 17l-5-5"/>`,
-    team:     `<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>`,
-    position: `<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>`,
-  };
-
-  function iconKey(reason) {
-    if (reason === "Over budget") return "budget";
-    if (reason.startsWith("Squad full")) return "full";
-    if (reason === "Already in squad") return "duplicate";
-    if (reason.startsWith("Max")) return "team";
-    return "position";
-  }
 
   function show(reason) {
     let region = document.getElementById("ruleAlertRegion");
@@ -66,42 +44,38 @@ const RuleAlert = (() => {
       document.body.appendChild(region);
     }
 
-    const detail = DETAIL[reason] || reason;
-    const icon = ICONS[iconKey(reason)];
-
     const el = document.createElement("div");
     el.className = "rule-alert is-hidden";
     el.setAttribute("role", "alert");
-    el.innerHTML =
-      `<span class="rule-alert__icon" aria-hidden="true">` +
-        `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px">${icon}</svg>` +
-      `</span>` +
-      `<span class="rule-alert__body">` +
-        `<span class="rule-alert__title">${reason}</span>` +
-        `<span class="rule-alert__detail">${detail}</span>` +
-      `</span>` +
-      `<button class="rule-alert__close" aria-label="Dismiss">` +
-        `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" style="width:15px;height:15px"><path d="M6 6l12 12M18 6L6 18"/></svg>` +
-      `</button>`;
+    el.innerHTML = `<span class="rule-alert__icon" aria-hidden="true">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 8v5m0 3h.01M10.3 3.9l-8 13.9A1.5 1.5 0 0 0 3.6 20h16.8a1.5 1.5 0 0 0 1.3-2.2l-8-13.9a1.5 1.5 0 0 0-2.6 0Z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <span class="rule-alert__body">
+        <span class="rule-alert__title">${reason}</span>
+        <span class="rule-alert__detail">${DETAIL[reason] || reason}</span>
+      </span>
+      <button class="rule-alert__close" aria-label="Dismiss">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
+      </button>`;
 
     let closed = false;
     const close = () => {
       if (closed) return;
       closed = true;
       el.classList.add("is-hidden");
-      setTimeout(() => el.remove(), 280);
+      setTimeout(() => el.remove(), 220);
     };
+
     el.querySelector(".rule-alert__close").addEventListener("click", close);
     region.appendChild(el);
     requestAnimationFrame(() => requestAnimationFrame(() => el.classList.remove("is-hidden")));
-    setTimeout(close, 4000);
+    setTimeout(close, 3800);
   }
 
   return { show };
 })();
 window.RuleAlert = RuleAlert;
 
-/* ------------------------------------------------------- screen switching --- */
 const STAGE_LABEL = {
   group_stage: (md) => `Round ${md}`,
   round_of_32: () => "Round of 32",
@@ -111,103 +85,195 @@ const STAGE_LABEL = {
   final: () => "Final",
 };
 
-function switchScreen(name) {
-  document.querySelectorAll(".screen").forEach((s) => s.classList.remove("is-active"));
-  document.getElementById("screen-" + name).classList.add("is-active");
-  document.querySelectorAll(".nav__link").forEach((l) => {
-    l.classList.toggle("is-active", l.dataset.screen === name);
-  });
-  // The matchday round strip is only meaningful on My Team / Scores — hide it on Fixtures
-  // (which has its own round navigation).
-  document.getElementById("matchdayNav").hidden = (name === "fixtures");
-  if (name === "fixtures") { Fixtures.setRound(State.currentMatchday); Fixtures.render(); }
-  if (name === "scores") Scores.render();
+let _roundMeta = [];
+let _scoreByMd = {};
+let _teamPane = "pitch";
+
+const SCREEN_COPY = {
+  team: { eyebrow: "TEAM MANAGEMENT", title: "Build your matchday squad" },
+  fixtures: { eyebrow: "TOURNAMENT", title: "Fixtures & standings" },
+  scores: { eyebrow: "PERFORMANCE", title: "Season dashboard" },
+  stats: { eyebrow: "TOURNAMENT", title: "Top player stats" },
+};
+
+function todayDateOnly() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
-/* ------------------------------------------------- MatchdayNavigation strip --- */
-let _roundMeta = [];   // [{matchday, stage, label, date}]
-let _scoreByMd = {};   // matchday -> cumulative score (for completed pills)
+function matchDateOnly(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function currentRoundMeta(md = State.currentMatchday) {
+  return _roundMeta.find((r) => r.matchday === md) || null;
+}
+
+function isWindowOpen(md) {
+  const meta = currentRoundMeta(md);
+  if (!meta || !meta.date) return true;
+  return todayDateOnly() < matchDateOnly(meta.date);
+}
+window.isWindowOpen = isWindowOpen;
+
+function switchScreen(name) {
+  const inner = document.querySelector(".main__inner");
+  let bar = document.getElementById("screenLoader");
+  if (!bar && inner) {
+    bar = document.createElement("div");
+    bar.id = "screenLoader";
+    bar.className = "screen-loader";
+    inner.prepend(bar);
+  }
+  if (bar) {
+    bar.style.width = "0";
+    bar.style.opacity = "1";
+    requestAnimationFrame(() => { bar.style.width = "70%"; });
+  }
+
+  document.querySelectorAll(".screen").forEach((screen) => {
+    screen.classList.toggle("is-active", screen.id === "screen-" + name);
+  });
+  document.querySelectorAll("[data-screen]").forEach((link) => {
+    link.classList.toggle("is-active", link.dataset.screen === name);
+  });
+
+  updateTopbarCopy(name);
+
+  if (name === "fixtures") {
+    Fixtures.setRound(State.currentMatchday);
+    Fixtures.render();
+  }
+  if (name === "scores") Scores.render();
+  if (name === "stats") Stats.render();
+
+  if (bar) {
+    bar.style.width = "100%";
+    setTimeout(() => { bar.style.opacity = "0"; }, 200);
+    setTimeout(() => { bar.style.width = "0"; }, 400);
+  }
+}
+
+function updateTopbarCopy(name) {
+  const copy = SCREEN_COPY[name] || SCREEN_COPY.team;
+  const eyebrow = document.getElementById("topbarEyebrow");
+  const title = document.getElementById("topbarTitle");
+  if (eyebrow) eyebrow.textContent = copy.eyebrow;
+  if (title) title.textContent = copy.title;
+}
 
 function buildRoundMeta() {
   const map = {};
-  for (const m of State.fixtures) {
-    if (!map[m.matchday]) map[m.matchday] = { matchday: m.matchday, stage: m.stage, date: m.date, kickoff: m.kickoff };
-    if (m.kickoff && (!map[m.matchday].kickoff || m.kickoff < map[m.matchday].kickoff)) {
-      map[m.matchday].kickoff = m.kickoff;
-      map[m.matchday].date = m.date;
+  for (const match of State.fixtures) {
+    if (!map[match.matchday]) {
+      map[match.matchday] = {
+        matchday: match.matchday,
+        stage: match.stage,
+        date: match.date,
+      };
+    }
+    if (match.date < map[match.matchday].date) {
+      map[match.matchday].date = match.date;
     }
   }
+  // Allow squad/transfer for Round of 32 before fixtures are loaded.
+  if (!map[4]) {
+    map[4] = { matchday: 4, stage: "round_of_32", date: null };
+  }
   _roundMeta = Object.values(map).sort((a, b) => a.matchday - b.matchday);
-  for (const r of _roundMeta) r.label = (STAGE_LABEL[r.stage] || STAGE_LABEL.group_stage)(r.matchday);
-}
-
-// GR-07: window locks 1 hour before the earliest kickoff of the matchday.
-function isWindowOpen(md) {
-  const meta = _roundMeta.find((r) => r.matchday === md);
-  if (!meta || !meta.kickoff) return true;
-  const lockTime = new Date(new Date(meta.kickoff).getTime() - 60 * 60 * 1000);
-  return new Date() < lockTime;
+  for (const round of _roundMeta) {
+    round.label = (STAGE_LABEL[round.stage] || STAGE_LABEL.group_stage)(round.matchday);
+  }
 }
 
 function fmtShortDate(iso) {
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"];
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const [y, m, d] = iso.split("-").map(Number);
   return `${d} ${months[m - 1]}`;
+}
+
+function updateBackendState() {
+  const isMock = Api.isMock();
+  const badge = document.getElementById("backendStateBadge");
+  const label = isMock ? "Demo data" : "Live backend";
+
+  if (badge) {
+    badge.textContent = label;
+    badge.classList.toggle("shell-pill--live", !isMock);
+    badge.classList.toggle("shell-pill--demo", isMock);
+  }
+}
+
+function updateShellSummary() {
+  const meta = currentRoundMeta();
+  const mdLabel = meta ? meta.label : `Round ${State.currentMatchday}`;
+  const headerMd = document.getElementById("headerMatchdayValue");
+  const summary = document.getElementById("matchdaySummary");
+  const transferWindow = document.getElementById("transferWindowStatus");
+  const actionMdLabel = document.getElementById("actionMatchdayLabel");
+
+  if (headerMd) headerMd.textContent = mdLabel;
+  if (actionMdLabel) actionMdLabel.textContent = mdLabel;
+  const modeLabel = document.getElementById("modeLabel");
+  if (modeLabel) modeLabel.textContent = mdLabel;
+  if (summary) {
+    if (meta) {
+      const lockCopy = isWindowOpen(meta.matchday) ? "Transfers open" : "Transfers locked";
+      const datePart = meta.date ? ` - ${fmtShortDate(meta.date)}` : "";
+      summary.textContent = `${mdLabel}${datePart} - ${lockCopy}`;
+    } else {
+      summary.textContent = mdLabel;
+    }
+  }
+  if (transferWindow) {
+    transferWindow.textContent = isWindowOpen(State.currentMatchday) ? "Transfers open" : "Transfers locked";
+  }
 }
 
 function renderMatchdayStrip() {
   const track = document.getElementById("matchdayTrack");
   let html = "";
-  for (const r of _roundMeta) {
-    const isActive = r.matchday === State.currentMatchday;
-    const isCompleted = r.matchday < State.currentMatchday;
-    let sub = `<span class="round__date">${fmtShortDate(r.date)}</span>`;
-    if (isActive) {
-      if (isWindowOpen(r.matchday)) {
-        sub = `<span class="round__sub round__sub--open">Transfers open</span>`;
-      } else if (Object.prototype.hasOwnProperty.call(_scoreByMd, r.matchday)) {
-        sub = `<span class="pill pill--pts">${_scoreByMd[r.matchday]} pts</span>`;
-      } else {
-        sub = `<span class="round__sub round__sub--locked">Transfers locked</span>`;
-      }
+
+  for (const round of _roundMeta) {
+    const active = round.matchday === State.currentMatchday;
+    const complete = round.matchday < State.currentMatchday;
+    let sub = round.date ? `<span class="round__date">${fmtShortDate(round.date)}</span>` : "";
+
+    if (active) {
+      sub = isWindowOpen(round.matchday)
+        ? `<span class="round__sub round__sub--open">Transfers open</span>`
+        : `<span class="round__sub round__sub--locked">Transfers locked</span>`;
+    } else if (complete && Object.prototype.hasOwnProperty.call(_scoreByMd, round.matchday)) {
+      sub = `<span class="pill pill--pts">${_scoreByMd[round.matchday]} pts</span>`;
     }
-    // Only show a pts pill when a REAL score exists for that round — never a fabricated "0 pts".
-    else if (isCompleted && Object.prototype.hasOwnProperty.call(_scoreByMd, r.matchday)) {
-      sub = `<span class="pill pill--pts">${_scoreByMd[r.matchday]} pts</span>`;
-    }
-    html += `<button class="round ${isActive ? "is-active" : ""}" role="tab"
-        aria-selected="${isActive}" data-md="${r.matchday}">
-      <span class="round__name">${r.label}</span>
+
+    html += `<button class="round ${active ? "is-active" : ""}" role="tab" aria-selected="${active}" data-md="${round.matchday}">
+      <span class="round__name">${round.label}</span>
       ${sub}
     </button>`;
   }
+
   track.innerHTML = html;
   track.querySelectorAll(".round").forEach((btn) => {
     btn.addEventListener("click", () => selectMatchday(+btn.dataset.md));
   });
+  updateShellSummary();
 }
 
 function updatePointsChip(md) {
   const el = document.getElementById("statPoints");
   if (!el) return;
   const pts = Object.prototype.hasOwnProperty.call(_scoreByMd, md) ? _scoreByMd[md] : null;
-  el.textContent = pts != null ? pts + " pts" : "—";
+  el.textContent = pts != null ? `${pts} pts` : "-";
+  const topbar = document.getElementById("topbarPoints");
+  if (topbar) {
+    let total = 0;
+    for (const key in _scoreByMd) total = total + Number(_scoreByMd[key] || 0);
+    topbar.textContent = String(total);
+  }
 }
 
-async function selectMatchday(md) {
-  State.setMatchday(md);
-  renderMatchdayStrip();
-  updatePointsChip(md);
-  await loadSquadForMatchday(md);
-  // refresh whichever screen is active
-  const active = document.querySelector(".screen.is-active").id;
-  if (active === "screen-fixtures") { Fixtures.setRound(md); Fixtures.render(); }
-  if (active === "screen-scores") Scores.render();
-}
-
-/* Matchday workflow (UI-contract §9): load saved squad if it exists.
-   Backfills team_id from the players list (the GET /squad payload historically
-   omitted it → flags rendered as placeholders until re-added). */
 function inferFormation(players) {
   const mids = players.filter((p) => p.position === "MID").length;
   const fwds = players.filter((p) => p.position === "FWD").length;
@@ -215,79 +281,548 @@ function inferFormation(players) {
   return "4-3-3";
 }
 
-function hydrate(p) {
-  let team_id = p.team_id, team_name = p.team_name;
+function hydrate(player) {
+  let team_id = player.team_id;
+  let team_name = player.team_name;
   if (!team_id) {
-    const full = State.players.find((x) => x.player_id === p.player_id);
-    if (full) { team_id = full.team_id; team_name = team_name || full.team_name; }
+    const full = State.players.find((item) => item.player_id === player.player_id);
+    if (full) {
+      team_id = full.team_id;
+      team_name = team_name || full.team_name;
+    }
   }
-  return { player_id: p.player_id, name: p.name, position: p.position, team_id, team_name, base_price: p.base_price };
+  return {
+    player_id: player.player_id,
+    name: player.name,
+    position: player.position,
+    team_id,
+    team_name,
+    base_price: player.base_price,
+  };
 }
+
 async function loadSquadForMatchday(md) {
   try {
-    const squad = await Api.getSquad(md);
+    const [squad, transfersUsed] = await Promise.all([
+      Api.getSquad(md),
+      Transfers.fetchUsed(md),
+    ]);
     State.currentSquad.players = squad.players.map(hydrate);
     State.currentSquad.formation = inferFormation(State.currentSquad.players);
     State.squadSaved = true;
-    State.transfersUsed = await Transfers.fetchUsed(md);
-    State.setBaseline();              // saved state is the baseline for "Cancel"
-    State.mode = "view";              // saved squad is read-only until "Make transfers"
+    State.transfersUsed = transfersUsed;
+    State.setBaseline();
+    State.mode = "view";
     State.emit();
   } catch (e) {
-    // 404 → no saved squad. Keep any persisted draft for this md, but the
-    // baseline is "empty" (nothing saved yet) so Cancel reverts to empty.
     if (State.currentSquad.matchday !== md) State.currentSquad.players = [];
-    const keep = State.currentSquad.players;
+    const draft = State.currentSquad.players;
     State.currentSquad.players = [];
     State.setBaseline();
-    State.currentSquad.players = keep;
+    State.currentSquad.players = draft;
     State.squadSaved = false;
     State.transfersUsed = 0;
-    State.mode = "build";             // no squad yet → build + Save
+    State.mode = "build";
     State.emit();
   }
 }
 
-/* ------------------------------------------------------------- bootstrap --- */
+async function selectMatchday(md) {
+  State.setMatchday(md);
+  State.transfersUsed = 0;
+  State.emit();
+  renderMatchdayStrip();
+  updatePointsChip(md);
+  await loadSquadForMatchday(md);
+
+  const active = document.querySelector(".screen.is-active").id;
+  if (active === "screen-fixtures") {
+    Fixtures.setRound(md);
+    Fixtures.render();
+  }
+  if (active === "screen-scores") Scores.render();
+}
+
+function setTeamPane(name) {
+  _teamPane = name;
+  document.querySelectorAll(".team-pane").forEach((pane) => {
+    pane.classList.toggle("is-active", pane.dataset.pane === name);
+  });
+  document.querySelectorAll(".team-mobile-tabs__tab").forEach((tab) => {
+    const active = tab.dataset.pane === name;
+    tab.classList.toggle("is-active", active);
+    tab.setAttribute("aria-selected", String(active));
+  });
+}
+
+function initTeamMobileTabs() {
+  document.querySelectorAll(".team-mobile-tabs__tab").forEach((tab) => {
+    tab.addEventListener("click", () => setTeamPane(tab.dataset.pane));
+  });
+}
+
+function bindNav() {
+  document.querySelectorAll("[data-screen]").forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchScreen(link.dataset.screen);
+    });
+  });
+
+  document.querySelectorAll("[data-pane-jump]").forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchScreen("team");
+      setTeamPane(link.dataset.paneJump);
+    });
+  });
+
+  document.querySelectorAll("[data-command='transfers']").forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchScreen("team");
+      if (State.mode === "view") {
+        Transfers.enter();
+        return;
+      }
+      setTeamPane("summary");
+      if (State.mode === "build") {
+        Toast.show("Save a squad before making transfers.", "info");
+      }
+    });
+  });
+
+  const menuBtn = document.getElementById("menuBtn");
+  const navLinks = document.getElementById("navLinks");
+  menuBtn.addEventListener("click", () => {
+    const open = !navLinks.classList.contains("is-open");
+    navLinks.classList.toggle("is-open", open);
+    menuBtn.setAttribute("aria-expanded", String(open));
+  });
+}
+
+async function refreshLiveData() {
+  const md = State.currentMatchday;
+  const matches = await Api.getMatches();
+  const cumulative = await Api.getScore().catch(() => ({}));
+  State.fixtures = matches;
+  _scoreByMd = {};
+  for (const row of (cumulative.by_matchday || [])) {
+    _scoreByMd[row.matchday] = Number(row.score ?? row.squad_score ?? 0);
+  }
+  buildRoundMeta();
+  renderMatchdayStrip();
+  updatePointsChip(md);
+  await loadSquadForMatchday(md);
+  const active = document.querySelector(".screen.is-active").id;
+  if (active === "screen-fixtures") {
+    Fixtures.setRound(md);
+    Fixtures.render();
+  }
+  if (active === "screen-scores") Scores.render();
+}
+
+function bindUpdateData() {
+  const btn = document.getElementById("updateDataBtn");
+  const subtitle = document.getElementById("updateDataSubtitle");
+  const label = btn ? btn.querySelector(".btn-update__title") : null;
+  if (!btn || !subtitle) return;
+
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    btn.setAttribute("aria-disabled", "true");
+    btn.classList.add("is-loading");
+    if (label) label.textContent = "Updating";
+    const subtitles = ["Fetching latest scores...", "Updating player stats...", "Refreshing squad analytics..."];
+    let index = 0;
+    subtitle.textContent = subtitles[index];
+    const timer = setInterval(() => {
+      index = (index + 1) % subtitles.length;
+      subtitle.textContent = subtitles[index];
+    }, 1200);
+
+    try {
+      const result = await Api.updateData();
+      await refreshLiveData();
+      subtitle.textContent = "Data update complete";
+      Toast.show(`Data updated: ${result.inserted || 0} stats added, ${result.matches_updated || 0} matches refreshed.`, "success");
+    } catch (e) {
+      subtitle.textContent = "Update failed";
+      Toast.show(e.message || "Could not update data.", "error");
+    } finally {
+      clearInterval(timer);
+      btn.disabled = false;
+      btn.setAttribute("aria-disabled", "false");
+      btn.classList.remove("is-loading");
+      if (label) label.textContent = "Update Data";
+    }
+  });
+}
+
+function bindMatchdayNav() {
+  const goPrev = () => {
+    if (State.currentMatchday > 1) selectMatchday(State.currentMatchday - 1);
+  };
+
+  const goNext = () => {
+    const maxMd = _roundMeta.length ? _roundMeta[_roundMeta.length - 1].matchday : 8;
+    if (State.currentMatchday < maxMd) selectMatchday(State.currentMatchday + 1);
+  };
+
+  document.getElementById("mdPrev").addEventListener("click", goPrev);
+  document.getElementById("mdNext").addEventListener("click", goNext);
+  const deskPrev = document.getElementById("mdPrevDesk");
+  const deskNext = document.getElementById("mdNextDesk");
+  if (deskPrev) deskPrev.addEventListener("click", goPrev);
+  if (deskNext) deskNext.addEventListener("click", goNext);
+}
+
+function bindHelpButtons() {
+  const onboarding = document.getElementById("openOnboardingBtn");
+  if (onboarding) {
+    onboarding.addEventListener("click", () => {
+      if (window.Onboarding) Onboarding.open();
+    });
+  }
+
+  const replayTour = document.getElementById("replayTourBtn");
+  if (replayTour) {
+    replayTour.addEventListener("click", () => {
+      if (window.Tour) Tour.start();
+    });
+  }
+}
+
+function updateAuthMode(mode) {
+  const title = document.getElementById("authTitle");
+  const subtitle = document.getElementById("authSubtitle");
+  const passwordField = document.getElementById("authPasswordField");
+  const options = document.getElementById("authOptions");
+  const submitBtn = document.getElementById("authSubmitBtn");
+  const separator = document.getElementById("authSeparator");
+  const googleBtn = document.getElementById("googleSignInBtn");
+  const googleText = document.getElementById("googleSignInText");
+  const modeText = document.getElementById("authModeText");
+  const toggleBtn = document.getElementById("authToggleBtn");
+
+  if (mode === "login") {
+    title.textContent = "Welcome back";
+    subtitle.style.display = "none";
+    passwordField.hidden = false;
+    options.hidden = false;
+    submitBtn.textContent = "Log In";
+    separator.hidden = false;
+    googleBtn.hidden = false;
+    googleText.textContent = "Sign In with Google";
+    if (modeText) modeText.textContent = "Don't have an account?";
+    if (toggleBtn) toggleBtn.textContent = "Sign Up";
+  } else if (mode === "signup") {
+    title.textContent = "Create account";
+    subtitle.style.display = "none";
+    passwordField.hidden = false;
+    options.hidden = true;
+    submitBtn.textContent = "Sign Up";
+    separator.hidden = false;
+    googleBtn.hidden = false;
+    googleText.textContent = "Sign Up with Google";
+    if (modeText) modeText.textContent = "Already have an account?";
+    if (toggleBtn) toggleBtn.textContent = "Log In";
+  } else if (mode === "reset") {
+    title.textContent = "Reset password";
+    subtitle.textContent = "Enter your email and we'll send you a reset link";
+    subtitle.style.display = "";
+    passwordField.hidden = true;
+    options.hidden = true;
+    submitBtn.textContent = "Send reset link";
+    separator.hidden = true;
+    googleBtn.hidden = true;
+    if (modeText) modeText.textContent = "Remember your password?";
+    if (toggleBtn) toggleBtn.textContent = "Log In";
+  }
+}
+
+function showLoginScreen() {
+  const login = document.getElementById("loginScreen");
+  const app = document.getElementById("appScreen");
+  if (login) login.style.display = "";
+  if (app) app.style.display = "none";
+  hideAuthOverlay();
+}
+
+function showAuthOverlay(type, email) {
+  const overlay = document.getElementById("authOverlay");
+  const card = document.querySelector(".login-screen__card");
+  const title = document.getElementById("authOverlayTitle");
+  const body = document.getElementById("authOverlayBody");
+  if (!overlay) return;
+  if (card) card.style.display = "none";
+  if (type === "signup") {
+    if (title) title.textContent = "Check your email";
+    if (body) body.innerHTML = "We sent a confirmation link to <strong>" + email + "</strong>. Click the link to activate your account.";
+  } else if (type === "reset") {
+    if (title) title.textContent = "Reset link sent";
+    if (body) body.innerHTML = "We sent a password reset link to <strong>" + email + "</strong>. Check your inbox and follow the link to reset your password.";
+  }
+  overlay.style.display = "";
+}
+
+function hideAuthOverlay() {
+  const overlay = document.getElementById("authOverlay");
+  const card = document.querySelector(".login-screen__card");
+  if (overlay) overlay.style.display = "none";
+  if (card) card.style.display = "";
+}
+
+function showAppScreen() {
+  const login = document.getElementById("loginScreen");
+  const app = document.getElementById("appScreen");
+  if (login) login.style.display = "none";
+  if (app) app.style.display = "";
+}
+
+function showGuestBanner() {
+  const banner = document.getElementById("guestBanner");
+  if (banner) banner.hidden = false;
+}
+
+function hideGuestBanner() {
+  const banner = document.getElementById("guestBanner");
+  if (banner) banner.hidden = true;
+}
+
 async function boot() {
   State.load();
 
-  // first-launch welcome overlay (how the game works) — no-op on return visits
-  Onboarding.maybeShow();
+  window.addEventListener("beforeunload", () => {
+    if (sessionStorage.getItem("gaffer_no_persist") === "1") {
+      if (window.supabaseAuth) {
+        window.supabaseAuth.auth.signOut().catch(() => {});
+      }
+    }
+  });
 
-  // wire feature modules
+  const googleSignInBtn = document.getElementById("googleSignInBtn");
+  const emailLoginForm = document.getElementById("emailLoginForm");
+  const guestBtn = document.getElementById("guestBtn");
+  const forgotPasswordBtn = document.getElementById("forgotPasswordBtn");
+  const authToggleBtn = document.getElementById("authToggleBtn");
+  const guestBannerClose = document.getElementById("guestBannerClose");
+  const guestBannerSignIn = document.getElementById("guestBannerSignIn");
+  let authMode = "login";
+
+  function swapToLogin() {
+    showLoginScreen();
+    hideGuestBanner();
+  }
+
+  async function swapToApp() {
+    showAppScreen();
+    _booted = false;
+    await continueBoot();
+  }
+
+  async function enterGuestMode() {
+    showAppScreen();
+    showGuestBanner();
+    Toast.show("Continuing as guest — data may be limited.", "info");
+    _booted = false;
+    await continueBoot();
+  }
+
+  window.addEventListener("auth-unauthorized", () => {
+    Toast.show("Session expired. Please sign in again.", "error");
+    if (window.supabaseAuth) {
+      window.supabaseAuth.auth.signOut().catch(() => {});
+    }
+    swapToLogin();
+  });
+
+  window.addEventListener("auth-forbidden", (e) => {
+    const detail = e && e.detail && e.detail.detail ? e.detail.detail : "You do not have permission to do that.";
+    if (window.Toast) Toast.show(detail, "error");
+  });
+
+  if (authToggleBtn) {
+    authToggleBtn.addEventListener("click", () => {
+      authMode = authMode === "login" ? "signup" : "login";
+      updateAuthMode(authMode);
+    });
+  }
+
+  const passwordToggle = document.getElementById("passwordToggle");
+  if (passwordToggle) {
+    passwordToggle.addEventListener("click", () => {
+      const input = document.getElementById("authPassword");
+      if (!input) return;
+      const isText = input.type === "text";
+      input.type = isText ? "password" : "text";
+      passwordToggle.setAttribute("aria-pressed", String(!isText));
+      passwordToggle.setAttribute("aria-label", isText ? "Show password" : "Hide password");
+    });
+  }
+
+  if (guestBtn) {
+    guestBtn.addEventListener("click", enterGuestMode);
+  }
+
+  if (googleSignInBtn) {
+    googleSignInBtn.addEventListener("click", async () => {
+      try {
+        await window.signInWithGoogle();
+      } catch (error) {
+        Toast.show(error.message || "Google sign-in failed", "error");
+      }
+    });
+  }
+
+  function setAuthLoading(loading) {
+    const submitBtn = document.getElementById("authSubmitBtn");
+    const googleBtn = document.getElementById("googleSignInBtn");
+    if (loading) {
+      if (submitBtn) { submitBtn.classList.add("btn--loading"); submitBtn.disabled = true; }
+      if (googleBtn) { googleBtn.classList.add("btn--loading"); googleBtn.disabled = true; }
+    } else {
+      if (submitBtn) { submitBtn.classList.remove("btn--loading"); submitBtn.disabled = false; }
+      if (googleBtn) { googleBtn.classList.remove("btn--loading"); googleBtn.disabled = false; }
+    }
+  }
+
+  const authOverlayBack = document.getElementById("authOverlayBack");
+  if (authOverlayBack) {
+    authOverlayBack.addEventListener("click", () => {
+      hideAuthOverlay();
+      updateAuthMode("login");
+      authMode = "login";
+    });
+  }
+
+  if (emailLoginForm) {
+    emailLoginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("authEmail").value;
+      const password = document.getElementById("authPassword").value;
+      const remember = document.getElementById("authRemember")?.checked ?? true;
+      setAuthLoading(true);
+      try {
+        if (authMode === "login") {
+          await window.signIn(email, password, remember);
+          await swapToApp();
+        } else if (authMode === "signup") {
+          await window.signUp(email, password);
+          showAuthOverlay("signup", email);
+          authMode = "login";
+        } else if (authMode === "reset") {
+          await window.resetPassword(email);
+          showAuthOverlay("reset", email);
+          authMode = "login";
+        }
+      } catch (error) {
+        Toast.show(error.message || "Authentication failed", "error");
+      } finally {
+        setAuthLoading(false);
+      }
+    });
+  }
+
+  if (forgotPasswordBtn) {
+    forgotPasswordBtn.addEventListener("click", () => {
+      authMode = "reset";
+      updateAuthMode(authMode);
+    });
+  }
+
+  if (guestBannerClose) {
+    guestBannerClose.addEventListener("click", hideGuestBanner);
+  }
+
+  if (guestBannerSignIn) {
+    guestBannerSignIn.addEventListener("click", () => {
+      if (window.supabaseAuth) {
+        window.supabaseAuth.auth.signOut().catch(() => {});
+      }
+      window.location.reload();
+    });
+  }
+
+  const session = await window.getCurrentSession();
+
+  if (!session) {
+    showLoginScreen();
+    return;
+  }
+
+  try {
+    const me = await Api.getMe();
+    const profileName = document.querySelector(".profile__name");
+    if (profileName && me.display_name) profileName.textContent = me.display_name;
+    if (me.role !== "admin") {
+      const updateBtn = document.getElementById("updateDataBtn");
+      if (updateBtn) updateBtn.style.display = "none";
+    }
+  } catch (e) {
+    if (e.status === 401) {
+      Toast.show("Session expired. Please sign in again.", "error");
+      if (window.supabaseAuth) {
+        await window.supabaseAuth.auth.signOut().catch(() => {});
+      }
+    } else {
+      Toast.show("Could not verify your session. Please sign in again.", "error");
+    }
+    showLoginScreen();
+    return;
+  }
+
+  const signOutBtn = document.getElementById("signOutBtn");
+  if (signOutBtn) {
+    signOutBtn.addEventListener("click", async () => {
+      try {
+        await window.signOut();
+        _booted = false;
+        swapToLogin();
+      } catch (error) {
+        Toast.show(error.message || "Sign out failed", "error");
+      }
+    });
+  }
+
+  await swapToApp();
+}
+
+let _booted = false;
+
+async function continueBoot() {
+  if (_booted) return;
+  _booted = true;
+
+  Onboarding.maybeShow();
+  updateTopbarCopy("team");
+
   Squad.init();
   Fixtures.init();
+  bindNav();
+  bindMatchdayNav();
+  bindUpdateData();
+  bindHelpButtons();
+  initTeamMobileTabs();
+  setTeamPane(_teamPane);
 
-  // nav
-  document.querySelectorAll(".nav__link").forEach((l) => {
-    l.addEventListener("click", (e) => { e.preventDefault(); switchScreen(l.dataset.screen); });
+  State.subscribe(() => {
+    updateShellSummary();
   });
-  document.getElementById("menuBtn").addEventListener("click", () => {
-    document.getElementById("navLinks").classList.toggle("is-open");
-  });
-  // The "Make transfers" / "Confirm transfers" button is wired in Squad.init()
-  // (its action depends on the current mode).
+  window.addEventListener("backend-mode-changed", updateBackendState);
 
-  // matchday strip prev/next
-  document.getElementById("mdPrev").addEventListener("click", () => {
-    const i = _roundMeta.findIndex((r) => r.matchday === State.currentMatchday);
-    if (i > 0) selectMatchday(_roundMeta[i - 1].matchday);
-  });
-  document.getElementById("mdNext").addEventListener("click", () => {
-    const i = _roundMeta.findIndex((r) => r.matchday === State.currentMatchday);
-    if (i >= 0 && i < _roundMeta.length - 1) selectMatchday(_roundMeta[i + 1].matchday);
-  });
-
-  // show skeleton immediately so the pitch doesn't sit blank while loading
   Squad.showSkeleton();
-
   const md = State.currentMatchday;
 
-  // fire all boot requests in parallel — one round trip instead of 4-5 sequential
-  let players = [], teams = [], matches = [], cum = {}, rawSquad = null, transfersUsed = 0;
+  let players = [];
+  let teams = [];
+  let matches = [];
+  let cumulative = {};
+  let rawSquad = null;
+  let transfersUsed = 0;
+
   try {
-    [players, teams, matches, cum, rawSquad, transfersUsed] = await Promise.all([
+    [players, teams, matches, cumulative, rawSquad, transfersUsed] = await Promise.all([
       Api.getPlayers(),
       Api.getTeams(),
       Api.getMatches(),
@@ -296,21 +831,24 @@ async function boot() {
       Transfers.fetchUsed(md),
     ]);
   } catch (e) {
-    Toast.show("Could not load data.", "error");
+    Toast.show("Could not load data. Retry the request.", "error");
   }
 
   State.players = players;
   State.teams = teams;
   State.fixtures = matches;
 
-  for (const row of (cum.by_matchday || [])) _scoreByMd[row.matchday] = Number(row.score ?? row.squad_score ?? 0);
+  _scoreByMd = {};
+  for (const row of (cumulative.by_matchday || [])) {
+    _scoreByMd[row.matchday] = Number(row.score ?? row.squad_score ?? 0);
+  }
 
   buildRoundMeta();
   renderMatchdayStrip();
   updatePointsChip(md);
+  updateBackendState();
   Squad.buildTeamSearch();
 
-  // apply the already-fetched squad instead of making another network call
   if (rawSquad && rawSquad.players && rawSquad.players.length) {
     State.currentSquad.players = rawSquad.players.map(hydrate);
     State.currentSquad.formation = inferFormation(State.currentSquad.players);
@@ -328,10 +866,11 @@ async function boot() {
     State.emit();
   }
 
-  // initial render
   Squad.renderPitch();
   Squad.renderSummary();
   Squad.renderPool();
+  Squad.renderProgressChecklist();
+  Squad.renderTipBanner();
 }
 
 if (document.readyState === "loading") {
@@ -339,3 +878,5 @@ if (document.readyState === "loading") {
 } else {
   boot();
 }
+
+

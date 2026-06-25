@@ -4,7 +4,7 @@ from app.core.scoring import calculate_score
 def get_playerstats(conn, match_id = None, player_id = None):
     cursor = conn.cursor()
     query = '''
-        SELECT stat_id, playerstat.player_id, name as player_name, match_id, goals, 
+        SELECT stat_id, playerstat.player_id, player.name as player_name, match_id, goals, 
         assists, minutes_played, yellow_cards, red_cards, clean_sheet, score
         FROM playerstat 
         JOIN player 
@@ -22,34 +22,131 @@ def get_playerstats(conn, match_id = None, player_id = None):
         values.append(player_id)
     if filters:
         query += " WHERE " + " AND ".join(filters)
+    query += " ORDER BY playerstat.match_id ASC, player.name ASC"
     
     cursor.execute(query, values)
     result = cursor.fetchall()
     cursor.close()
     return result
 
-# upload player stats 
-def post_playerstats(conn, player_id, match_id, goals, assists, minutes_played, yellow_cards, red_cards, clean_sheet):
+
+def get_top_stats(conn, limit=5):
     cursor = conn.cursor()
-    
-    # grab position to calculate score
-    cursor.execute('''
-        SELECT position FROM player WHERE player_id = %s
-    ''', (player_id,))
-    position = cursor.fetchone()["position"]
-    score = calculate_score(goals, assists, minutes_played, yellow_cards, red_cards, clean_sheet, position)
-    
-    # query to insert stat
-    cursor.execute('''
-        INSERT INTO playerstat (player_id, match_id, goals, assists, minutes_played, yellow_cards, red_cards, clean_sheet, score)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-        RETURNING stat_id
-    ''', (player_id, match_id, goals, assists, minutes_played, yellow_cards, red_cards, clean_sheet, score))
-    stat_id = cursor.fetchone()["stat_id"]
-    conn.commit()
+    query = """
+        SELECT
+            p.player_id,
+            p.name,
+            p.position,
+            t.team_id,
+            t.name AS team_name,
+            SUM(ps.goals) AS total_goals,
+            SUM(ps.assists) AS total_assists,
+            SUM(ps.goals + ps.assists) AS total_goal_involvements,
+            SUM(ps.minutes_played) AS total_minutes,
+            SUM(ps.clean_sheet) AS total_clean_sheets,
+            SUM(ps.yellow_cards) AS total_yellow_cards,
+            SUM(ps.red_cards) AS total_red_cards,
+            SUM(ps.score) AS total_score
+        FROM playerstat ps
+        JOIN player p ON ps.player_id = p.player_id
+        JOIN team t ON p.team_id = t.team_id
+        GROUP BY p.player_id, p.name, p.position, t.team_id, t.name
+    """
+    cursor.execute(query)
+    rows = cursor.fetchall()
     cursor.close()
 
-    return stat_id, score
+    def top_n(rows, key, reverse=True):
+        keyfunc = key if callable(key) else lambda r: r[key]
+        sorted_rows = sorted(rows, key=keyfunc, reverse=reverse)
+        return sorted_rows[:limit]
+
+    return {
+        "top_fantasy_score": [
+            {"player_id": r["player_id"], "name": r["name"], "position": r["position"], "team_id": r["team_id"], "team_name": r["team_name"], "value": float(r["total_score"] or 0)}
+            for r in top_n(rows, "total_score")
+        ],
+        "top_scorers": [
+            {"player_id": r["player_id"], "name": r["name"], "position": r["position"], "team_id": r["team_id"], "team_name": r["team_name"], "value": int(r["total_goals"] or 0)}
+            for r in top_n(rows, "total_goals")
+        ],
+        "top_assists": [
+            {"player_id": r["player_id"], "name": r["name"], "position": r["position"], "team_id": r["team_id"], "team_name": r["team_name"], "value": int(r["total_assists"] or 0)}
+            for r in top_n(rows, "total_assists")
+        ],
+        "top_goal_involvements": [
+            {"player_id": r["player_id"], "name": r["name"], "position": r["position"], "team_id": r["team_id"], "team_name": r["team_name"], "value": int(r["total_goal_involvements"] or 0)}
+            for r in top_n(rows, "total_goal_involvements")
+        ],
+        "top_clean_sheets": [
+            {"player_id": r["player_id"], "name": r["name"], "position": r["position"], "team_id": r["team_id"], "team_name": r["team_name"], "value": int(r["total_clean_sheets"] or 0)}
+            for r in top_n(rows, "total_clean_sheets")
+        ],
+        "top_cards": [
+            {
+                "player_id": r["player_id"],
+                "name": r["name"],
+                "position": r["position"],
+                "team_id": r["team_id"],
+                "team_name": r["team_name"],
+                "value": int((r["total_yellow_cards"] or 0) + (r["total_red_cards"] or 0)),
+                "yellow_cards": int(r["total_yellow_cards"] or 0),
+                "red_cards": int(r["total_red_cards"] or 0),
+            }
+            for r in top_n(rows, lambda r: (r["total_yellow_cards"] or 0) + (r["total_red_cards"] or 0))
+        ],
+    }
+
+
+def post_playerstats_batch(conn, match_id, stats_list):
+    if not stats_list:
+        return 0, 0
+
+    player_ids = [s["player_id"] for s in stats_list]
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT player_id, position FROM player WHERE player_id = ANY(%s)",
+            (player_ids,),
+        )
+        position_map = {}
+        for row in cursor.fetchall():
+            position_map[row["player_id"]] = row["position"]
+
+        values = []
+        for s in stats_list:
+            pos = position_map.get(s["player_id"])
+            if pos is None:
+                continue
+            clean_sheet = s["clean_sheet"] if s["minutes_played"] > 0 else 0
+            score = calculate_score(
+                s["goals"], s["assists"], s["minutes_played"],
+                s["yellow_cards"], s["red_cards"], clean_sheet, pos,
+            )
+            values.append((
+                s["player_id"], match_id, s["goals"], s["assists"],
+                s["minutes_played"], s["yellow_cards"], s["red_cards"],
+                clean_sheet, score,
+            ))
+
+        if not values:
+            return 0, 0
+
+        placeholders = ",".join(["(%s,%s,%s,%s,%s,%s,%s,%s,%s)"] * len(values))
+        flat = tuple(v for row in values for v in row)
+        cursor.execute(
+            "INSERT INTO playerstat (player_id, match_id, goals, assists, minutes_played, yellow_cards, red_cards, clean_sheet, score) VALUES "
+            + placeholders + " ON CONFLICT (player_id, match_id) DO NOTHING",
+            flat,
+        )
+        inserted = cursor.rowcount
+        conn.commit()
+        return inserted, len(values) - inserted
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cursor.close()
 
 
 

@@ -1,6 +1,11 @@
 # World Cup Fantasy 2026 — Frontend Contract
 
-Version: 1.1
+Version: 1.2
+
+Status: historical planning contract. The implemented runtime app is `frontend/index.html`,
+`frontend/js/*`, and `frontend/css/*`; `frontend/docs/design-system.md` is the current visual
+direction note. Keep this file for planning context, but verify live route names against
+`docs/API.md` and `frontend/js/api.js`.
 
 ---
 
@@ -105,12 +110,13 @@ Search, filtering, and sorting are all client-side — the World Cup player data
 | `GET /matches` | Fixtures Screen | No |
 | `GET /matches/{match_id}` | Fixtures Screen → match detail / score breakdown | No |
 | `POST /squad` | Save Squad | — |
-| `GET /fixtures` | Fixtures Screen | — |
-| `GET /scores` | Scores Screen | — |
+| `GET /score` | Dashboard / scoring | — |
 | `POST /transfer` | Transfer Confirmation | — |
 | `GET /transfers` | Transfer History | — |
+| `POST /load-stats` | Update Data action | — |
 
-**Note:** `GET /fixtures` and `GET /scores` are referenced here per the original v1 contract, but API.md (v2.3) defines the live endpoints as `GET /matches` (fixtures) and `GET /score` (scoring, singular). Confirm with backend which naming is authoritative before wiring Phase 4 — this doc and API.md currently disagree on endpoint names for these two.
+**Note:** API paths in this table omit the `/api` prefix. The live frontend client uses
+`GET /matches` for fixtures and `GET /score` for scoring.
 
 ---
 

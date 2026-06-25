@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.database import get_db
+from app.auth import get_current_user
 from app.queries.squad import get_squad, get_effective_squad, create_squad
 from app.queries.player import get_player
 from app.schemas import SquadCreate
@@ -32,9 +33,12 @@ def build_squad(rows):
 
 
 @router.get("/squad")
-def get_squad_route(matchday: int, conn = Depends(get_db)):
-    user_id = 1
-    rows = get_effective_squad(conn, user_id, matchday)
+def get_squad_route(
+    matchday: int,
+    conn = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    rows = get_effective_squad(conn, current_user["user_id"], matchday)
     if not rows:
         raise HTTPException(status_code=404, detail="No squad found.")
     return build_squad(rows)
@@ -42,8 +46,12 @@ def get_squad_route(matchday: int, conn = Depends(get_db)):
 
 
 @router.post("/squad", status_code = 201)
-def post_squad_route(body: SquadCreate, conn = Depends(get_db)):
-    user_id = 1
+def post_squad_route(
+    body: SquadCreate,
+    conn = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    user_id = current_user["user_id"]
     players = []
     for player_id in body.player_ids:
         player = get_player(conn, player_id)
@@ -61,4 +69,4 @@ def post_squad_route(body: SquadCreate, conn = Depends(get_db)):
         conn.rollback()
         raise HTTPException(status_code = 400, detail = "Squad already exists for this matchday")
 
-    return build_squad(get_squad(conn, body.matchday))
+    return build_squad(get_squad(conn, user_id, body.matchday))

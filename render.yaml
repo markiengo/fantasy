@@ -1,11 +1,12 @@
 services:
   - type: web
-    name: fantasy
+    name: wc-fantasy-2026
     runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: DATABASE_URL
         sync: false
-      - key: FRONTEND_URL
-        value: https://fantasy.onrender.com
+      - key: SUPABASE_URL
+        sync: false
+    plan: free

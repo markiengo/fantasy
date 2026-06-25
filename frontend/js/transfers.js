@@ -1,15 +1,3 @@
-/* ============================================================================
-   transfers.js — On-pitch transfer engine (replaces the old modal).
-
-   Transfers happen directly on the My Team pitch: enter transfer mode, remove
-   players and re-add same-position replacements, then Confirm. Each pending
-   swap (computed by State.pendingTransfers) is sent as one POST /transfer.
-   The backend (GR-05..GR-07) re-validates the squad after each individual
-   transfer, so swaps are sent budget-freeing-first to keep every intermediate
-   squad within the cap. The backend is authoritative — after confirming we
-   reload the saved squad rather than trusting local state.
-   ============================================================================ */
-
 const Transfers = (() => {
   async function fetchUsed(md) {
     try {
@@ -23,12 +11,17 @@ const Transfers = (() => {
       Toast.show("No transfers left this round.", "info");
       return;
     }
+    if (window.innerWidth <= 760) setTeamPane("pitch");
     State.setMode("transfer");
+    if (!localStorage.getItem("gaffer_transfer_tour_done") && window.Tour) {
+      Tour.start(Tour.TRANSFER_STEPS);
+    }
   }
 
   // transfer → view: throw away the pending edits, restore the saved squad.
   function cancel() {
     State.restoreBaseline();
+    if (window.innerWidth <= 760) setTeamPane("summary");
     State.setMode("view");
   }
 
@@ -42,8 +35,8 @@ const Transfers = (() => {
       return;
     }
 
-    const btn = document.getElementById("makeTransfersBtn");
-    btn.disabled = true;
+    const btn = document.getElementById("confirmBtn");
+    if (btn) btn.disabled = true;
 
     // Each change is one POST /transfer — the single documented entry point for
     // squad edits (API.md §5). It updates squadplayer + budget on the existing
@@ -61,6 +54,7 @@ const Transfers = (() => {
 
     // Backend is authoritative — re-sync (resets baseline + drops back to view mode).
     await loadSquadForMatchday(State.currentMatchday);
+    if (window.innerWidth <= 760) setTeamPane("summary");
 
     if (failures.length && done) {
       Toast.show(`${done} transfer${done === 1 ? "" : "s"} confirmed; ${failures.length} rejected (${failures[0]}).`, "info");

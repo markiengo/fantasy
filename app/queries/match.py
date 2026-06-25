@@ -33,7 +33,7 @@ def get_match(conn, match_id):
     cursor.execute('''
         SELECT m.match_id, m.team1_id, t1.name AS team1_name,
                m.team2_id, t2.name AS team2_name, m.matchday, m.stage, m.date,
-               m.team1_score, m.team2_score
+               m.team1_score, m.team2_score, m.kickoff
         FROM match m
         JOIN team t1 ON m.team1_id = t1.team_id
         JOIN team t2 ON m.team2_id = t2.team_id
@@ -53,6 +53,39 @@ def get_matchday_start(conn, matchday):
     cursor.close()
     return row["first_kickoff"] if row else None
 
+def update_match_score(conn, match_id, team1_score, team2_score):
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            '''
+            UPDATE match
+            SET team1_score = %s, team2_score = %s
+            WHERE match_id = %s
+            ''',
+            (team1_score, team2_score, match_id)
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cursor.close()
+
+def get_match_dates_without_stats(conn):
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT DISTINCT m.date
+        FROM match m
+        WHERE NOT EXISTS (
+            SELECT 1 FROM playerstat ps WHERE ps.match_id = m.match_id
+        )
+        AND m.date <= CURRENT_DATE
+        ORDER BY m.date ASC
+    ''')
+    rows = cursor.fetchall()
+    cursor.close()
+    return [row["date"] for row in rows]
+
 
 def get_match_stats(conn, match_id):
     cursor = conn.cursor()
@@ -66,4 +99,4 @@ def get_match_stats(conn, match_id):
         ''', (match_id,))
     results = cursor.fetchall()
     cursor.close()
-    return results 
+    return results

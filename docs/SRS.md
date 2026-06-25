@@ -1,54 +1,52 @@
 # SRS - World Cup Fantasy Football 2026
 **Version:** 2.0  
 **Author:** Tân  
-**Last Updated:** 2026-06-09
+**Last Updated:** 2026-06-25
 
 ---
 
 ## 1. Introduction
 
-### 1.1 Project Overview
-Một web application cho phép user xây dựng đội hình 11 cầu thủ trong giới hạn budget cố định, tích điểm mỗi matchday dựa theo thành tích thực tế của cầu thủ, và có thể thực hiện tối đa 5 transfer giữa các vòng đấu theo quy tắc budget cụ thể.
+### 1.1 Overview
+Web app: build đội hình 11 cầu thủ trong budget, tích điểm mỗi matchday dựa thành tích thực tế, thực hiện tối đa 5 transfer giữa các vòng đấu.
 
 ### 1.2 System Scope
-- Web application (browser-based)
 - Backend: FastAPI + Supabase (PostgreSQL) + psycopg2 (raw SQL)
 - Frontend: Vanilla HTML/CSS/JS
-- Single user (không có multiplayer ở v1)
-- Match stats lấy từ third-party API hoặc web scraping (deferred)
+- Multi-user với Supabase JWT auth (email/Google sign-in)
+- Match stats từ ESPN API hoặc manual entry
 
 ### 1.3 Assumptions
-- Dữ liệu cầu thủ và giá được seed thủ công hoặc qua API (TBD)
-- Match stats được nhập sau mỗi matchday thực tế (phương thức TBD)
-- Scoring algorithm dùng standard fantasy points ở v1
-- Không cần authentication ở v1 (single user)
+- Player data seed từ ESPN roster API + Wikipedia squad lists (canonical cho `in_tournament`)
+- Match stats nhập sau mỗi matchday qua ESPN API hoặc manual entry
+- v1 scoring: standard fantasy points
+- Identity từ verified JWT bearer token, không hardcode `user_id`
 
 ### 1.4 Out of Scope
-- Multiplayer / leaderboard
 - Real-time live score updates
 - Biến động giá cầu thủ
 - Captain / vice-captain multiplier
-- Các biến, multiplier phức tạp hơn để tính điểm (deferred to v2)
+- Scoring multiplier phức tạp hơn (v2)
 
 ---
 
 ## 2. Use Cases
 
-| ID    | Actor  | Use Case              | Description                                                  |
-| -------| --------| -----------------------| --------------------------------------------------------------|
-| UC-01 | User   | View player list      | User xem danh sách cầu thủ, lọc theo vị trí, đội, giá        |
-| UC-02 | User   | Build squad           | User pick 11 cầu thủ tạo đội hình trong budget               |
-| UC-03 | User   | View current squad    | User xem đội hình hiện tại với giá và vị trí                 |
-| UC-04 | User   | Make transfer         | User bán 1 cầu thủ, mua 1 cầu thủ khác trong transfer window |
-| UC-05 | User   | View transfer history | User xem lịch sử transfer theo matchday                      |
-| UC-06 | User   | View fixtures         | User xem lịch thi đấu vòng hiện tại và sắp tới               |
-| UC-07 | User   | View matchday score   | User xem điểm của đội hình theo từng matchday                |
-| UC-08 | User   | View score breakdown  | User xem điểm đóng góp của từng cầu thủ mỗi vòng             |
-| UC-09 | User   | View points chart     | User xem biểu đồ điểm tích lũy qua các vòng                  |
-| UC-10 | User   | View budget           | User xem budget còn lại và số transfer còn lại               |
-| UC-11 | System | Calculate score       | System tính điểm tự động sau khi stats được nhập vào DB      |
-| UC-12 | System | Lock transfers        | System khóa transfer khi trận đầu tiên của matchday bắt đầu  |
-| UC-13 | System | Validate squad        | System validate formation, budget, team limit trước khi lưu  |
+| ID | Actor | Use Case | Description |
+|---|---|---|---|
+| UC-01 | User | View player list | Filter theo vị trí, đội, giá |
+| UC-02 | User | Build squad | Pick 11 cầu thủ trong budget |
+| UC-03 | User | View current squad | Xem squad với giá và vị trí |
+| UC-04 | User | Make transfer | Swap một cầu thủ trong transfer window |
+| UC-05 | User | View transfer history | Theo matchday |
+| UC-06 | User | View fixtures | Lịch thi đấu vòng hiện tại và sắp tới |
+| UC-07 | User | View matchday score | Điểm squad theo từng matchday |
+| UC-08 | User | View score breakdown | Đóng góp điểm từng cầu thủ mỗi vòng |
+| UC-09 | User | View points chart | Biểu đồ điểm tích lũy |
+| UC-10 | User | View budget | Budget còn lại và số transfer còn lại |
+| UC-11 | System | Calculate score | Tự động tính khi insert stats |
+| UC-12 | System | Lock transfers | Khóa transfer khi matchday kickoff |
+| UC-13 | System | Validate squad | Formation, budget, team limit trước khi lưu |
 
 ---
 
@@ -56,84 +54,76 @@ Một web application cho phép user xây dựng đội hình 11 cầu thủ tro
 
 ### 3.1 Squad Management
 
-| ID | Yêu cầu | Use Case |
+| ID | Yêu cầu | UC |
 |---|---|---|
-| FR-01 | User xem được danh sách tất cả cầu thủ, lọc theo vị trí, đội, và giá | UC-01 |
-| FR-02 | User pick 11 cầu thủ để tạo đội hình trước từng vòng đấu | UC-02 |
-| FR-03 | Đội hình phải tuân theo formation: 4-3-3 hoặc 4-4-2 (1 GK, 4 DEF, 3/4 MID, 3/2 FWD) | UC-02, UC-13 |
-| FR-04 | Tổng giá đội hình không được vượt quá budget cố định ($50M) | UC-02, UC-13 |
-| FR-05 | Không được pick quá 3 cầu thủ từ cùng một đội tuyển quốc gia | UC-02, UC-13 |
-| FR-06 | User xem được đội hình hiện tại với giá và vị trí từng cầu thủ | UC-03 |
+| FR-01 | Filter players theo vị trí, đội, giá | UC-01 |
+| FR-02 | Pick 11 cầu thủ để build squad | UC-02 |
+| FR-03 | Formation: 4-3-3 hoặc 4-4-2 (1 GK, 4 DEF, 3/4 MID, 3/2 FWD) | UC-02, UC-13 |
+| FR-04 | Tổng giá ≤ $50M | UC-02, UC-13 |
+| FR-05 | Max 3 cầu thủ cùng đội tuyển | UC-02, UC-13 |
+| FR-06 | Xem squad hiện tại với giá và vị trí | UC-03 |
 
 ### 3.2 Transfers
 
-| ID    | Yêu cầu                                                                | Use Case |
-| -------| ------------------------------------------------------------------------| ----------|
-| FR-07 | User thực hiện tối đa 5 transfer mỗi matchday window                   | UC-04    |
-| FR-08 | Khi bán cầu thủ, giá bán được cộng lại vào budget                      | UC-04    |
-| FR-09 | Khi mua cầu thủ, giá mua bị trừ khỏi budget                            | UC-04    |
-| FR-10 | Transfer bị khóa khi trận đầu tiên của matchday bắt đầu                | UC-12    |
-| FR-11 | Transfer chưa dùng không được tích lũy sang vòng tiếp theo             | UC-04    |
-| FR-12 | User xem được số transfer còn lại và budget hiện tại trước khi confirm | UC-10    |
+| ID | Yêu cầu | UC |
+|---|---|---|
+| FR-07 | Max 5 transfer mỗi matchday window | UC-04 |
+| FR-08 | Giá bán cộng lại vào budget | UC-04 |
+| FR-09 | Giá mua trừ khỏi budget | UC-04 |
+| FR-10 | Transfer khóa khi matchday kickoff | UC-12 |
+| FR-11 | Transfer chưa dùng không tích lũy sang vòng sau | UC-04 |
+| FR-12 | Hiển thị transfer còn lại và budget trước khi confirm | UC-10 |
 
 ### 3.3 Scoring
 
-| ID    | Yêu cầu                                                                     | Use Case |
-| -------| -----------------------------------------------------------------------------| ----------|
-| FR-13 | Hệ thống tính điểm cho từng cầu thủ sau mỗi matchday dựa theo stats thực tế | UC-11    |
-| FR-14 | Bảng điểm mặc định (v1, subject to change):                                 | UC-11    |
-|       | - Ghi bàn (FWD/MID): +5 điểm                                                |          |
-|       | - Ghi bàn (DEF/GK): +6 điểm                                                 |          |
-|       | - Kiến tạo: +3 điểm                                                         |          |
-|       | - Clean sheet (GK/DEF): +4 điểm                                             |          |
-|       | - Thẻ vàng: -1 điểm                                                         |          |
-|       | - Thẻ đỏ: -3 điểm                                                           |          |
-|       | - Thi đấu ≥ 60 phút: +2 điểm                                                |          |
-|       | - Thi đấu < 60 phút: +1 điểm                                                |          |
-| FR-15 | Điểm matchday = tổng điểm của 11 cầu thủ trong đội hình                     | UC-07    |
-| FR-16 | Tổng điểm tích lũy = tổng điểm của tất cả các matchday                      | UC-07    |
-| FR-17 | Scoring algorithm có thể được thay thế mà không ảnh hưởng phần còn lại      | UC-11    |
+| ID | Yêu cầu | UC |
+|---|---|---|
+| FR-13 | Tính điểm từng cầu thủ từ stats thực tế sau mỗi matchday | UC-11 |
+| FR-14 | Bảng điểm v1 (xem §8 API.md) | UC-11 |
+| FR-15 | Điểm matchday = tổng điểm 11 cầu thủ trong squad | UC-07 |
+| FR-16 | Điểm tích lũy = tổng tất cả matchday | UC-07 |
+| FR-17 | Scoring algorithm swappable không ảnh hưởng endpoints | UC-11 |
 
 ### 3.4 Stats & Reporting
 
-| ID | Yêu cầu | Use Case |
+| ID | Yêu cầu | UC |
 |---|---|---|
-| FR-18 | User xem được tổng điểm và điểm breakdown theo từng matchday | UC-07, UC-08 |
-| FR-19 | User xem được biểu đồ điểm theo các vòng đấu | UC-09 |
-| FR-20 | User xem được điểm đóng góp của từng cầu thủ mỗi vòng | UC-08 |
-| FR-21 | User xem được budget còn lại | UC-10 |
+| FR-18 | Xem tổng điểm và breakdown theo từng matchday | UC-07, UC-08 |
+| FR-19 | Xem biểu đồ điểm tích lũy | UC-09 |
+| FR-20 | Xem đóng góp điểm từng cầu thủ mỗi vòng | UC-08 |
+| FR-21 | Xem budget còn lại | UC-10 |
 
-### 3.5 Fixtures Display
+### 3.5 Fixtures
 
-| ID    | Yêu cầu                                                        | Use Case |
-| -------| ----------------------------------------------------------------| ----------|
-| FR-22 | User xem được lịch thi đấu của vòng đấu hiện tại và sắp tới    | UC-06    |
-| FR-23 | Fixtures hiển thị: hai đội, ngày giờ thi đấu, nhãn group stage | UC-06    |
+| ID | Yêu cầu | UC |
+|---|---|---|
+| FR-22 | Xem lịch thi đấu vòng hiện tại và sắp tới | UC-06 |
+| FR-23 | Hiển thị: hai đội, ngày giờ, group stage label | UC-06 |
 
 ### 3.6 Data Pipeline
 
 | ID | Yêu cầu |
 |---|---|
-| FR-24 | Dữ liệu cầu thủ (tên, vị trí, đội, giá) được seed trực tiếp vào database |
-| FR-25 | Dữ liệu trận đấu (hai đội, matchday, giai đoạn) được seed trực tiếp vào database |
-| FR-26 | Match stats sau mỗi vòng được nhập vào database (bằng thủ công, mock data, script ESPN API, hoặc bulk endpoint cho machine-level loading) |
-| FR-27 | Hệ thống lưu raw stats của từng cầu thủ mỗi trận riêng biệt với điểm đã tính |
+| FR-24 | Player data (tên, vị trí, đội, giá) seed vào DB |
+| FR-25 | Match data (hai đội, matchday, stage) seed vào DB |
+| FR-26 | Match stats nhập qua manual entry, ESPN script, hoặc bulk endpoint |
+| FR-27 | Raw stats lưu riêng biệt với computed score |
 
 ---
 
 ## 4. Game Rules
 
-| ID    | Quy tắc                                                                                         |
-| -------| -------------------------------------------------------------------------------------------------|
-| GR-01 | Budget khởi đầu cố định: $50M                                                                   |
-| GR-02 | Đội hình gồm đúng 11 cầu thủ                                                                    |
-| GR-03 | Formation: 4-3-3 hoặc 4-4-2 (1 GK, 4 DEF, 3/4 MID, 3/2 FWD)                                     |
-| GR-04 | Tối đa 3 cầu thủ từ cùng một đội tuyển quốc gia                                                 |
-| GR-05 | Tối đa 5 transfer mỗi matchday window                                                           |
-| GR-06 | Giá cầu thủ không thay đổi trong v1 — giá bán = giá mua                                         |
-| GR-07 | Transfer bị khóa khi trận đầu tiên của matchday bắt đầu                                         |
-| GR-08 | Điểm chỉ được tính sau khi stats cho matchday đó được nhập vào database                         |
-| GR-09 | Scoring formula được version-control và có thể swap (v1 = standard, v2 = opponent-adjusted TBD) |
+| ID | Quy tắc |
+|---|---|
+| GR-01 | Budget: $50M |
+| GR-02 | Squad: đúng 11 cầu thủ |
+| GR-03 | Formation: 4-3-3 hoặc 4-4-2 |
+| GR-04 | Max 3 cầu thủ cùng đội tuyển |
+| GR-05 | Max 5 transfer mỗi matchday |
+| GR-06 | Giá cố định trong v1 — giá bán = giá mua |
+| GR-07 | Transfer khóa khi matchday kickoff |
+| GR-08 | Điểm chỉ tính sau khi stats có trong DB |
+| GR-09 | Scoring formula versioned và swappable (v1 = standard, v2 = TBD) |
 
 ---
 
@@ -151,37 +141,39 @@ Một web application cho phép user xây dựng đội hình 11 cầu thủ tro
 
 | Entity | Key Attributes |
 |---|---|
-| **users** | user_id, username, created_at |
+| **users** | user_id, username, auth_user_id, display_name, role, is_active, created_at |
 | **team** | team_id, name, fifa_ranking, elo_rating, group_stage |
-| **player** | player_id, name, position, team_id, base_price |
-| **match** | match_id, team1_id, team2_id, matchday, stage, date, team1_score, team2_score |
-| **playerstat** | stat_id, player_id, match_id, goals, assists, minutes_played, yellow_cards, score (derived) |
+| **player** | player_id, espn_id, name, position, team_id, base_price, in_tournament |
+| **match** | match_id, team1_id, team2_id, matchday, stage, date, kickoff, team1_score, team2_score |
+| **playerstat** | stat_id, player_id, match_id, goals, assists, minutes_played, yellow_cards, red_cards, clean_sheet, score (derived) |
 | **squad** | squad_id, user_id, matchday, budget_used, created_at |
 | **squadplayer** | squadplayer_id, squad_id, player_id |
-| **transfers** | transfer_id, user_id, player_in_id, player_out_id, matchday |
+| **transfer** | transfer_id, user_id, player_in_id, player_out_id, matchday |
 
 ### 5.4 Key Relationships
 
-- `users` 1:N `squad` — một user có nhiều squad (một per matchday)
-- `squad` 1:N `squadplayer` — một squad có đúng 11 squadplayer
-- `player` 1:N `squadplayer` — một player có thể xuất hiện trong nhiều squad
-- `player` 1:N `playerstat` — một player có nhiều stat rows (một per trận)
-- `match` 1:N `playerstat` — một trận generates nhiều player stats
-- `users` 1:N `transfers` — một user có nhiều transfer records
-- `team` 1:N `player` — một team có nhiều player
+- `users` 1:N `squad` — một squad per matchday
+- `squad` 1:N `squadplayer` — đúng 11 per squad
+- `player` 1:N `squadplayer` — player có thể xuất hiện trong nhiều squad
+- `player` 1:N `playerstat` — một stat row per match
+- `match` 1:N `playerstat` — một match generates nhiều stats
+- `users` 1:N `transfer` — một user có nhiều transfer records
+- `team` 1:N `player` — một team có nhiều players
 
 ### 5.5 Key Constraints
 
-- `UNIQUE (user_id, matchday)` trên `squad` — một squad per user per matchday
-- `UNIQUE (player_id, match_id)` trên `playerstat` — một stat row per player per match
-- `UNIQUE (squad_id, player_id)` trên `squadplayer` — không trùng player trong cùng squad
-- `CHECK (position IN ('GK', 'DEF', 'MID', 'FWD'))` trên `player`
+- `UNIQUE (user_id, matchday)` on `squad`
+- `UNIQUE (player_id, match_id)` on `playerstat`
+- `UNIQUE (squad_id, player_id)` on `squadplayer`
+- `UNIQUE (espn_id)` on `player`
+- `CHECK (position IN ('GK', 'DEF', 'MID', 'FWD'))` on `player`
+- `in_tournament boolean DEFAULT false` on `player` — chỉ rows `true` xuất hiện trong player pool. Nguồn: Wikipedia 2026 FIFA World Cup squads.
 
 ---
 
 ## 6. Tech Stack
 
-### 6.1 Stack Overview
+### 6.1 Stack
 
 | Layer | Technology |
 |---|---|
@@ -192,41 +184,60 @@ Một web application cho phép user xây dựng đội hình 11 cầu thủ tro
 
 ### 6.2 Python Libraries
 
-| Library | Version | Purpose |
-|---|---|---|
-| `fastapi` | latest | Web framework, định nghĩa API endpoints |
-| `uvicorn` | latest | ASGI server để chạy FastAPI app |
-| `psycopg2-binary` | latest | PostgreSQL driver, kết nối và chạy raw SQL |
-| `python-dotenv` | latest | Load Supabase credentials từ `.env` file |
-| `pydantic` | v2 | Request/response validation (built into FastAPI) |
+| Library | Purpose |
+|---|---|
+| `fastapi` | Web framework |
+| `uvicorn` | ASGI server |
+| `psycopg2-binary` | PostgreSQL driver |
+| `python-dotenv` | Load `.env` credentials |
+| `pydantic` | Request/response validation (v2) |
+| `PyJWT` | Verify Supabase JWT tokens |
+| `cryptography` | JWT key decoding (RS256 + ES256) |
+| `httpx` | HTTP client cho JWKS fetch |
+| `beautifulsoup4` | Parse Wikipedia squad HTML |
 
 ### 6.3 Project Structure
 
 ```
 fantasy-wc/
 ├── app/
-│   ├── main.py         # FastAPI entry point
-│   ├── routers/        # API route handlers (players, squad, transfers, scoring)
-│   ├── crud/           # Raw SQL query functions
-│   └── database.py     # Supabase connection setup
-├── static/             # HTML/CSS/JS frontend
+│   ├── main.py         # FastAPI entry point, static frontend mount
+│   ├── auth.py         # Supabase JWT verification (RS256 + ES256)
+│   ├── permissions.py  # require_admin helper
+│   ├── database.py     # get_db() dependency, psycopg2 + RealDictCursor
+│   ├── schemas.py      # Pydantic request models
+│   ├── routers/        # API route handlers
+│   ├── queries/        # Raw SQL query functions
+│   ├── services/       # Backend services (stat loading)
+│   └── core/
+│       ├── scoring.py     # calculate_score()
+│       └── validation.py  # Squad and transfer rules
+├── frontend/           # HTML/CSS/JS frontend
+├── tools/
+│   ├── espn_client.py  # ESPN API wrapper
+│   ├── run-once/       # Pre-tournament setup scripts
+│   ├── repeat/         # Repeatable during tournament
+│   └── maps/           # ESPN ID -> DB ID maps
+├── tests/
 ├── .env                # Supabase credentials (never commit)
 ├── requirements.txt
 └── docs/
 ```
 
+---
+
 ## 7. Glossary
 
 | Term | Definition |
 |---|---|
-| Matchday | Một vòng đấu trong World Cup, bao gồm nhiều trận diễn ra trong cùng một period |
-| Squad | Đội hình 11 cầu thủ của user cho một matchday cụ thể |
-| Transfer | Hành động bán một cầu thủ và mua một cầu thủ khác trong transfer window |
-| Transfer window | Khoảng thời gian giữa hai matchday khi user được phép thay đổi đội hình |
-| Budget | Số tiền ảo user dùng để mua cầu thủ, mặc định $50M |
-| Score | Điểm tích lũy của một cầu thủ trong một trận, tính bởi scoring engine |
-| Scoring engine | Module tính điểm dựa trên raw stats của cầu thủ sau mỗi matchday |
-| Seed | Nhập dữ liệu ban đầu vào database (cầu thủ, đội, lịch thi đấu) |
-| Stage | Giai đoạn của giải đấu: Group Stage, Round of 32, Round of 16, QF, SF, Final |
-| raw SQL | Viết câu lệnh SQL trực tiếp trong Python thay vì dùng ORM |
+| Matchday | Một vòng đấu World Cup trong cùng period |
+| Squad | Đội hình 11 cầu thủ cho một matchday |
+| Transfer | Swap một cầu thủ trong transfer window |
+| Transfer window | Khoảng thời gian giữa hai matchday khi được phép thay đổi squad |
+| Budget | Tiền ảo mua cầu thủ ($50M default) |
+| Score | Điểm tích lũy của cầu thủ trong một match, tính bởi scoring engine |
+| Scoring engine | Module tính điểm từ raw stats |
+| Seed | Nhập dữ liệu ban đầu vào database |
+| Stage | Giai đoạn giải đấu: Group Stage, R32, R16, QF, SF, Final |
+| Raw SQL | SQL trực tiếp trong Python, không ORM |
 

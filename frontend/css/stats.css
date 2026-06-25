@@ -1,0 +1,204 @@
+.stats-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+/* Headline card — fantasy points, slightly emphasized */
+.stats-card--headline {
+  grid-column: span 1;
+  border: 1px solid var(--accent-18);
+  box-shadow: 0 8px 30px -16px rgba(198,242,74,.3), var(--shadow-panel);
+}
+.stats-card--headline .stats-row__value {
+  color: var(--accent);
+}
+
+.stats-card {
+  padding: 18px;
+  border-radius: var(--r-lg);
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+  box-shadow: var(--shadow-panel);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stats-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.stats-card__title {
+  font-size: var(--fs-h2);
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -.01em;
+}
+.stats-card__hint {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.stats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  list-style: none;
+}
+
+/* Row layout: rank | avatar+flag | flag+name | value */
+.stats-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 6px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+.stats-row:hover {
+  background: rgba(255,255,255,.07);
+}
+
+.stats-row__rank {
+  flex-shrink: 0;
+  width: 22px;
+  text-align: center;
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.stats-row--leader .stats-row__rank {
+  color: var(--accent);
+}
+
+/* Avatar + flag overlay wrapper */
+.stats-row__photo {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+.stats-row__photo .avatar {
+  border-width: 2px;
+}
+.stats-row__photo .avatar[data-pos="GK"] { border-color: var(--pos-GK); }
+.stats-row__photo .avatar[data-pos="DEF"] { border-color: var(--pos-DEF); }
+.stats-row__photo .avatar[data-pos="MID"] { border-color: var(--pos-MID); }
+.stats-row__photo .avatar[data-pos="FWD"] { border-color: var(--pos-FWD); }
+
+/* Headline leader: larger avatar + extra padding */
+.stats-card--headline .stats-row--leader {
+  padding: 12px 6px;
+}
+.stats-card--headline .stats-row--leader .avatar--44 {
+  width: 44px;
+  height: 44px;
+}
+
+/* Rank-1 subtle accent glow on all cards */
+.stats-row--leader {
+  background: var(--accent-12);
+}
+.stats-row--leader:hover {
+  background: var(--accent-18);
+}
+
+/* Flag + name inline */
+.stats-row__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.stats-row__info .flag {
+  flex-shrink: 0;
+}
+.stats-row__name {
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stats-row__value {
+  flex-shrink: 0;
+  font-size: var(--fs-body);
+  font-weight: 800;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+}
+.stats-row__unit {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: lowercase;
+}
+
+/* Cards category — card-shaped rectangle icons */
+.stats-row__cards {
+  flex-shrink: 0;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.stats-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 30px;
+  border-radius: 3px;
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid rgba(0,0,0,.2);
+}
+.stats-card-icon--yellow {
+  background: #facc15;
+  color: #1a1a0a;
+}
+.stats-card-icon--red {
+  background: #ef4444;
+  color: #fff;
+}
+.stats-card-icon--zero {
+  opacity: .25;
+}
+
+/* Empty / error states */
+.stats-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: var(--fs-body);
+}
+
+/* Skeleton loading */
+.stats-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 6px;
+}
+.stats-skeleton-row .skeleton {
+  border-radius: 6px;
+}

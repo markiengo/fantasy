@@ -3,3 +3,7 @@ uvicorn
 psycopg2-binary
 python-dotenv
 pydantic
+PyJWT
+cryptography
+httpx
+beautifulsoup4

@@ -1,9 +1,3 @@
-/* ============================================================================
-   state.js — global app state, persistence, and squad-rule helpers.
-   Mirrors app/core/validation.py rules client-side so the UI can give instant
-   feedback (the backend remains the source of truth on save/transfer).
-   ============================================================================ */
-
 const FORMATIONS = {
   "4-3-3": { GK: 1, DEF: 4, MID: 3, FWD: 3 },
   "4-4-2": { GK: 1, DEF: 4, MID: 4, FWD: 2 },
@@ -116,6 +110,11 @@ const State = {
   },
   removePlayer(id) {
     this.currentSquad.players = this.currentSquad.players.filter((p) => p.player_id !== id);
+    this.emit();
+  },
+  setFormation(formation) {
+    if (!FORMATIONS[formation]) return;
+    this.currentSquad.formation = formation;
     this.emit();
   },
   setMatchday(md) { this.currentMatchday = md; this.currentSquad.matchday = md; this.emit(); },

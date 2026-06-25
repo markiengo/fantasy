@@ -4,6 +4,10 @@
 CREATE TABLE public.users (
   user_id integer NOT NULL DEFAULT nextval('users_user_id_seq'::regclass),
   username character varying NOT NULL UNIQUE,
+  auth_user_id uuid UNIQUE,
+  display_name character varying,
+  role character varying NOT NULL DEFAULT 'user',
+  is_active boolean NOT NULL DEFAULT true,
   created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT users_pkey PRIMARY KEY (user_id)
 );
@@ -17,11 +21,14 @@ CREATE TABLE public.team (
 );
 CREATE TABLE public.player (
   player_id integer NOT NULL DEFAULT nextval('player_player_id_seq'::regclass),
+  espn_id integer,
   name character varying NOT NULL,
   position character varying NOT NULL CHECK ("position"::text = ANY (ARRAY['GK'::character varying, 'DEF'::character varying, 'MID'::character varying, 'FWD'::character varying]::text[])),
   team_id text NOT NULL,
   base_price numeric NOT NULL,
+  in_tournament boolean NOT NULL DEFAULT false,
   CONSTRAINT player_pkey PRIMARY KEY (player_id),
+  CONSTRAINT player_espn_id_key UNIQUE (espn_id),
   CONSTRAINT fk_player_team FOREIGN KEY (team_id) REFERENCES public.team(team_id)
 );
 CREATE TABLE public.match (
@@ -51,7 +58,8 @@ CREATE TABLE public.playerstat (
   red_cards integer DEFAULT 0,
   CONSTRAINT playerstat_pkey PRIMARY KEY (stat_id),
   CONSTRAINT fk_stat_player FOREIGN KEY (player_id) REFERENCES public.player(player_id),
-  CONSTRAINT fk_stat_match FOREIGN KEY (match_id) REFERENCES public.match(match_id)
+  CONSTRAINT fk_stat_match FOREIGN KEY (match_id) REFERENCES public.match(match_id),
+  CONSTRAINT playerstat_player_match_key UNIQUE (player_id, match_id)
 );
 CREATE TABLE public.squad (
   squad_id integer NOT NULL DEFAULT nextval('squad_squad_id_seq'::regclass),
@@ -60,7 +68,8 @@ CREATE TABLE public.squad (
   budget_used numeric NOT NULL DEFAULT 0,
   created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT squad_pkey PRIMARY KEY (squad_id),
-  CONSTRAINT fk_squad_user FOREIGN KEY (user_id) REFERENCES public.users(user_id)
+  CONSTRAINT fk_squad_user FOREIGN KEY (user_id) REFERENCES public.users(user_id),
+  CONSTRAINT squad_user_matchday_key UNIQUE (user_id, matchday)
 );
 CREATE TABLE public.squadplayer (
   squadplayer_id integer NOT NULL DEFAULT nextval('squadplayer_squadplayer_id_seq'::regclass),
@@ -68,7 +77,8 @@ CREATE TABLE public.squadplayer (
   player_id integer NOT NULL,
   CONSTRAINT squadplayer_pkey PRIMARY KEY (squadplayer_id),
   CONSTRAINT fk_sp_squad FOREIGN KEY (squad_id) REFERENCES public.squad(squad_id),
-  CONSTRAINT fk_sp_player FOREIGN KEY (player_id) REFERENCES public.player(player_id)
+  CONSTRAINT fk_sp_player FOREIGN KEY (player_id) REFERENCES public.player(player_id),
+  CONSTRAINT squadplayer_squad_player_key UNIQUE (squad_id, player_id)
 );
 CREATE TABLE public.transfers (
   transfer_id integer NOT NULL DEFAULT nextval('transfers_transfer_id_seq'::regclass),

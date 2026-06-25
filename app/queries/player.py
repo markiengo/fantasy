@@ -6,6 +6,7 @@ def get_players(conn, name = None, position = None, team_id = None, max_price = 
     FROM player p
     JOIN team t
         ON p.team_id = t.team_id
+    WHERE p.in_tournament = true
     '''
     filters = []
     values = []
@@ -22,8 +23,8 @@ def get_players(conn, name = None, position = None, team_id = None, max_price = 
     if max_price:
         filters.append("p.base_price <= %s")
         values.append(max_price)
-    if filters: 
-        query += " WHERE " + " AND " .join(filters)
+    if filters:
+        query += " AND " + " AND ".join(filters)
 
     cursor.execute(query, values)
     results = cursor.fetchall()
