@@ -41,6 +41,7 @@ CREATE TABLE public.match (
   team1_score integer,
   team2_score integer,
   kickoff timestamp with time zone,
+  bracket_order integer,
   CONSTRAINT match_pkey PRIMARY KEY (match_id),
   CONSTRAINT fk_match_team1 FOREIGN KEY (team1_id) REFERENCES public.team(team_id),
   CONSTRAINT fk_match_team2 FOREIGN KEY (team2_id) REFERENCES public.team(team_id)

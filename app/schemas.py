@@ -62,6 +62,7 @@ class Match(BaseModel):
     date: date
     team1_score: Optional[int]
     team2_score: Optional[int]
+    bracket_order: Optional[int] = None
 
 class SquadCreate(BaseModel): 
     matchday: int

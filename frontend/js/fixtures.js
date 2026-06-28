@@ -292,7 +292,7 @@ const Fixtures = (() => {
       for (const match of State.fixtures) {
         if (match.stage === stage) matches.push(match);
       }
-      matches.sort((a, b) => a.matchday - b.matchday || a.match_id - b.match_id);
+      matches.sort((a, b) => (a.bracket_order ?? 999) - (b.bracket_order ?? 999) || a.match_id - b.match_id);
       const expectedN = EXPECTED_NODES[stage] || 1;
       roundData.push({ stage, matches, n: Math.max(expectedN, matches.length) });
     }

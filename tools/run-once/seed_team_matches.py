@@ -32,6 +32,48 @@ knockout_matchday = {
     "final":        8,
 }
 
+# ESPN event ID -> bracket position (0-indexed, adjacent pairs feed into next round)
+# Source: Wikipedia 2026 FIFA World Cup knockout bracket + ESPN event names
+bracket_order = {
+    # Round of 32 (FIFA matches 73-88, reordered so adjacent pairs feed same R16 match)
+    "760486": 0,  # M73 RSA vs CAN  -> R16 #1
+    "760488": 1,  # M75 NED vs MAR  -> R16 #1
+    "760489": 2,  # M74 GER vs PAR  -> R16 #2
+    "760492": 3,  # M77 FRA vs SWE  -> R16 #2
+    "760487": 4,  # M76 BRA vs JPN  -> R16 #3
+    "760490": 5,  # M78 CIV vs NOR  -> R16 #3
+    "760491": 6,  # M79 MEX vs ECU  -> R16 #4
+    "760495": 7,  # M80 ENG vs COD  -> R16 #4
+    "760496": 8,  # M83 POR vs CRO  -> R16 #5
+    "760497": 9,  # M84 ESP vs AUT  -> R16 #5
+    "760494": 10, # M81 USA vs BIH  -> R16 #6
+    "760493": 11, # M82 BEL vs SEN  -> R16 #6
+    "760500": 12, # M86 ARG vs CPV  -> R16 #7
+    "760499": 13, # M88 AUS vs EGY  -> R16 #7
+    "760498": 14, # M85 SUI vs ALG  -> R16 #8
+    "760501": 15, # M87 COL vs GHA  -> R16 #8
+    # Round of 16 (FIFA matches 89-96)
+    "760502": 0,  # W(M73) vs W(M75) -> QF #1
+    "760503": 1,  # W(M74) vs W(M77) -> QF #1
+    "760504": 2,  # W(M76) vs W(M78) -> QF #2
+    "760505": 3,  # W(M79) vs W(M80) -> QF #2
+    "760506": 4,  # W(M83) vs W(M84) -> QF #3
+    "760507": 5,  # W(M81) vs W(M82) -> QF #3
+    "760509": 6,  # W(M86) vs W(M88) -> QF #4
+    "760508": 7,  # W(M85) vs W(M87) -> QF #4
+    # Quarter-finals (FIFA matches 97-100)
+    "760510": 0,  # W(R16#1) vs W(R16#2) -> SF #1
+    "760511": 1,  # W(R16#5) vs W(R16#6) -> SF #1
+    "760512": 2,  # W(R16#3) vs W(R16#4) -> SF #2
+    "760513": 3,  # W(R16#7) vs W(R16#8) -> SF #2
+    # Semi-finals (FIFA matches 101-102)
+    "760514": 0,  # W(QF#1) vs W(QF#2) -> Final
+    "760515": 1,  # W(QF#3) vs W(QF#4) -> Final
+    # Final + 3rd place
+    "760517": 0,  # Final
+    "760516": 1,  # 3rd place (mapped to final stage)
+}
+
 maps_dir = os.path.join(tools_dir, "maps")
 
 
@@ -127,17 +169,19 @@ def seed(dry_run):
             match_id = row["match_id"]
             t1_score = m["home_score"] if row["team1_id"] == m["home"] else m["away_score"]
             t2_score = m["away_score"] if row["team1_id"] == m["home"] else m["home_score"]
+            bo = bracket_order.get(m["event_id"])
             cur.execute(
-                "UPDATE match SET team1_score = %s, team2_score = %s WHERE match_id = %s",
-                (t1_score, t2_score, match_id),
+                "UPDATE match SET team1_score = %s, team2_score = %s, bracket_order = %s WHERE match_id = %s",
+                (t1_score, t2_score, bo, match_id),
             )
             updated += 1
         else:
+            bo = bracket_order.get(m["event_id"])
             cur.execute(
-                "INSERT INTO match (team1_id, team2_id, matchday, stage, date, team1_score, team2_score) "
-                "VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING match_id",
+                "INSERT INTO match (team1_id, team2_id, matchday, stage, date, team1_score, team2_score, bracket_order) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING match_id",
                 (m["home"], m["away"], m["matchday"], m["stage"], m["date"],
-                 m["home_score"], m["away_score"]),
+                 m["home_score"], m["away_score"], bo),
             )
             match_id = cur.fetchone()["match_id"]
             inserted += 1

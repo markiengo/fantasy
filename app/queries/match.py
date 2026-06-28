@@ -3,7 +3,7 @@ def get_matches(conn, matchday = None, stage = None):
     query = '''
         SELECT m.match_id, m.team1_id, t1.name AS team1_name,
                m.team2_id, t2.name AS team2_name, m.matchday, m.stage, m.date,
-               m.team1_score, m.team2_score, m.kickoff
+               m.team1_score, m.team2_score, m.kickoff, m.bracket_order
         FROM match m
         JOIN team t1 ON m.team1_id = t1.team_id
         JOIN team t2 ON m.team2_id = t2.team_id
@@ -33,7 +33,7 @@ def get_match(conn, match_id):
     cursor.execute('''
         SELECT m.match_id, m.team1_id, t1.name AS team1_name,
                m.team2_id, t2.name AS team2_name, m.matchday, m.stage, m.date,
-               m.team1_score, m.team2_score, m.kickoff
+               m.team1_score, m.team2_score, m.kickoff, m.bracket_order
         FROM match m
         JOIN team t1 ON m.team1_id = t1.team_id
         JOIN team t2 ON m.team2_id = t2.team_id
