@@ -300,17 +300,18 @@
 }
 .bracket-round__nodes {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
+  position: relative;
 }
 .bracket-node {
-  position: relative;
+  position: absolute;
+  left: 0;
+  right: 0;
   z-index: 1;
   padding: 7px 9px;
   border-radius: 11px;
   background: var(--tile);
   border: 1px solid var(--hairline);
+  transform: translateY(-50%);
 }
 .bracket-node--final {
   background: linear-gradient(150deg, rgba(198,242,74,.14), rgba(198,242,74,.04));

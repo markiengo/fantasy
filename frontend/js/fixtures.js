@@ -275,7 +275,7 @@ const Fixtures = (() => {
     const root = document.getElementById("knockoutBracket");
     if (!root) return;
 
-    const COL_W = 150, GAP = 56, HEIGHT = 1120, TOP = 26;
+    const COL_W = 150, GAP = 56, HEIGHT = 1400, TOP = 26;
     const EXPECTED_NODES = { round_of_32: 16, round_of_16: 8, quarter_final: 4, semi_final: 2, final: 1 };
     const ROUND_NAMES = {
       round_of_32: "ROUND OF 32",
@@ -320,31 +320,29 @@ const Fixtures = (() => {
 
     const totalW = bracketStages.length * COL_W + (bracketStages.length - 1) * GAP + 80;
 
-    // Build rounds HTML
+    // Build rounds HTML — nodes are absolutely positioned at nodeY() so SVG lines align
     let roundsHtml = "";
     for (let k = 0; k < roundData.length; k++) {
       const { stage, matches, n } = roundData[k];
       const isFinalRound = stage === "final";
       let nodesHtml = "";
 
-      if (!matches.length) {
-        for (let i = 0; i < n; i++) {
-          nodesHtml += `<div class="bracket-node${isFinalRound ? " bracket-node--final" : ""}">
-            <div class="bracket-node__slot"><span class="shield"></span><b>TBD</b></div>
-            <div class="bracket-node__slot"><span class="shield"></span><b>TBD</b></div>
-          </div>`;
-        }
-      } else {
-        for (const match of matches) {
+      for (let i = 0; i < n; i++) {
+        const y = nodeY(i, n);
+        const match = matches[i];
+        let inner;
+
+        if (match) {
           const t1 = match.team1_name || (match.team1_id || "TBD");
           const t2 = match.team2_name || (match.team2_id || "TBD");
-          const dateLabel = match.date ? match.date.slice(5).replace("-", " ") : "";
-          nodesHtml += `<div class="bracket-node${isFinalRound ? " bracket-node--final" : ""}">
-            <div class="bracket-node__slot">${flagImg(match.team1_id)}<b>${t1}</b></div>
-            <div class="bracket-node__slot">${flagImg(match.team2_id)}<b>${t2}</b></div>
-            ${dateLabel ? `<span class="bracket-node__date">${dateLabel}</span>` : ""}
-          </div>`;
+          inner = `<div class="bracket-node__slot">${flagImg(match.team1_id)}<b>${t1}</b></div>
+            <div class="bracket-node__slot">${flagImg(match.team2_id)}<b>${t2}</b></div>`;
+        } else {
+          inner = `<div class="bracket-node__slot"><span class="shield"></span><b>TBD</b></div>
+            <div class="bracket-node__slot"><span class="shield"></span><b>TBD</b></div>`;
         }
+
+        nodesHtml += `<div class="bracket-node${isFinalRound ? " bracket-node--final" : ""}" style="top:${y - TOP}px">${inner}</div>`;
       }
 
       roundsHtml += `<div class="bracket-round">

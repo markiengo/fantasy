@@ -171,17 +171,17 @@ def seed(dry_run):
             t2_score = m["away_score"] if row["team1_id"] == m["home"] else m["home_score"]
             bo = bracket_order.get(m["event_id"])
             cur.execute(
-                "UPDATE match SET team1_score = %s, team2_score = %s, bracket_order = %s WHERE match_id = %s",
-                (t1_score, t2_score, bo, match_id),
+                "UPDATE match SET team1_score = %s, team2_score = %s, bracket_order = %s, kickoff = %s WHERE match_id = %s",
+                (t1_score, t2_score, bo, m.get("date_raw"), match_id),
             )
             updated += 1
         else:
             bo = bracket_order.get(m["event_id"])
             cur.execute(
-                "INSERT INTO match (team1_id, team2_id, matchday, stage, date, team1_score, team2_score, bracket_order) "
-                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING match_id",
+                "INSERT INTO match (team1_id, team2_id, matchday, stage, date, team1_score, team2_score, bracket_order, kickoff) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING match_id",
                 (m["home"], m["away"], m["matchday"], m["stage"], m["date"],
-                 m["home_score"], m["away_score"], bo),
+                 m["home_score"], m["away_score"], bo, m.get("date_raw")),
             )
             match_id = cur.fetchone()["match_id"]
             inserted += 1

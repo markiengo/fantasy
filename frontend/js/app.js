@@ -144,6 +144,12 @@ function isWindowOpen(md) {
 }
 window.isWindowOpen = isWindowOpen;
 
+function isTransferAllowed(md) {
+  const current = currentTransferMatchday();
+  return md === current || md === current + 1;
+}
+window.isTransferAllowed = isTransferAllowed;
+
 function switchScreen(name) {
   const inner = document.querySelector(".main__inner");
   let bar = document.getElementById("screenLoader");
@@ -210,9 +216,18 @@ function buildRoundMeta() {
       map[match.matchday].firstKickoff = match.kickoff;
     }
   }
-  // Allow squad/transfer for Round of 32 before fixtures are loaded.
-  if (!map[4]) {
-    map[4] = { matchday: 4, stage: "round_of_32", date: null };
+  // Ensure all knockout rounds exist even before fixtures are loaded.
+  const knockoutStages = [
+    { md: 4, stage: "round_of_32" },
+    { md: 5, stage: "round_of_16" },
+    { md: 6, stage: "quarter_final" },
+    { md: 7, stage: "semi_final" },
+    { md: 8, stage: "final" },
+  ];
+  for (const ks of knockoutStages) {
+    if (!map[ks.md]) {
+      map[ks.md] = { matchday: ks.md, stage: ks.stage, date: null, firstKickoff: null };
+    }
   }
   _roundMeta = Object.values(map).sort((a, b) => a.matchday - b.matchday);
   for (const round of _roundMeta) {
@@ -274,7 +289,9 @@ function renderMatchdayStrip() {
     let sub = round.date ? `<span class="round__date">${fmtShortDate(round.date)}</span>` : "";
 
     if (active) {
-      sub = isWindowOpen(round.matchday)
+      const allowed = isTransferAllowed(round.matchday);
+      const open = isWindowOpen(round.matchday);
+      sub = (allowed && open)
         ? `<span class="round__sub round__sub--open">Transfers open</span>`
         : `<span class="round__sub round__sub--locked">Transfers locked</span>`;
     } else if (complete && Object.prototype.hasOwnProperty.call(_scoreByMd, round.matchday)) {

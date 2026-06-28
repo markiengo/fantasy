@@ -52,6 +52,7 @@ const Squad = (() => {
 
   function primaryActionNote() {
     if (State.mode === "view") {
+      if (!isTransferAllowed(State.currentMatchday)) return "Transfers are only allowed for the current and next matchday.";
       if (!isWindowOpen(State.currentMatchday)) return "Transfers are locked once this matchday opens.";
       if (State.transfersRemaining() <= 0) return "No transfers remain for this matchday.";
       return "Saved squad is read-only until you enter transfer mode.";
@@ -279,7 +280,7 @@ const Squad = (() => {
       saveBtn.hidden = true;
       confirmBtn.hidden = true;
       cancelBtn.hidden = true;
-      transferBtn.disabled = !isWindowOpen(State.currentMatchday) || State.transfersRemaining() <= 0;
+      transferBtn.disabled = !isTransferAllowed(State.currentMatchday) || !isWindowOpen(State.currentMatchday) || State.transfersRemaining() <= 0;
     }
   }
 
