@@ -348,11 +348,14 @@ function hydrate(player) {
     team_id,
     team_name,
     base_price: player.base_price,
+    is_captain: player.is_captain || false,
   };
 }
 function applySquadForMatchday(squad, md, transfersUsed) {
   State.currentSquad.players = squad.players.map(hydrate);
   State.currentSquad.formation = inferFormation(State.currentSquad.players);
+  const captain = State.currentSquad.players.find((p) => p.is_captain);
+  State.currentSquad.captainId = captain ? captain.player_id : null;
   State.squadSaved = squad.matchday === md;
   State.transfersUsed = State.squadSaved ? transfersUsed : 0;
   State.setBaseline();
@@ -674,10 +677,10 @@ async function boot() {
     await continueBoot();
   }
 
-  async function enterGuestMode() {
+  async function enterDemoMode() {
+    Api.setDemoToken();
     showAppScreen();
-    showGuestBanner();
-    Toast.show("Continuing as guest - data may be limited.", "info");
+    Toast.show("Logged in as demo user.", "success");
     _booted = false;
     await continueBoot();
   }
@@ -715,7 +718,7 @@ async function boot() {
   }
 
   if (guestBtn) {
-    guestBtn.addEventListener("click", enterGuestMode);
+    guestBtn.addEventListener("click", enterDemoMode);
   }
 
   if (googleSignInBtn) {
@@ -799,8 +802,13 @@ async function boot() {
 
   const session = await window.getCurrentSession();
 
-  if (!session) {
+  if (!session && !Api.isDemo()) {
     showLoginScreen();
+    return;
+  }
+
+  if (Api.isDemo()) {
+    await swapToApp();
     return;
   }
 
@@ -829,7 +837,11 @@ async function boot() {
   if (signOutBtn) {
     signOutBtn.addEventListener("click", async () => {
       try {
-        await window.signOut();
+        if (Api.isDemo()) {
+          Api.clearDemoToken();
+        } else {
+          await window.signOut();
+        }
         _booted = false;
         swapToLogin();
       } catch (error) {

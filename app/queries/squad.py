@@ -5,7 +5,7 @@ def get_squad(conn, user_id, matchday):
     cursor.execute('''
         SELECT
             s.matchday, s.budget_used, (%s - s.budget_used) as budget_remaining,
-            sp.squad_id, sp.player_id,
+            sp.squad_id, sp.player_id, sp.is_captain,
             p.name as player_name, p.position, p.team_id, p.base_price,
             t.name as team_name
         FROM squad s
@@ -39,7 +39,7 @@ def get_effective_squad(conn, user_id, matchday):
         return []
     return get_squad(conn, user_id, row["matchday"])
 
-def create_squad(conn, user_id, matchday, budget_used, player_ids):
+def create_squad(conn, user_id, matchday, budget_used, player_ids, captain_player_id=None):
     cursor = conn.cursor()
     try:
         cursor.execute('''
@@ -50,10 +50,11 @@ def create_squad(conn, user_id, matchday, budget_used, player_ids):
         squad_id = cursor.fetchone()["squad_id"]
         
         for player_id in player_ids:
+            is_cap = player_id == captain_player_id
             cursor.execute('''
-                INSERT INTO squadplayer (squad_id, player_id)
-                VALUES (%s, %s)
-                ''', (squad_id, player_id))
+                INSERT INTO squadplayer (squad_id, player_id, is_captain)
+                VALUES (%s, %s, %s)
+                ''', (squad_id, player_id, is_cap))
         
         conn.commit()
         return squad_id

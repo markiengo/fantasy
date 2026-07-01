@@ -228,12 +228,14 @@ const Scores = (() => {
         const points = scoreOf(item);
         const seed = encodeURIComponent(item.player_name);
         const avatarSrc = `https://api.dicebear.com/9.x/micah/svg?seed=${seed}&backgroundColor=c6f24a,a6d92e,7aa2ff,ffb06c&radius=50`;
+        const capBadge = item.is_captain ? `<span class="scorer-cap">(C)</span>` : "";
+        const ptsDisplay = item.is_captain ? `${points} <span class="scorer-x2">(x2)</span>` : `${points}`;
         html += `<li>
           <span class="rank">${rank}</span>
           <span class="avatar avatar--30" style="background-image:url('${avatarSrc}')"></span>
-          <span class="scorer-name">${item.player_name}</span>
+          <span class="scorer-name">${item.player_name} ${capBadge}</span>
           <i class="pos pos--${item.position.toLowerCase()}">${item.position}</i>
-          <b class="scorer-pts${points < 0 ? " scorer-pts--neg" : ""}">${points}</b>
+          <b class="scorer-pts${points < 0 ? " scorer-pts--neg" : ""}">${ptsDisplay}</b>
         </li>`;
         rank = rank + 1;
       }

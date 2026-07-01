@@ -4,6 +4,7 @@ const API_BASE = (location.hostname === "127.0.0.1" || location.hostname === "lo
 
 const Api = (() => {
   let useMock = false; // trips to true on first backend failure
+  let demoToken = sessionStorage.getItem("gaffer_demo_token") || null;
 
   function announceMode() {
     window.dispatchEvent(new CustomEvent("backend-mode-changed", {
@@ -16,7 +17,9 @@ const Api = (() => {
 
     const headers = { "Content-Type": "application/json" };
 
-    if (window.getAccessToken) {
+    if (demoToken) {
+      headers["Authorization"] = `Bearer ${demoToken}`;
+    } else if (window.getAccessToken) {
       try {
         const token = await window.getAccessToken();
         if (token) {
@@ -85,7 +88,10 @@ const Api = (() => {
 
   return {
     isMock: () => useMock,
+    isDemo: () => demoToken !== null,
     forceMock: () => { useMock = true; announceMode(); },
+    setDemoToken: () => { demoToken = "demo-token"; sessionStorage.setItem("gaffer_demo_token", demoToken); },
+    clearDemoToken: () => { demoToken = null; sessionStorage.removeItem("gaffer_demo_token"); },
 
     getPlayers: (params = {}) =>
       withFallback(() => call("/players" + qs(params)), () => Mock.getPlayers(params)),
@@ -99,10 +105,10 @@ const Api = (() => {
       withFallback(() => call("/playerstats" + qs(params)), () => Mock.getPlayerStats(params)),
     getSquad: (matchday) =>
       withFallback(() => call("/squad" + qs({ matchday })), () => Mock.getSquad(matchday)),
-    createSquad: (matchday, player_ids) =>
+    createSquad: (matchday, player_ids, captain_player_id) =>
       withFallback(
-        () => call("/squad", { method: "POST", body: JSON.stringify({ matchday, player_ids }) }),
-        () => Mock.createSquad(matchday, player_ids)
+        () => call("/squad", { method: "POST", body: JSON.stringify({ matchday, player_ids, captain_player_id }) }),
+        () => Mock.createSquad(matchday, player_ids, captain_player_id)
       ),
     getTransfers: (matchday) =>
       withFallback(() => call("/transfers" + qs({ matchday })), () => Mock.getTransfers(matchday)),
@@ -266,7 +272,7 @@ const Mock = (() => {
       const err = new Error("Squad not created for this matchday");
       err.status = 404; throw err;
     },
-    createSquad(matchday, player_ids) {
+    createSquad(matchday, player_ids, captain_player_id) {
       build();
       const players = player_ids.map((id) => _players.find((p) => p.player_id === id)).filter(Boolean);
       const used = players.reduce((s, p) => s + p.base_price, 0);
@@ -276,6 +282,7 @@ const Mock = (() => {
         players: players.map((p) => ({
           player_id: p.player_id, name: p.name, position: p.position,
           team_id: p.team_id, team_name: p.team_name, base_price: p.base_price,
+          is_captain: p.player_id === captain_player_id,
         })),
       };
       _squads[matchday] = squad;

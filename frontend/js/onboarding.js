@@ -44,6 +44,7 @@ const Onboarding = (() => {
     if (showMeHow && !showMeHow.dataset.bound) {
       showMeHow.dataset.bound = "1";
       showMeHow.addEventListener("click", () => {
+        if (typeof switchScreen === "function") switchScreen("team");
         close({ startTour: true });
       });
     }

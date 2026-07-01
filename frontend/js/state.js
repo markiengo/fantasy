@@ -13,7 +13,7 @@ const State = {
   currentMatchday: 1,
   players: [],
   teams: [],
-  currentSquad: { matchday: 1, formation: "4-3-3", players: [] },
+  currentSquad: { matchday: 1, formation: "4-3-3", players: [], captainId: null },
   fixtures: [],
   scores: null,
   _subs: [],
@@ -46,16 +46,17 @@ const State = {
 
   /* --- baseline snapshot (for "Cancel changes") --- */
   _baseline: null,
-  setBaseline() { this._baseline = JSON.stringify({ f: this.currentSquad.formation, p: this.currentSquad.players }); },
+  setBaseline() { this._baseline = JSON.stringify({ f: this.currentSquad.formation, p: this.currentSquad.players, c: this.currentSquad.captainId }); },
   restoreBaseline() {
-    if (!this._baseline) { this.currentSquad.players = []; this.emit(); return; }
+    if (!this._baseline) { this.currentSquad.players = []; this.currentSquad.captainId = null; this.emit(); return; }
     const b = JSON.parse(this._baseline);
     this.currentSquad.formation = b.f;
     this.currentSquad.players = b.p;
+    this.currentSquad.captainId = b.c || null;
     this.emit();
   },
   isDirty() {
-    return this._baseline !== JSON.stringify({ f: this.currentSquad.formation, p: this.currentSquad.players });
+    return this._baseline !== JSON.stringify({ f: this.currentSquad.formation, p: this.currentSquad.players, c: this.currentSquad.captainId });
   },
 
   /* --- render bus --- */
@@ -110,6 +111,7 @@ const State = {
   },
   removePlayer(id) {
     this.currentSquad.players = this.currentSquad.players.filter((p) => p.player_id !== id);
+    if (this.currentSquad.captainId === id) this.currentSquad.captainId = null;
     this.emit();
   },
   setFormation(formation) {
@@ -119,6 +121,14 @@ const State = {
   },
   setMatchday(md) { this.currentMatchday = md; this.currentSquad.matchday = md; this.emit(); },
   setMode(m) { this.mode = m; this.emit(); },
+  setCaptain(playerId) {
+    this.currentSquad.captainId = playerId;
+    this.emit();
+  },
+  getCaptain() {
+    if (!this.currentSquad.captainId) return null;
+    return this.currentSquad.players.find((p) => p.player_id === this.currentSquad.captainId) || null;
+  },
 
   /* --- transfers (against a saved squad) --- */
   transfersRemaining() { return Math.max(0, RULES.maxTransfers - this.transfersUsed); },

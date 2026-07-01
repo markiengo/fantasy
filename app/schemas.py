@@ -67,6 +67,7 @@ class Match(BaseModel):
 class SquadCreate(BaseModel): 
     matchday: int
     player_ids: list[int]
+    captain_player_id: Optional[int] = None
 
 class TransferCreate(BaseModel):
     player_in_id: int

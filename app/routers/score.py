@@ -23,6 +23,7 @@ def get_score_route(
                 "player_name": row["name"],
                 "position": row["position"],
                 "score": row["score"],
+                "is_captain": row["is_captain"],
             })
         return {
             "matchday": matchday,

@@ -51,7 +51,7 @@ def post_transfer(conn, user_id, player_in_id, player_out_id, matchday):
             squad_id = cursor.fetchone()["squad_id"]
 
             cursor.execute(
-                "INSERT INTO squadplayer (squad_id, player_id) SELECT %s, player_id FROM squadplayer WHERE squad_id = %s",
+                "INSERT INTO squadplayer (squad_id, player_id, is_captain) SELECT %s, player_id, is_captain FROM squadplayer WHERE squad_id = %s",
                 (squad_id, source["squad_id"])
             )
 
@@ -64,7 +64,7 @@ def post_transfer(conn, user_id, player_in_id, player_out_id, matchday):
 
         # Swap the players
         cursor.execute("DELETE FROM squadplayer WHERE player_id = %s AND squad_id = %s", (player_out_id, squad_id))
-        cursor.execute("INSERT INTO squadplayer (squad_id, player_id) VALUES (%s, %s)", (squad_id, player_in_id))
+        cursor.execute("INSERT INTO squadplayer (squad_id, player_id, is_captain) VALUES (%s, %s, false)", (squad_id, player_in_id))
 
         # Update budget
         cursor.execute(

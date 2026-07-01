@@ -133,7 +133,13 @@ def decode_supabase_token(token):
     return payload
 
 
+DEMO_TOKEN = "demo-token"
+DEMO_AUTH_USER_ID = "00000000-0000-0000-0000-000000000000"
+
+
 def get_current_auth_payload(token: str = Depends(get_bearer_token)):
+    if token == DEMO_TOKEN:
+        return {"sub": DEMO_AUTH_USER_ID, "email": "demo@gaffer.com"}
     return decode_supabase_token(token)
 
 

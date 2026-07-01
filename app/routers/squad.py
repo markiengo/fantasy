@@ -22,6 +22,7 @@ def build_squad(rows):
             "team_id": r["team_id"],
             "team_name": r["team_name"],
             "base_price": r["base_price"],
+            "is_captain": r["is_captain"],
         })
     return {
         "squad_id": first["squad_id"],
@@ -61,10 +62,15 @@ def post_squad_route(
 
     validate_squad(players)
 
+    if body.captain_player_id is None:
+        raise HTTPException(status_code=400, detail="Captain is required")
+    if body.captain_player_id not in body.player_ids:
+        raise HTTPException(status_code=400, detail="Captain must be in the squad")
+
     budget_used = sum(p["base_price"] for p in players)
 
     try:
-        create_squad(conn, user_id, body.matchday, budget_used, body.player_ids)
+        create_squad(conn, user_id, body.matchday, budget_used, body.player_ids, body.captain_player_id)
     except psycopg2.errors.UniqueViolation:
         conn.rollback()
         raise HTTPException(status_code = 400, detail = "Squad already exists for this matchday")

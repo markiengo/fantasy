@@ -68,6 +68,7 @@ const Squad = (() => {
     }
 
     if (!State.isComplete()) return "Fill the remaining slots before saving.";
+    if (!State.currentSquad.captainId) return "Select a captain before saving.";
     if (State.budgetRemaining() < 0) return "Budget must be under $50.0m before saving.";
     return "Backend validation still runs when you save.";
   }
@@ -83,8 +84,7 @@ const Squad = (() => {
       byPos[player.position].push(player);
     }
 
-    const captain = State.currentSquad.players.slice()
-      .sort((a, b) => Number(b.base_price || 0) - Number(a.base_price || 0))[0];
+    const captain = State.getCaptain();
 
     const preview = previewPlayer();
     const canTarget = preview && State.mode !== "view" && State.addBlockReason(preview) === null;
@@ -148,6 +148,70 @@ const Squad = (() => {
     pitch.querySelectorAll(".player-token--empty").forEach((btn) => {
       btn.addEventListener("click", () => filterByPosition(btn.dataset.pos));
     });
+
+    pitch.querySelectorAll(".player-token:not(.player-token--empty)").forEach((token) => {
+      token.addEventListener("click", (e) => {
+        if (e.target.closest(".player-token__remove")) return;
+        const pid = +token.dataset.pid;
+        showCaptainPopover(token, pid);
+      });
+    });
+  }
+
+  let _activePopover = null;
+
+  function closeCaptainPopover() {
+    if (_activePopover) {
+      _activePopover.remove();
+      _activePopover = null;
+    }
+  }
+
+  function showCaptainPopover(token, pid) {
+    closeCaptainPopover();
+    const player = State.currentSquad.players.find((p) => p.player_id === pid);
+    if (!player) return;
+    const isCap = State.currentSquad.captainId === pid;
+    const popover = document.createElement("div");
+    popover.className = "captain-popover";
+    const rect = token.getBoundingClientRect();
+    popover.style.position = "fixed";
+    popover.style.top = rect.top + "px";
+    popover.style.left = (rect.right + 8) + "px";
+    popover.innerHTML = `
+      <div class="captain-popover__header">${player.name}</div>
+      <button class="captain-popover__btn" type="button">${isCap ? "Remove Captain" : "Make Captain"}</button>
+    `;
+    document.body.appendChild(popover);
+    _activePopover = popover;
+
+    if (rect.right + 8 + popover.offsetWidth > window.innerWidth) {
+      popover.style.left = (rect.left - popover.offsetWidth - 8) + "px";
+    }
+
+    popover.querySelector(".captain-popover__btn").addEventListener("click", () => {
+      if (isCap) {
+        State.setCaptain(null);
+        Toast.show(`${player.name} removed as captain.`, "info");
+      } else {
+        State.setCaptain(pid);
+        Toast.show(`${player.name} is now captain (x2 points).`, "success");
+      }
+      closeCaptainPopover();
+      renderPitch();
+      renderSummary();
+    });
+
+    setTimeout(() => {
+      document.addEventListener("click", _popoverOutsideClick);
+    }, 0);
+  }
+
+  function _popoverOutsideClick(e) {
+    if (_activePopover && !_activePopover.contains(e.target) && !e.target.closest(".player-token")) {
+      closeCaptainPopover();
+      document.removeEventListener("click", _popoverOutsideClick);
+    }
   }
 
   function filterByPosition(pos) {
@@ -196,7 +260,7 @@ const Squad = (() => {
     const used = State.budgetUsed();
     const remaining = State.budgetRemaining();
     const pending = State.pendingTransfers();
-    const captain = State.currentSquad.players.slice().sort((a, b) => Number(b.base_price || 0) - Number(a.base_price || 0))[0];
+    const captain = State.getCaptain();
 
     document.getElementById("statSelected").textContent = `${selected}/11`;
     document.getElementById("statFormation").textContent = State.currentSquad.formation;
@@ -219,7 +283,7 @@ const Squad = (() => {
       }
     }
     const captainLabel = document.getElementById("captainLabel");
-    if (captainLabel) captainLabel.textContent = captain ? captain.name : "Auto pick";
+    if (captainLabel) captainLabel.textContent = captain ? captain.name : "Not selected";
     const captainAvatar = document.getElementById("captainAvatar");
     if (captainAvatar) {
       if (captain) {
@@ -263,7 +327,7 @@ const Squad = (() => {
       cancelBtn.hidden = !State.isDirty();
       transferBtn.hidden = true;
       confirmBtn.hidden = true;
-      saveBtn.disabled = !State.isComplete() || used > RULES.budgetCap;
+      saveBtn.disabled = !State.isComplete() || used > RULES.budgetCap || !State.currentSquad.captainId;
       cancelBtn.textContent = "Cancel";
       cancelBtn.disabled = !State.isDirty();
     } else if (State.mode === "transfer") {
@@ -499,7 +563,7 @@ const Squad = (() => {
     btn.disabled = true;
     try {
       const ids = State.currentSquad.players.map((player) => player.player_id);
-      const squad = await Api.createSquad(State.currentMatchday, ids);
+      const squad = await Api.createSquad(State.currentMatchday, ids, State.currentSquad.captainId);
       State.squadSaved = true;
       State.transfersUsed = 0;
       State.setBaseline();

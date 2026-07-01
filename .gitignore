@@ -27,6 +27,7 @@ claude-design/
 skills-lock.json
 .mcp.json
 .claude
+.devin/
 
 # ── Design assets (large, not source) ────────────────────────────────────────
 frontend/moodboard
