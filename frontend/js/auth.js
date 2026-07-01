@@ -12,12 +12,27 @@ async function getAccessToken() {
   return data.session?.access_token || null;
 }
 
-async function signIn(email, password, remember = true) {
+async function signIn(emailOrUsername, password, remember = true) {
   if (!remember) {
     sessionStorage.setItem("gaffer_no_persist", "1");
   } else {
     sessionStorage.removeItem("gaffer_no_persist");
   }
+
+  let email = emailOrUsername;
+  if (!emailOrUsername.includes("@")) {
+    const base = (location.hostname === "127.0.0.1" || location.hostname === "localhost")
+      ? "http://127.0.0.1:8000/api"
+      : "/api";
+    const res = await fetch(`${base}/lookup-username?username=${encodeURIComponent(emailOrUsername)}`);
+    if (!res.ok) {
+      throw new Error("Username not found");
+    }
+    const data = await res.json();
+    email = data.email;
+    if (!email) throw new Error("Username not found");
+  }
+
   const { data, error } = await supabaseClient.auth.signInWithPassword({
     email,
     password,
@@ -60,10 +75,13 @@ async function signInWithGoogle() {
   return data;
 }
 
-async function signUp(email, password) {
+async function signUp(email, password, username) {
   const { data, error } = await supabaseClient.auth.signUp({
     email,
     password,
+    options: {
+      data: { username },
+    },
   });
   if (error) {
     throw error;

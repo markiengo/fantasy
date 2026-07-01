@@ -196,17 +196,16 @@ const Mock = (() => {
       }
     }
     const ko = [
-      [4, "round_of_32", "2026-06-29"], [5, "round_of_16", "2026-07-05"],
-      [6, "quarter_final", "2026-07-10"], [7, "semi_final", "2026-07-15"],
-      [8, "final", "2026-07-19"],
+      [4, "round_of_32", "2026-06-29", 16], [5, "round_of_16", "2026-07-05", 8],
+      [6, "quarter_final", "2026-07-10", 4], [7, "semi_final", "2026-07-15", 2],
+      [8, "final", "2026-07-19", 1],
     ];
-    ko.forEach(([md, stage, date]) => {
-      const n = md <= 5 ? 2 : 1;
+    ko.forEach(([md, stage, date, n]) => {
       for (let k = 0; k < n; k++) {
         _matches.push({
-          match_id: mid++, team1_id: _teams[k * 2].team_id, team1_name: _teams[k * 2].name,
-          team2_id: _teams[k * 2 + 1].team_id, team2_name: _teams[k * 2 + 1].name,
-          matchday: md, stage, date,
+          match_id: mid++, team1_id: null, team1_name: null,
+          team2_id: null, team2_name: null,
+          matchday: md, stage, date, bracket_order: k + 1,
         });
       }
     });

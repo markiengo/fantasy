@@ -191,7 +191,7 @@
 .fixtures__list { gap: 8px; }
 .fixture-row {
   display: grid;
-  grid-template-columns: 1fr 68px 1fr;
+  grid-template-columns: 1fr 110px 1fr;
   align-items: center;
   gap: 10px;
   padding: 14px 12px;
@@ -233,15 +233,25 @@
   gap: 3px;
 }
 .fixture-row__mid .score {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 800;
   color: var(--ink);
   letter-spacing: -.01em;
+  white-space: nowrap;
 }
 .fixture-row__mid .time {
   font-size: 14px;
   font-weight: 700;
   color: var(--ink-2);
+}
+.fixture-row__team--win b {
+  font-weight: 800;
+  color: var(--ink);
+}
+.fixture-row__team--lose b {
+  font-weight: 600;
+  color: var(--faint);
+  opacity: 0.6;
 }
 .fixture-row__mid .live {
   display: flex;
@@ -336,6 +346,28 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.bracket-node__score {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink);
+  margin-left: auto;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+.bracket-node__slot--win b {
+  color: var(--ink);
+  font-weight: 800;
+}
+.bracket-node__slot--lose b {
+  color: var(--faint);
+  font-weight: 600;
+  opacity: 0.55;
+}
+.bracket-node__slot--lose .bracket-node__score {
+  color: var(--faint);
+  font-weight: 600;
+  opacity: 0.55;
 }
 .shield {
   width: 17px;

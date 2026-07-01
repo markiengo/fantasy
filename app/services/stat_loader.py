@@ -75,11 +75,15 @@ def update_event_score(conn, match_id, event):
 
     team1_score = event["home_score"]
     team2_score = event["away_score"]
+    team1_penalty = event.get("home_penalty")
+    team2_penalty = event.get("away_penalty")
     if match["team1_id"] != event["home"]:
         team1_score = event["away_score"]
         team2_score = event["home_score"]
+        team1_penalty = event.get("away_penalty")
+        team2_penalty = event.get("home_penalty")
 
-    update_match_score(conn, match_id, team1_score, team2_score)
+    update_match_score(conn, match_id, team1_score, team2_score, team1_penalty, team2_penalty)
     return True
 
 

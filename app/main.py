@@ -15,6 +15,7 @@ from app.routers import team
 from app.routers import transfer
 from app.routers import load_stats
 from app.routers import me
+from app.routers import auth as auth_router
 from app.core.validation import SquadValidationError
 
 app = FastAPI()
@@ -36,6 +37,7 @@ app.include_router(team.router, prefix = "/api")
 app.include_router(transfer.router, prefix = "/api")
 app.include_router(load_stats.router, prefix = "/api")
 app.include_router(me.router, prefix = "/api")
+app.include_router(auth_router.router, prefix = "/api")
 
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 

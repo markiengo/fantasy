@@ -50,9 +50,13 @@
         <p class="login-screen__subtitle" id="authSubtitle">Sign in to manage your fantasy squad and track your World Cup journey</p>
 
         <form id="emailLoginForm" class="auth-form">
+          <div class="field field--auth" id="authUsernameField" hidden>
+            <label class="label" for="authUsername">Username</label>
+            <input type="text" id="authUsername" class="input input--auth" placeholder="3-20 chars, letters/numbers/_">
+          </div>
           <div class="field field--auth">
-            <label class="label" for="authEmail">Email</label>
-            <input type="email" id="authEmail" class="input input--auth" placeholder="Enter your email" required>
+            <label class="label" for="authEmail">Email or Username</label>
+            <input type="text" id="authEmail" class="input input--auth" placeholder="Enter email or username" required>
           </div>
           <div class="field field--auth" id="authPasswordField">
             <label class="label" for="authPassword">Password</label>

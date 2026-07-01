@@ -80,8 +80,8 @@ const STAGE_LABEL = {
   group_stage: (md) => `Round ${md}`,
   round_of_32: () => "Round of 32",
   round_of_16: () => "Round of 16",
-  quarter_final: () => "Quarter-final",
-  semi_final: () => "Semi-final",
+  quarter_final: () => "Quarterfinals",
+  semi_final: () => "Semifinals",
   final: () => "Final",
 };
 
@@ -552,6 +552,7 @@ function bindHelpButtons() {
 function updateAuthMode(mode) {
   const title = document.getElementById("authTitle");
   const subtitle = document.getElementById("authSubtitle");
+  const usernameField = document.getElementById("authUsernameField");
   const passwordField = document.getElementById("authPasswordField");
   const options = document.getElementById("authOptions");
   const submitBtn = document.getElementById("authSubmitBtn");
@@ -560,38 +561,49 @@ function updateAuthMode(mode) {
   const googleText = document.getElementById("googleSignInText");
   const modeText = document.getElementById("authModeText");
   const toggleBtn = document.getElementById("authToggleBtn");
+  const emailLabel = document.querySelector('label[for="authEmail"]');
+  const emailInput = document.getElementById("authEmail");
 
   if (mode === "login") {
     title.textContent = "Welcome back";
     subtitle.style.display = "none";
+    if (usernameField) usernameField.hidden = true;
     passwordField.hidden = false;
     options.hidden = false;
     submitBtn.textContent = "Log In";
     separator.hidden = false;
     googleBtn.hidden = false;
     googleText.textContent = "Sign In with Google";
+    if (emailLabel) emailLabel.textContent = "Email or Username";
+    if (emailInput) emailInput.placeholder = "Enter email or username";
     if (modeText) modeText.textContent = "Don't have an account?";
     if (toggleBtn) toggleBtn.textContent = "Sign Up";
   } else if (mode === "signup") {
     title.textContent = "Create account";
     subtitle.style.display = "none";
+    if (usernameField) usernameField.hidden = false;
     passwordField.hidden = false;
     options.hidden = true;
     submitBtn.textContent = "Sign Up";
     separator.hidden = false;
     googleBtn.hidden = false;
     googleText.textContent = "Sign Up with Google";
+    if (emailLabel) emailLabel.textContent = "Email";
+    if (emailInput) emailInput.placeholder = "Enter your email";
     if (modeText) modeText.textContent = "Already have an account?";
     if (toggleBtn) toggleBtn.textContent = "Log In";
   } else if (mode === "reset") {
     title.textContent = "Reset password";
     subtitle.textContent = "Enter your email and we'll send you a reset link";
     subtitle.style.display = "";
+    if (usernameField) usernameField.hidden = true;
     passwordField.hidden = true;
     options.hidden = true;
     submitBtn.textContent = "Send reset link";
     separator.hidden = true;
     googleBtn.hidden = true;
+    if (emailLabel) emailLabel.textContent = "Email";
+    if (emailInput) emailInput.placeholder = "Enter your email";
     if (modeText) modeText.textContent = "Remember your password?";
     if (toggleBtn) toggleBtn.textContent = "Log In";
   }
@@ -755,21 +767,41 @@ async function boot() {
   if (emailLoginForm) {
     emailLoginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const email = document.getElementById("authEmail").value;
+      const emailOrUser = document.getElementById("authEmail").value.trim();
       const password = document.getElementById("authPassword").value;
       const remember = document.getElementById("authRemember")?.checked ?? true;
+      const usernameInput = document.getElementById("authUsername");
+      const username = usernameInput ? usernameInput.value.trim() : "";
       setAuthLoading(true);
       try {
         if (authMode === "login") {
-          await window.signIn(email, password, remember);
+          await window.signIn(emailOrUser, password, remember);
           await swapToApp();
         } else if (authMode === "signup") {
-          await window.signUp(email, password);
-          showAuthOverlay("signup", email);
+          if (!username || !/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+            Toast.show("Username must be 3-20 chars: letters, numbers, underscores only.", "error");
+            setAuthLoading(false);
+            return;
+          }
+          const base = (location.hostname === "127.0.0.1" || location.hostname === "localhost")
+            ? "http://127.0.0.1:8000/api"
+            : "/api";
+          const checkRes = await fetch(`${base}/check-username?username=${encodeURIComponent(username)}`);
+          const checkData = await checkRes.json();
+          if (!checkData.available) {
+            const msg = checkData.reason === "invalid"
+              ? "Username must be 3-20 chars: letters, numbers, underscores only."
+              : "Username already taken.";
+            Toast.show(msg, "error");
+            setAuthLoading(false);
+            return;
+          }
+          await window.signUp(emailOrUser, password, username);
+          showAuthOverlay("signup", emailOrUser);
           authMode = "login";
         } else if (authMode === "reset") {
-          await window.resetPassword(email);
-          showAuthOverlay("reset", email);
+          await window.resetPassword(emailOrUser);
+          showAuthOverlay("reset", emailOrUser);
           authMode = "login";
         }
       } catch (error) {

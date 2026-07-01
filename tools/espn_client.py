@@ -52,19 +52,23 @@ def scoreboard(yyyymmdd):
     for e in data.get("events", []):
         comp = e["competitions"][0]
         home = away = home_score = away_score = None
+        home_penalty = away_penalty = None
         for c in comp["competitors"]:
             abbr = c["team"]["abbreviation"]
             raw = c.get("score")
             score = int(raw) if raw not in (None, "") else None
+            shootout_raw = c.get("shootoutScore")
+            penalty = int(shootout_raw) if shootout_raw not in (None, "") else None
             if c.get("homeAway") == "home":
-                home, home_score = abbr, score
+                home, home_score, home_penalty = abbr, score, penalty
             else:
-                away, away_score = abbr, score
+                away, away_score, away_penalty = abbr, score, penalty
 
         slug = (e.get("season") or {}).get("slug", "group-stage")
         completed = (comp.get("status") or {}).get("type", {}).get("completed", False)
         if not completed:
             home_score = away_score = None
+            home_penalty = away_penalty = None
 
         out.append({
             "event_id": e["id"],
@@ -74,6 +78,7 @@ def scoreboard(yyyymmdd):
             "stage_slug": slug,
             "home": home, "away": away,
             "home_score": home_score, "away_score": away_score,
+            "home_penalty": home_penalty, "away_penalty": away_penalty,
             "completed": completed,
         })
     return out

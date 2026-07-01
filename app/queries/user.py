@@ -34,3 +34,50 @@ def create_user_from_auth(conn, auth_user_id, username, display_name):
         raise
     finally:
         cursor.close()
+
+
+def get_user_by_username(conn, username):
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            SELECT user_id, username, auth_user_id, display_name, role, is_active, created_at
+            FROM users
+            WHERE username = %s
+            """,
+            (username,)
+        )
+        row = cursor.fetchone()
+        return row
+    finally:
+        cursor.close()
+
+
+def check_username_taken(conn, username):
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT 1 FROM users WHERE username = %s",
+            (username,)
+        )
+        return cursor.fetchone() is not None
+    finally:
+        cursor.close()
+
+
+def get_email_by_username(conn, username):
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            SELECT au.email
+            FROM auth.users au
+            JOIN public.users pu ON pu.auth_user_id = au.id
+            WHERE pu.username = %s
+            """,
+            (username,)
+        )
+        row = cursor.fetchone()
+        return row["email"] if row else None
+    finally:
+        cursor.close()

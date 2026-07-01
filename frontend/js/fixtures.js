@@ -7,8 +7,8 @@ const Fixtures = (() => {
     group_stage: (md) => `Round ${md}`,
     round_of_32: () => "Round of 32",
     round_of_16: () => "Round of 16",
-    quarter_final: () => "Quarter-final",
-    semi_final: () => "Semi-final",
+    quarter_final: () => "Quarterfinals",
+    semi_final: () => "Semifinals",
     final: () => "Final",
   };
 
@@ -39,7 +39,8 @@ const Fixtures = (() => {
   }
 
   function renderOverview(matches) {
-    const stage = matches.length ? matches[0].stage : "group_stage";
+    const meta = currentRoundMeta(round);
+    const stage = matches.length ? matches[0].stage : (meta ? meta.stage : "group_stage");
     const roundLabel = document.getElementById("fxRoundLabel");
     const countLabel = document.getElementById("tournamentMatchCount");
     const stageText = document.getElementById("tournamentStageLabel");
@@ -254,19 +255,79 @@ const Fixtures = (() => {
     list.innerHTML = html;
   }
 
+  function scoreLabel(match, side) {
+    const score = side === 1 ? match.team1_score : match.team2_score;
+    const penalty = side === 1 ? match.team1_penalty_score : match.team2_penalty_score;
+    if (score == null) return "";
+    let label = String(score);
+    if (penalty != null) label += ` (${penalty})`;
+    return label;
+  }
+
+  function shortName(name) {
+    if (!name) return "TBD";
+    const shorts = {
+      "South Africa": "S.Africa", "South Korea": "S.Korea",
+      "Korea Republic": "Korea", "Netherlands": "Dutch",
+      "Switzerland": "Switz.", "Australia": "Aussie",
+      "Argentina": "Argent.", "Paraguay": "Parag.",
+      "Colombia": "Colom.", "Morocco": "Moroc.",
+      "Germany": "Ger.", "Portugal": "Port.",
+      "England": "Eng.", "Scotland": "Scot.",
+      "Spain": "Spa.", "France": "Fra.",
+      "Mexico": "Mex.", "Canada": "Can.",
+      "Japan": "Jpn.", "Brazil": "Bra.",
+      "Belgium": "Bel.", "Croatia": "Cro.",
+      "Ecuador": "Ecu.", "Senegal": "Sen.",
+      "Norway": "Nor.", "Sweden": "Swe.",
+      "Uruguay": "Uru.", "Iran": "Irn.",
+      "Tunisia": "Tun.", "Algeria": "Alger.",
+      "Nigeria": "Nig.", "Ghana": "Gha.",
+      "Panama": "Pan.", "Jordan": "Jor.",
+      "Uzbekistan": "Uzb.", "Iraq": "Irq.",
+      "Saudi Arabia": "S.Arab.", "Egypt": "Egy.",
+      "New Zealand": "N.Z.", "Ivory Coast": "Ivory",
+      "Cape Verde": "C.Verde", "Curacao": "Curac.",
+      "Bosnia & H.": "Bosnia", "Haiti": "Haiti",
+      "Qatar": "Qat.", "Costa Rica": "C.Rica",
+      "DR Congo": "DRC", "Czechia": "Czech.",
+      "United States": "USA", "Türkiye": "Tur.",
+      "Turkiye": "Tur.", "Turkey": "Tur.",
+    };
+    return shorts[name] || name;
+  }
+
+  function matchWinner(match) {
+    if (match.team1_score == null || match.team2_score == null) return 0;
+    if (match.team1_score > match.team2_score) return 1;
+    if (match.team1_score < match.team2_score) return 2;
+    if (match.team1_penalty_score != null && match.team2_penalty_score != null) {
+      if (match.team1_penalty_score > match.team2_penalty_score) return 1;
+      if (match.team1_penalty_score < match.team2_penalty_score) return 2;
+    }
+    return 0;
+  }
+
   function matchRow(match) {
     const hasScore = match.team1_score != null && match.team2_score != null;
+    const t1Name = shortName(match.team1_name);
+    const t2Name = shortName(match.team2_name);
+
     const center = hasScore
-      ? `<b class="score">${match.team1_score} – ${match.team2_score}</b>`
+      ? `<b class="score">${scoreLabel(match, 1)} – ${scoreLabel(match, 2)}</b>`
       : `<b class="time">${kickoff(match)}</b>`;
 
+    const winner = matchWinner(match);
+    const t1Class = winner === 1 ? " fixture-row__team--win" : winner === 2 ? " fixture-row__team--lose" : "";
+    const t2Class = winner === 2 ? " fixture-row__team--win" : winner === 1 ? " fixture-row__team--lose" : "";
+
     return `<div class="fixture-row">
-      <span class="fixture-row__team fixture-row__team--home">
-        <b>${match.team1_name}</b>${flagImg(match.team1_id)}
+      <span class="fixture-row__team fixture-row__team--home${t1Class}">
+        <b>${t1Name}</b>${flagImg(match.team1_id)}
       </span>
       <span class="fixture-row__mid">${center}</span>
-      <span class="fixture-row__team">
-        ${flagImg(match.team2_id)}<b>${match.team2_name}</b>
+      <span class="fixture-row__team${t2Class}">
+        ${flagImg(match.team2_id)}<b>${t2Name}</b>
       </span>
     </div>`;
   }
@@ -280,8 +341,8 @@ const Fixtures = (() => {
     const ROUND_NAMES = {
       round_of_32: "ROUND OF 32",
       round_of_16: "ROUND OF 16",
-      quarter_final: "QUARTER-FINALS",
-      semi_final: "SEMI-FINALS",
+      quarter_final: "QUARTERFINALS",
+      semi_final: "SEMIFINALS",
       final: "FINAL",
     };
 
@@ -333,10 +394,25 @@ const Fixtures = (() => {
         let inner;
 
         if (match) {
-          const t1 = match.team1_name || (match.team1_id || "TBD");
-          const t2 = match.team2_name || (match.team2_id || "TBD");
-          inner = `<div class="bracket-node__slot">${flagImg(match.team1_id)}<b>${t1}</b></div>
-            <div class="bracket-node__slot">${flagImg(match.team2_id)}<b>${t2}</b></div>`;
+          const t1 = shortName(match.team1_name) || (match.team1_id || "TBD");
+          const t2 = shortName(match.team2_name) || (match.team2_id || "TBD");
+          const hasScore = match.team1_score != null && match.team2_score != null;
+          let t1Score = "", t2Score = "";
+          let t1Win = "", t2Win = "";
+          if (hasScore) {
+            t1Score = scoreLabel(match, 1);
+            t2Score = scoreLabel(match, 2);
+            const winner = matchWinner(match);
+            if (winner === 1) {
+              t1Win = " bracket-node__slot--win";
+              t2Win = " bracket-node__slot--lose";
+            } else if (winner === 2) {
+              t1Win = " bracket-node__slot--lose";
+              t2Win = " bracket-node__slot--win";
+            }
+          }
+          inner = `<div class="bracket-node__slot${t1Win}">${flagImg(match.team1_id)}<b>${t1}</b>${t1Score ? `<span class="bracket-node__score">${t1Score}</span>` : ""}</div>
+            <div class="bracket-node__slot${t2Win}">${flagImg(match.team2_id)}<b>${t2}</b>${t2Score ? `<span class="bracket-node__score">${t2Score}</span>` : ""}</div>`;
         } else {
           inner = `<div class="bracket-node__slot"><span class="shield"></span><b>TBD</b></div>
             <div class="bracket-node__slot"><span class="shield"></span><b>TBD</b></div>`;

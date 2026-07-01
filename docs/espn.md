@@ -65,23 +65,761 @@ endpoint is the same base URL with the World Cup league code `fifa.world`, then 
 https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/<resource>
 ```
 
-Swap the last part:
+There are **two kinds of URLs** for every piece of data ESPN serves:
 
-| Resource                     | Returns                                                 | Fills        |
-| ------------------------------| ---------------------------------------------------------| --------------|
-| `/teams`                     | all 48 teams (id, abbreviation, name)                   | `team`       |
-| `/teams/{teamId}/roster`     | one nation's squad (player id, name, position)          | `player`     |
-| `/scoreboard?dates=YYYYMMDD` | the fixtures on a date (event ids, teams, score, stage) | `match`      |
-| `/summary?event={eventId}`   | one match's per-player stats                            | `playerstat` |
+- **API URL** — the JSON endpoint a program calls (returns raw structured data)
+- **User URL** — the human-readable ESPN.com page a browser opens (returns HTML with the same data, prettified)
 
-You can paste any of these into a browser right now and see the JSON.
+For every match, team, and player, ESPN's JSON includes `links` arrays that contain the
+corresponding user-facing URL. So from the API response alone, you can always find the
+human-readable page.
 
-### How you know which match is which event ID
+### The four endpoints
 
-You don't guess IDs — the **scoreboard tells you**. Step 1: ask the scoreboard for a date; it
-returns a list of events, each with its `id` *and* the teams playing. Step 2: feed that `id`
-into `/summary?event=`. So it's always two steps: *list the events for a day → pick the id → ask
-for that match's details.* The loader does exactly this in a loop.
+| Resource                     | API URL                                                                    | Returns                                                 | Fills        |
+| ------------------------------| ---------------------------------------------------------------------------| ---------------------------------------------------------| --------------|
+| `/teams`                     | `…/fifa.world/teams`                                                       | all 48 teams (id, abbreviation, name, logo, color)     | `team`       |
+| `/teams/{teamId}/roster`     | `…/fifa.world/teams/{teamId}/roster`                                       | one nation's squad (player id, name, position, stats)  | `player`     |
+| `/scoreboard?dates=YYYYMMDD` | `…/fifa.world/scoreboard?dates=20260611`                                   | the fixtures on a date (event ids, teams, score, stage)| `match`      |
+| `/summary?event={eventId}`   | `…/fifa.world/summary?event=760415`                                        | one match's full details (per-player stats, lineups, play-by-play, team stats) | `playerstat` |
+
+You can paste any API URL into a browser right now and see the JSON.
+
+---
+
+### 3.1 `/teams` — all 48 nations
+
+**API URL:**
+```
+https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/teams
+```
+
+**User URL (human-readable team list):**
+```
+https://www.espn.com/soccer/teams/_/league/fifa.world
+```
+
+**What you get:** a `sports[0].leagues[0].teams` array, one entry per nation. Each team object
+contains the ESPN internal `id`, the `abbreviation` (which is the FIFA 3-letter code we use as
+`team_id`), display name, logo URL, team colors, and links to the ESPN clubhouse page.
+
+**Real JSON example** (truncated to 2 of 48 teams for readability):
+
+```json
+{
+  "sports": [{
+    "leagues": [{
+      "id": "606",
+      "name": "FIFA World Cup",
+      "slug": "fifa.world",
+      "season": { "year": 2026, "displayName": "2026" },
+      "teams": [
+        {
+          "team": {
+            "id": "202",
+            "abbreviation": "ARG",
+            "displayName": "Argentina",
+            "name": "Argentina",
+            "shortDisplayName": "Argentina",
+            "slug": "arg",
+            "color": "74acdf",
+            "alternateColor": "173E69",
+            "logos": [{
+              "href": "https://a.espncdn.com/i/teamlogos/countries/500/arg.png",
+              "width": 500, "height": 500
+            }],
+            "links": [{
+              "rel": ["clubhouse", "desktop", "team"],
+              "href": "https://www.espn.com/soccer/team/_/id/202/argentina",
+              "text": "Clubhouse"
+            }]
+          }
+        },
+        {
+          "team": {
+            "id": "203",
+            "abbreviation": "MEX",
+            "displayName": "Mexico",
+            "name": "Mexico",
+            "slug": "mex",
+            "color": "006847",
+            "logos": [{
+              "href": "https://a.espncdn.com/i/teamlogos/countries/500/mex.png",
+              "width": 500, "height": 500
+            }],
+            "links": [{
+              "rel": ["clubhouse", "desktop", "team"],
+              "href": "https://www.espn.com/soccer/team/_/id/203/mexico",
+              "text": "Clubhouse"
+            }]
+          }
+        }
+      ]
+    }]
+  }]
+}
+```
+
+**How our code extracts values:**
+
+```python
+for entry in data["sports"][0]["leagues"][0]["teams"]:
+    team = entry["team"]
+    team_id = team["abbreviation"]     # "MEX" — already the FIFA code, becomes our team_id
+    name     = team["displayName"]     # "Mexico"
+    logo     = team["logos"][0]["href"]  # "https://a.espncdn.com/i/teamlogos/countries/500/mex.png"
+    espn_id  = team["id"]              # "203" — stored for later lookups (roster, scoreboard)
+```
+
+The `abbreviation` is already the FIFA 3-letter code (`ENG`, `BRA`, `ARG`…), so teams need
+**no translation table** — `abbreviation` goes straight into our `team.team_id` column.
+
+---
+
+### 3.2 `/teams/{teamId}/roster` — one nation's squad
+
+**API URL:**
+```
+https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/teams/203/roster
+```
+
+(Team ID `203` = Mexico. Get the ID from the `/teams` response.)
+
+**User URL (human-readable squad page):**
+```
+https://www.espn.com/soccer/team/squad/_/id/203/mexico
+```
+
+**What you get:** an `athletes` array, one entry per player. Each athlete object contains the
+ESPN player `id`, full name, jersey number, position (`G` / `D` / `M` / `F`), height, weight,
+date of birth, citizenship, a headshot URL, and a `statistics.splits` block with
+tournament-wide aggregated stats (appearances, goals, assists, cards, etc.).
+
+**Real JSON example** (truncated to 2 players for readability):
+
+```json
+{
+  "timestamp": "2026-07-01T09:16:36Z",
+  "status": "success",
+  "season": { "year": 2026, "displayName": "2026 FIFA World Cup" },
+  "athletes": [
+    {
+      "id": "290899",
+      "fullName": "Raúl Rangel",
+      "displayName": "Raúl Rangel",
+      "shortName": "R. Rangel",
+      "jersey": "1",
+      "position": { "abbreviation": "G", "name": "Goalkeeper" },
+      "height": 75.0, "displayHeight": "6' 3\"",
+      "weight": 192.0, "displayWeight": "192 lbs",
+      "age": 26,
+      "dateOfBirth": "2000-02-25T08:00Z",
+      "citizenship": "Mexico",
+      "headshot": { "href": "https://a.espncdn.com/i/headshots/soccer/players/full/290899.png" },
+      "links": [{
+        "rel": ["playercard", "desktop", "athlete"],
+        "href": "https://www.espn.com/soccer/player/_/id/290899/raul-rangel",
+        "text": "Player Card"
+      }],
+      "statistics": {
+        "splits": {
+          "categories": [
+            {
+              "name": "general",
+              "stats": [
+                { "name": "appearances", "value": 4.0, "displayValue": "4" },
+                { "name": "yellowCards", "value": 0.0, "displayValue": "0" },
+                { "name": "redCards",   "value": 0.0, "displayValue": "0" }
+              ]
+            },
+            {
+              "name": "goalKeeping",
+              "stats": [
+                { "name": "saves",         "value": 6.0, "displayValue": "6" },
+                { "name": "goalsConceded", "value": 0.0, "displayValue": "0" }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "233075",
+      "fullName": "Julián Quiñones",
+      "displayName": "Julián Quiñones",
+      "shortName": "J. Quiñones",
+      "jersey": "16",
+      "position": { "abbreviation": "F", "name": "Forward" },
+      "links": [{
+        "rel": ["playercard", "desktop", "athlete"],
+        "href": "https://www.espn.com/soccer/player/_/id/233075/julian-quinones",
+        "text": "Player Card"
+      }],
+      "statistics": {
+        "splits": {
+          "categories": [
+            {
+              "name": "general",
+              "stats": [
+                { "name": "appearances", "value": 4.0, "displayValue": "4" },
+                { "name": "yellowCards", "value": 0.0, "displayValue": "0" },
+                { "name": "redCards",   "value": 0.0, "displayValue": "0" }
+              ]
+            },
+            {
+              "name": "offensive",
+              "stats": [
+                { "name": "totalGoals",  "value": 3.0, "displayValue": "3" },
+                { "name": "goalAssists", "value": 1.0, "displayValue": "1" },
+                { "name": "shotsOnTarget", "value": 5.0, "displayValue": "5" }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "coach": [
+    { "id": "136", "firstName": "Javier", "lastName": "Aguirre" }
+  ],
+  "team": {
+    "id": "203", "abbreviation": "MEX", "displayName": "Mexico",
+    "logo": "https://a.espncdn.com/i/teamlogos/countries/500/mex.png"
+  }
+}
+```
+
+**How our code extracts values:**
+
+```python
+for athlete in data["athletes"]:
+    espn_id  = athlete["id"]                          # "290899"
+    name     = athlete["displayName"]                 # "Raúl Rangel"
+    jersey   = athlete["jersey"]                      # "1"
+    pos_abbr = athlete["position"]["abbreviation"]    # "G" → maps to "GK"
+    # position mapping: G→GK, D→DEF, M→MID, F→FWD
+    headshot = athlete.get("headshot", {}).get("href")  # optional, may be missing
+```
+
+The `links` array contains the user-facing player card URL:
+`https://www.espn.com/soccer/player/_/id/290899/raul-rangel`
+
+---
+
+### 3.3 `/scoreboard?dates=YYYYMMDD` — fixtures for a date
+
+**API URL:**
+```
+https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260611
+```
+
+**User URL (human-readable scoreboard for that date):**
+```
+https://www.espn.com/soccer/scoreboard/_/league/fifa.world/date/20260611
+```
+
+**What you get:** an `events` array, one entry per match that day. Each event contains:
+
+- `id` — the event ID (needed for `/summary`)
+- `date` — kickoff time in ISO format
+- `name` / `shortName` — e.g. "South Africa at Mexico" / "RSA @ MEX"
+- `season.slug` — the stage: `group-stage`, `round-of-16`, `quarterfinals`, etc.
+- `status` — match state (`pre`, `in`, `post`) and clock
+- `competitions[0].competitors` — two team objects with `score`, `winner`, `team` details
+- `competitions[0].details` — goals, cards, substitutions with player IDs and minute
+- `competitions[0].venue` — stadium name, city, country
+- `links` — user-facing URLs for match summary, highlights, recap, stats, bracket
+
+**Real JSON example** (truncated to 1 of 2 events for readability — this is the World Cup
+opening match, Mexico vs South Africa on June 11, 2026):
+
+```json
+{
+  "leagues": [{
+    "id": "606",
+    "name": "FIFA World Cup",
+    "slug": "fifa.world",
+    "season": {
+      "year": 2026,
+      "displayName": "2026 FIFA World Cup",
+      "type": { "id": "2", "name": "Round of 32" }
+    },
+    "calendar": [{
+      "label": "FIFA World Cup",
+      "entries": [
+        { "label": "Group",          "detail": "Jun 11-27",  "value": "1" },
+        { "label": "Round of 32",    "detail": "Jun 28-Jul 3","value": "2" },
+        { "label": "Rd of 16",       "detail": "Jul 4-7",    "value": "3" },
+        { "label": "Quarterfinals",  "detail": "Jul 9-11",   "value": "4" },
+        { "label": "Semifinals",     "detail": "Jul 14-15",  "value": "5" },
+        { "label": "3rd-Place Match","detail": "Jul 18",     "value": "6" },
+        { "label": "Final",          "detail": "Jul 19",     "value": "7" }
+      ]
+    }]
+  }],
+  "events": [
+    {
+      "id": "760415",
+      "date": "2026-06-11T19:00Z",
+      "name": "South Africa at Mexico",
+      "shortName": "RSA @ MEX",
+      "season": { "year": 2026, "type": 13802, "slug": "group-stage" },
+      "status": {
+        "clock": 5400.0,
+        "displayClock": "90'+8'",
+        "type": {
+          "name": "STATUS_FULL_TIME",
+          "state": "post",
+          "completed": true,
+          "detail": "FT"
+        }
+      },
+      "competitions": [{
+        "id": "760415",
+        "date": "2026-06-11T19:00Z",
+        "attendance": 80824,
+        "venue": {
+          "fullName": "Estadio Banorte",
+          "address": { "city": "Mexico City", "country": "Mexico" }
+        },
+        "competitors": [
+          {
+            "id": "203",
+            "homeAway": "home",
+            "winner": true,
+            "score": "2",
+            "team": {
+              "id": "203",
+              "abbreviation": "MEX",
+              "displayName": "Mexico",
+              "logo": "https://a.espncdn.com/i/teamlogos/countries/500/mex.png",
+              "color": "006847"
+            },
+            "statistics": [
+              { "name": "totalGoals",   "displayValue": "2" },
+              { "name": "goalAssists",  "displayValue": "2" },
+              { "name": "possessionPct","displayValue": "60.5" },
+              { "name": "totalShots",   "displayValue": "16" },
+              { "name": "shotsOnTarget","displayValue": "4" }
+            ]
+          },
+          {
+            "id": "467",
+            "homeAway": "away",
+            "winner": false,
+            "score": "0",
+            "team": {
+              "id": "467",
+              "abbreviation": "RSA",
+              "displayName": "South Africa",
+              "logo": "https://a.espncdn.com/i/teamlogos/countries/500/rsa.png"
+            }
+          }
+        ],
+        "details": [
+          {
+            "type": { "id": "70", "text": "Goal" },
+            "clock": { "value": 513.0, "displayValue": "9'" },
+            "team": { "id": "203" },
+            "scoreValue": 1,
+            "scoringPlay": true,
+            "athletesInvolved": [{
+              "id": "233075",
+              "displayName": "Julián Quiñones",
+              "jersey": "16",
+              "position": "LM"
+            }]
+          },
+          {
+            "type": { "id": "94", "text": "Yellow Card" },
+            "clock": { "value": 981.0, "displayValue": "17'" },
+            "team": { "id": "467" },
+            "athletesInvolved": [{
+              "id": "256691",
+              "displayName": "Teboho Mokoena",
+              "jersey": "4"
+            }]
+          },
+          {
+            "type": { "id": "137", "text": "Goal - Header" },
+            "clock": { "value": 3996.0, "displayValue": "67'" },
+            "team": { "id": "203" },
+            "scoreValue": 1,
+            "athletesInvolved": [{
+              "id": "167060",
+              "displayName": "Raúl Jiménez",
+              "jersey": "9",
+              "position": "F"
+            }]
+          },
+          {
+            "type": { "id": "93", "text": "Red Card" },
+            "clock": { "value": 2940.0, "displayValue": "49'" },
+            "team": { "id": "467" },
+            "athletesInvolved": [{
+              "id": "228595",
+              "displayName": "Sphephelo Sithole",
+              "jersey": "13"
+            }]
+          }
+        ],
+        "headlines": [{
+          "description": "Mexico's misery in World Cup opening games was finally ended as they secured a 2-0 win over South Africa at the Estadio Azteca in a match featuring three red cards.",
+          "type": "Recap"
+        }]
+      }],
+      "links": [
+        {
+          "rel": ["summary", "desktop", "event"],
+          "href": "https://www.espn.com/soccer/match/_/gameId/760415/south-africa-mexico",
+          "text": "Summary"
+        },
+        {
+          "rel": ["recap", "desktop", "event"],
+          "href": "https://www.espn.com/soccer/report/_/gameId/760415",
+          "text": "Report"
+        },
+        {
+          "rel": ["stats", "desktop", "event"],
+          "href": "https://www.espn.com/soccer/matchstats/_/gameId/760415",
+          "text": "Statistics"
+        },
+        {
+          "rel": ["bracket", "desktop", "event"],
+          "href": "https://www.espn.com/soccer/bracket/_/season/2026/league/fifa.world",
+          "text": "Bracket"
+        }
+      ]
+    },
+    {
+      "id": "760414",
+      "date": "2026-06-12T02:00Z",
+      "name": "Czechia at South Korea",
+      "shortName": "CZE @ KOR",
+      "season": { "slug": "group-stage" }
+    }
+  ]
+}
+```
+
+**How our code extracts values:**
+
+```python
+for event in data["events"]:
+    event_id  = event["id"]                          # "760415"
+    date      = event["date"]                        # "2026-06-11T19:00Z"
+    stage     = event["season"]["slug"]              # "group-stage"
+    completed = event["status"]["type"]["completed"] # True
+
+    comp = event["competitions"][0]
+    home = comp["competitors"][0]  # order 0 = home
+    away = comp["competitors"][1]  # order 1 = away
+
+    home_team_id = home["team"]["abbreviation"]      # "MEX"
+    home_score   = int(home["score"])                # 2
+    away_team_id = away["team"]["abbreviation"]      # "RSA"
+    away_score   = int(away["score"])                # 0
+
+    venue = comp["venue"]["fullName"]                # "Estadio Banorte"
+    city  = comp["venue"]["address"]["city"]         # "Mexico City"
+```
+
+The `details` array gives goals, cards, and substitutions with the ESPN player ID and the
+minute (`clock.value / 60`). The `links` array gives the user-facing match summary page:
+`https://www.espn.com/soccer/match/_/gameId/760415/south-africa-mexico`
+
+The `calendar` entries in the league object reveal the full tournament structure — group
+dates, each knockout round's date range, and the type IDs ESPN uses internally.
+
+---
+
+### 3.4 `/summary?event={eventId}` — one match's full details
+
+This is the richest endpoint. It returns everything ESPN knows about a single match: team
+statistics, per-player statistics, lineups, formations, substitutions, play-by-play
+commentary, head-to-head history, recent form, and group standings.
+
+**API URL:**
+```
+https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event=760415
+```
+
+(Event ID `760415` = Mexico vs South Africa, June 11 2026. Get the ID from the scoreboard.)
+
+**User URL (human-readable match summary):**
+```
+https://www.espn.com/soccer/match/_/gameId/760415/south-africa-mexico
+```
+
+**User URL (match statistics page):**
+```
+https://www.espn.com/soccer/matchstats/_/gameId/760415
+```
+
+**What you get — top-level keys in the JSON:**
+
+| Key             | Contains                                                                 |
+| -----------------| ------------------------------------------------------------------------|
+| `boxscore`      | recent form for both teams, team-level match statistics, lineups        |
+| `gameInfo`      | venue, attendance, officials (referee name)                             |
+| `leaders`       | per-match stat leaders (top scorer, top passer, top defender, saves)   |
+| `headToHeadGames`| historical meetings between the two teams                             |
+| `rosters`       | full lineups with per-player match stats (goals, assists, cards, mins) |
+| `commentary`    | play-by-play text (every event with clock, player, field position)     |
+| `standings`     | live group standings updated after the match                           |
+
+**Real JSON — `boxscore.teams` (team-level match stats):**
+
+```json
+{
+  "boxscore": {
+    "teams": [
+      {
+        "team": {
+          "id": "203",
+          "abbreviation": "MEX",
+          "displayName": "Mexico",
+          "logo": "https://a.espncdn.com/i/teamlogos/countries/500/mex.png",
+          "color": "006847"
+        },
+        "statistics": [
+          { "name": "possessionPct",  "displayValue": "60.5", "label": "Possession" },
+          { "name": "totalShots",     "displayValue": "16",    "label": "SHOTS" },
+          { "name": "shotsOnTarget",  "displayValue": "4",     "label": "ON GOAL" },
+          { "name": "totalGoals",     "displayValue": "2",     "label": "Goals" },
+          { "name": "goalAssists",    "displayValue": "2",     "label": "Assists" },
+          { "name": "yellowCards",    "displayValue": "1",     "label": "Yellow Cards" },
+          { "name": "redCards",       "displayValue": "1",     "label": "Red Cards" },
+          { "name": "foulsCommitted", "displayValue": "12",    "label": "Fouls" },
+          { "name": "wonCorners",     "displayValue": "3",     "label": "Corner Kicks" },
+          { "name": "saves",          "displayValue": "2",     "label": "Saves" },
+          { "name": "accuratePasses", "displayValue": "467",   "label": "Accurate Passes" },
+          { "name": "totalPasses",    "displayValue": "520",   "label": "Passes" },
+          { "name": "passPct",        "displayValue": "0.9",   "label": "Pass Completion %" }
+        ],
+        "homeAway": "home"
+      },
+      {
+        "team": {
+          "id": "467",
+          "abbreviation": "RSA",
+          "displayName": "South Africa"
+        },
+        "statistics": [
+          { "name": "possessionPct", "displayValue": "39.5" },
+          { "name": "totalShots",    "displayValue": "3" },
+          { "name": "totalGoals",    "displayValue": "0" },
+          { "name": "redCards",      "displayValue": "2" }
+        ],
+        "homeAway": "away"
+      }
+    ]
+  }
+}
+```
+
+**Real JSON — `leaders` (per-match individual stat leaders):**
+
+```json
+{
+  "leaders": [
+    {
+      "team": { "id": "203", "abbreviation": "MEX" },
+      "leaders": [
+        {
+          "name": "totalShots",
+          "displayName": "Total Shots",
+          "leaders": [{
+            "displayValue": "5",
+            "athlete": {
+              "id": "233075",
+              "fullName": "Julián Quiñones",
+              "jersey": "16",
+              "position": { "abbreviation": "F" }
+            },
+            "statistics": [
+              { "name": "totalShots",    "value": 5.0 },
+              { "name": "shotsOnTarget", "value": 2.0 },
+              { "name": "expectedGoals", "value": 0.37 }
+            ]
+          }]
+        },
+        {
+          "name": "saves",
+          "displayName": "Saves",
+          "leaders": [{
+            "displayValue": "2",
+            "athlete": {
+              "id": "290899",
+              "fullName": "Raúl Rangel",
+              "jersey": "1",
+              "position": { "abbreviation": "G" }
+            }
+          }]
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Real JSON — `rosters` (per-player match stats — this is what fills `playerstat`):**
+
+The `rosters` array contains two team entries, each with a `roster` array of every player
+who appeared. Each player has a `stats` list of `{name, value}` pairs:
+
+```json
+{
+  "rosters": [
+    {
+      "team": { "id": "203", "abbreviation": "MEX" },
+      "roster": [
+        {
+          "athlete": {
+            "id": "290899",
+            "displayName": "Raúl Rangel",
+            "jersey": "1",
+            "position": { "abbreviation": "G" }
+          },
+          "starter": true,
+          "stats": [
+            { "name": "totalGoals",   "value": 0 },
+            { "name": "goalAssists",  "value": 0 },
+            { "name": "yellowCards",  "value": 0 },
+            { "name": "redCards",     "value": 0 },
+            { "name": "saves",        "value": 2 },
+            { "name": "shotsOnTarget","value": 0 }
+          ]
+        },
+        {
+          "athlete": {
+            "id": "233075",
+            "displayName": "Julián Quiñones",
+            "jersey": "16",
+            "position": { "abbreviation": "F" }
+          },
+          "starter": true,
+          "stats": [
+            { "name": "totalGoals",    "value": 1 },
+            { "name": "goalAssists",   "value": 0 },
+            { "name": "yellowCards",   "value": 0 },
+            { "name": "shotsOnTarget", "value": 2 }
+          ]
+        },
+        {
+          "athlete": {
+            "id": "167060",
+            "displayName": "Raúl Jiménez",
+            "jersey": "9",
+            "position": { "abbreviation": "F" }
+          },
+          "starter": true,
+          "stats": [
+            { "name": "totalGoals",  "value": 1 },
+            { "name": "goalAssists", "value": 0 }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Real JSON — `commentary` (play-by-play, truncated to 3 events):**
+
+```json
+{
+  "commentary": [
+    {
+      "sequence": 1,
+      "time": { "value": 0.0, "displayValue": "" },
+      "text": "Match ends, Mexico 2, South Africa 0."
+    },
+    {
+      "sequence": 11,
+      "time": { "value": 513.0, "displayValue": "9'" },
+      "text": "Goal! Mexico 1, South Africa 0. Julián Quiñones (Mexico) right footed shot from the centre of the box to the bottom left corner.",
+      "play": {
+        "type": { "id": "70", "text": "Goal" },
+        "participants": [{ "athlete": { "displayName": "Julián Quiñones" } }]
+      },
+      "clock": { "value": 513.0 }
+    },
+    {
+      "sequence": 66,
+      "time": { "value": 3996.0, "displayValue": "67'" },
+      "text": "Goal! Mexico 2, South Africa 0. Raúl Jiménez (Mexico) header from very close range to the bottom left corner. Assisted by Roberto Alvarado with a cross.",
+      "play": {
+        "type": { "id": "137", "text": "Goal - Header" },
+        "participants": [
+          { "athlete": { "displayName": "Raúl Jiménez" } },
+          { "athlete": { "displayName": "Roberto Alvarado" } }
+        ]
+      }
+    }
+  ]
+}
+```
+
+**How our code extracts per-player stats:**
+
+```python
+for team_entry in data["rosters"]:
+    team_id = team_entry["team"]["abbreviation"]      # "MEX"
+    for player in team_entry["roster"]:
+        espn_id = player["athlete"]["id"]              # "233075"
+        starter = player.get("starter", False)         # True
+        stats   = { s["name"]: s["value"] for s in player["stats"] }
+
+        goals        = stats.get("totalGoals", 0)      # 1
+        assists      = stats.get("goalAssists", 0)     # 0
+        yellow_cards = stats.get("yellowCards", 0)     # 0
+        red_cards    = stats.get("redCards", 0)        # 0
+```
+
+**How we derive minutes played** (ESPN has no "minutes played" field):
+
+The substitution events are in `commentary` (or `boxscore`), each with `clock.value` (seconds)
+and `play.type.text == "Substitution"`. The participants array tells you who came on and who
+went off. Combined with the `starter` flag from `rosters`:
+
+- started and not subbed off → **90**
+- started and subbed off at minute *X* → **X**
+- came on as a sub at minute *X* → **90 − X**
+- didn't appear → **0**
+
+That's accurate enough that the scoring engine's 60-minute appearance threshold is always right.
+
+---
+
+### 3.5 How the four endpoints chain together
+
+The loader never guesses IDs. It always follows this two-step chain:
+
+```
+STEP 1:  /scoreboard?dates=20260611
+         → returns events[] with each event's "id" and team IDs
+
+STEP 2:  /summary?event=760415
+         → returns per-player stats for that match
+```
+
+For seeding (one-time setup), the chain is:
+
+```
+/teams                          → 48 nations (team_id = abbreviation)
+  └─ /teams/{teamId}/roster     → each nation's squad (player id, name, position)
+                                   writes idmap.json (ESPN player id → our player_id)
+
+/scoreboard?dates=20260611      → event IDs for that date
+  └─ /summary?event={eventId}   → per-player stats for each match
+                                   writes matchmap.json (ESPN event id → our match_id)
+```
+
+You can paste any of these API URLs into a browser right now and see the JSON. The
+corresponding human-readable ESPN.com pages are always in the `links` arrays inside the JSON
+response — look for entries with `"rel": ["summary", "desktop", "event"]` or
+`"rel": ["clubhouse", "desktop", "team"]` or `"rel": ["playercard", "desktop", "athlete"]`.
 
 ---
 
@@ -93,14 +831,14 @@ ESPN's `abbreviation` for each team is already the FIFA 3-letter code our schema
 Per-player match stats live in `summary.rosters[].roster[].stats` as a list of
 `{name, value}` objects. The mapping:
 
-| Our `playerstat` column | ESPN source |
-|---|---|
-| `goals` | stat `totalGoals` |
-| `assists` | stat `goalAssists` |
-| `yellow_cards` | stat `yellowCards` |
-| `red_cards` | stat `redCards` |
-| `minutes_played` | **derived** (see below) |
-| `clean_sheet` | **derived** — 1 for a player who appeared when their team conceded 0 |
+| Our `playerstat` column | ESPN source                                                          |
+| -------------------------| ----------------------------------------------------------------------|
+| `goals`                 | stat `totalGoals`                                                    |
+| `assists`               | stat `goalAssists`                                                   |
+| `yellow_cards`          | stat `yellowCards`                                                   |
+| `red_cards`             | stat `redCards`                                                      |
+| `minutes_played`        | **derived** (see below)                                              |
+| `clean_sheet`           | **derived** — 1 for a player who appeared when their team conceded 0 |
 
 ESPN has **no "minutes played" field**, so we compute it from the `starter` / `subbedIn` /
 `subbedOut` flags plus the substitution events. Each substitution in `summary.keyEvents` carries

@@ -149,7 +149,8 @@ def get_current_user(conn=Depends(get_db), payload: dict = Depends(get_current_a
 
     user = get_user_by_auth_id(conn, auth_user_id)
     if not user:
-        username = email or f"user_{auth_user_id[:8]}"
+        user_metadata = payload.get("user_metadata") or {}
+        username = user_metadata.get("username") or email or f"user_{auth_user_id[:8]}"
         try:
             user = create_user_from_auth(conn, auth_user_id, username, username)
         except UniqueViolation:

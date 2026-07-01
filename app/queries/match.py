@@ -3,10 +3,11 @@ def get_matches(conn, matchday = None, stage = None):
     query = '''
         SELECT m.match_id, m.team1_id, t1.name AS team1_name,
                m.team2_id, t2.name AS team2_name, m.matchday, m.stage, m.date,
-               m.team1_score, m.team2_score, m.kickoff, m.bracket_order
+               m.team1_score, m.team2_score, m.kickoff, m.bracket_order,
+               m.team1_penalty_score, m.team2_penalty_score
         FROM match m
-        JOIN team t1 ON m.team1_id = t1.team_id
-        JOIN team t2 ON m.team2_id = t2.team_id
+        LEFT JOIN team t1 ON m.team1_id = t1.team_id
+        LEFT JOIN team t2 ON m.team2_id = t2.team_id
     '''
 
     filters = []
@@ -33,10 +34,11 @@ def get_match(conn, match_id):
     cursor.execute('''
         SELECT m.match_id, m.team1_id, t1.name AS team1_name,
                m.team2_id, t2.name AS team2_name, m.matchday, m.stage, m.date,
-               m.team1_score, m.team2_score, m.kickoff, m.bracket_order
+               m.team1_score, m.team2_score, m.kickoff, m.bracket_order,
+               m.team1_penalty_score, m.team2_penalty_score
         FROM match m
-        JOIN team t1 ON m.team1_id = t1.team_id
-        JOIN team t2 ON m.team2_id = t2.team_id
+        LEFT JOIN team t1 ON m.team1_id = t1.team_id
+        LEFT JOIN team t2 ON m.team2_id = t2.team_id
         WHERE m.match_id = %s
         ''', (match_id,))
     results = cursor.fetchone()
@@ -53,16 +55,17 @@ def get_matchday_start(conn, matchday):
     cursor.close()
     return row["first_kickoff"] if row else None
 
-def update_match_score(conn, match_id, team1_score, team2_score):
+def update_match_score(conn, match_id, team1_score, team2_score, team1_penalty=None, team2_penalty=None):
     cursor = conn.cursor()
     try:
         cursor.execute(
             '''
             UPDATE match
-            SET team1_score = %s, team2_score = %s
+            SET team1_score = %s, team2_score = %s,
+                team1_penalty_score = %s, team2_penalty_score = %s
             WHERE match_id = %s
             ''',
-            (team1_score, team2_score, match_id)
+            (team1_score, team2_score, team1_penalty, team2_penalty, match_id)
         )
         conn.commit()
     except Exception:

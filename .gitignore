@@ -28,6 +28,7 @@ skills-lock.json
 .mcp.json
 .claude
 .devin/
+.windsurf/
 
 # ── Design assets (large, not source) ────────────────────────────────────────
 frontend/moodboard

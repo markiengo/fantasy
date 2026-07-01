@@ -50,7 +50,9 @@ const Scores = (() => {
     for (const row of rows) {
       const value = scoreOf(row);
       const pct = Math.max(8, Math.abs(value) / max * 100);
-      html += `<span class="sparkline__bar" title="R${row.matchday}: ${value}" style="height:${pct}%"></span>`;
+      const meta = _roundMeta.find((r) => r.matchday === row.matchday);
+      const lbl = meta ? meta.label : `R${row.matchday}`;
+      html += `<span class="sparkline__bar" title="${lbl}: ${value}" style="height:${pct}%"></span>`;
     }
     root.innerHTML = html;
   }
@@ -158,7 +160,9 @@ const Scores = (() => {
     for (const md of allMatchdays) {
       const active = md === _selectedMatchday;
       const hasData = scoredSet && scoredSet.has(md);
-      html += `<button class="dash-md-tab${active ? " is-active" : ""}${!hasData ? " dash-md-tab--empty" : ""}" type="button" data-md="${md}">R${md}</button>`;
+      const meta = _roundMeta.find((r) => r.matchday === md);
+      const label = meta ? meta.label : `R${md}`;
+      html += `<button class="dash-md-tab${active ? " is-active" : ""}${!hasData ? " dash-md-tab--empty" : ""}" type="button" data-md="${md}">${label}</button>`;
     }
     nav.innerHTML = html;
     nav.querySelectorAll(".dash-md-tab").forEach(btn => {
@@ -314,7 +318,9 @@ const Scores = (() => {
     for (const row of by) {
       const value = scoreOf(row);
       total = total + value;
-      barData.push({ label: `R${row.matchday}`, value });
+      const meta = _roundMeta.find((r) => r.matchday === row.matchday);
+      const label = meta ? meta.label : `R${row.matchday}`;
+      barData.push({ label, value });
     }
     setText("scoreTotal", total);
     Charts.bars(document.getElementById("scoreBars"), barData);
