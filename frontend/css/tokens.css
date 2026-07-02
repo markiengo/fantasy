@@ -92,4 +92,15 @@
   --fs-label: 10px;
   --fs-h1: 22px;
   --fs-h2: 14px;
+
+  /* pinky chart tokens — adapted for dark+lime theme */
+  --chart-card-bg: rgba(255,255,255,.04);
+  --chart-card-border: var(--stroke);
+  --chart-card-shadow: var(--shadow-panel);
+  --chart-accent: var(--muted-2);
+  --chart-grid-stroke: var(--stroke-soft);
+  --chart-axis-text: var(--muted);
+  --chart-label-text: var(--ink);
+  --chart-legend-text: var(--muted);
+  --chart-dot-fill: var(--bg);
 }

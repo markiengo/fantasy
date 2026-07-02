@@ -1,14 +1,17 @@
-# get score 
-def get_score(conn, user_id, matchday=None):
+from app.core.scoring import captain_score_sql
+
+
+# get squad score
+def get_squad_score(conn, user_id, matchday=None):
     cursor = conn.cursor()
-    
+
     if matchday is not None:
         # inside a squad, get players' scores for specific matchday.
         # join match so we only count stats from this matchday's fixtures.
         # captain's score is doubled (x2).
-        cursor.execute('''
+        cursor.execute(f'''
             SELECT ps.player_id, p.name, p.position,
-                   CASE WHEN sp.is_captain = true THEN ps.score * 2 ELSE ps.score END AS score,
+                   {captain_score_sql()} AS player_score,
                    sp.is_captain
             FROM playerstat ps
             JOIN player p
@@ -22,10 +25,10 @@ def get_score(conn, user_id, matchday=None):
             WHERE s.user_id = %s AND s.matchday = %s
         ''', (user_id, matchday))
     else:
-        # get cumulative score of the squad by matchday (captain x2 applied per matchday)
-        cursor.execute('''
+        # get cumulative squad_score by matchday (captain x2 applied per matchday)
+        cursor.execute(f'''
             SELECT s.matchday, SUM(
-                CASE WHEN sp.is_captain = true THEN ps.score * 2 ELSE ps.score END
+                {captain_score_sql()}
             ) as squad_score
             FROM playerstat ps
             JOIN squadplayer sp
@@ -38,9 +41,7 @@ def get_score(conn, user_id, matchday=None):
             GROUP BY s.matchday
             ORDER BY s.matchday ASC
         ''', (user_id,))
-    
+
     result = cursor.fetchall()
     cursor.close()
     return result
-
-# 

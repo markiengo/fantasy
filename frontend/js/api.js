@@ -117,8 +117,12 @@ const Api = (() => {
         () => call("/transfer", { method: "POST", body: JSON.stringify({ player_in_id, player_out_id, matchday }) }),
         () => Mock.createTransfer(player_in_id, player_out_id, matchday)
       ),
-    getScore: (matchday) =>
-      withFallback(() => call("/score" + qs({ matchday })), () => Mock.getScore(matchday)),
+    getSquadScore: (matchday) =>
+      withFallback(() => call("/analytics/squad-score" + qs({ matchday })), () => Mock.getSquadScore(matchday)),
+    getComposition: (matchday) =>
+      withFallback(() => call("/analytics/composition" + qs({ matchday })), () => Mock.getComposition(matchday)),
+    getRankHistory: () =>
+      withFallback(() => call("/analytics/rank-history"), () => Mock.getRankHistory()),
     updateData: (body = {}) =>
       withFallback(
         () => call("/load-stats", { method: "POST", body: JSON.stringify(body) }),
@@ -127,6 +131,8 @@ const Api = (() => {
     getMe: () => call("/me"),
     getTopStats: (limit = 5) =>
       withFallback(() => call("/playerstats/top" + qs({ limit })), () => Mock.getTopStats(limit)),
+    getLeaderboard: (matchday) =>
+      withFallback(() => call("/leaderboard" + qs({ matchday })), () => Mock.getLeaderboard(matchday)),
   };
 })();
 
@@ -299,7 +305,9 @@ const Mock = (() => {
       const t = {
         transfer_id: _transfers.length + 1,
         player_in_id: inId, player_in_name: pin ? pin.name : "?",
+        player_in_price: pin ? pin.base_price : 0,
         player_out_id: outId, player_out_name: pout ? pout.name : "?",
+        player_out_price: pout ? pout.base_price : 0,
         matchday, transfers_used: used + 1, transfers_remaining: 5 - (used + 1),
         budget_remaining: _squads[matchday] ? _squads[matchday].budget_remaining : 50,
       };
@@ -314,7 +322,7 @@ const Mock = (() => {
       }
       return clone(t);
     },
-    getScore(matchday) {
+    getSquadScore(matchday) {
       build();
       // Deterministic pseudo-scores for any saved squad; otherwise demo on md 1.
       const ref = _squads[matchday] || _squads[1];
@@ -325,7 +333,8 @@ const Mock = (() => {
           matchday,
           breakdown: sq.players.map((p, i) => ({
             player_id: p.player_id, player_name: p.name, position: p.position,
-            score: ((p.player_id * 7 + i * 3) % 13) - 2,
+            is_captain: !!p.is_captain,
+            player_score: ((p.player_id * 7 + i * 3) % 13) - 2,
           })),
         };
       }
@@ -334,9 +343,51 @@ const Mock = (() => {
       Object.keys(_squads).forEach((md) => {
         const sq = _squads[md];
         const total = sq.players.reduce((s, p, i) => s + (((p.player_id * 7 + i * 3) % 13) - 2), 0);
-        by.push({ matchday: +md, score: total });
+        by.push({ matchday: +md, squad_score: total });
       });
       return { by_matchday: by.sort((a, b) => a.matchday - b.matchday) };
+    },
+    getComposition(matchday) {
+      build();
+      const sq = _squads[matchday] || _squads[1];
+      if (!sq) { const e = new Error("No squad for this matchday"); e.status = 404; throw e; }
+      let goals_pts = 0, assist_pts = 0, cs_pts = 0, minute_pts = 0, card_pts = 0;
+      for (let i = 0; i < sq.players.length; i++) {
+        const p = sq.players[i];
+        const mult = p.is_captain ? 2 : 1;
+        const goals = p.position === "FWD" ? p.player_id % 2 : 0;
+        const assists = p.position === "MID" ? p.player_id % 2 : 0;
+        const gval = (p.position === "FWD" || p.position === "MID") ? 5 : 6;
+        goals_pts += goals * gval * mult;
+        assist_pts += assists * 3 * mult;
+        if (p.position === "DEF" || p.position === "GK") {
+          cs_pts += (p.position === "GK" || p.position === "DEF" ? 1 : 0) * 4 * mult;
+        }
+        minute_pts += 2 * mult;
+      }
+      const total = goals_pts + assist_pts + cs_pts + minute_pts + card_pts;
+      return { matchday, goals_pts, assist_pts, cs_pts, minute_pts, card_pts, total };
+    },
+    getRankHistory() {
+      build();
+      const mds = Object.keys(_squads).map(Number).sort((a, b) => a - b);
+      const history = [];
+      for (let i = 0; i < mds.length; i++) {
+        const md = mds[i];
+        const sq = _squads[md];
+        let total = 0;
+        for (let j = 0; j < sq.players.length; j++) {
+          const p = sq.players[j];
+          total += ((p.player_id * 7 + j * 3) % 13) - 2;
+        }
+        history.push({
+          matchday: md,
+          rank: 1 + (i % 3),
+          squad_score: total,
+          total_managers: 10,
+        });
+      }
+      return { rank_history: history };
     },
     updateData() {
       build();
@@ -400,6 +451,32 @@ const Mock = (() => {
             value: r.total_yellow_cards + r.total_red_cards,
             yellow_cards: r.total_yellow_cards, red_cards: r.total_red_cards,
           })),
+      };
+    },
+    getLeaderboard(matchday) {
+      const names = ["GafferKing", "TacticalGenius", "MidfieldMaestro", "GoalMachine", "CleanSheetHero",
+        "WildcardWilly", "TransferWizard", "DarkHorseDev", "StrikerSage", "PenaltyPundit"];
+      const entries = [];
+      for (let i = 0; i < names.length; i++) {
+        const baseScore = matchday
+          ? ((i * 7 + matchday * 3) % 31) + 5
+          : ((i * 11 + 3) % 47) + 10;
+        const delta = matchday ? ((i * 5 + matchday * 2) % 13) - 6 : 0;
+        entries.push({
+          rank: i + 1,
+          user_id: i === 0 ? 999 : 1000 + i,
+          username: names[i],
+          display_name: names[i],
+          score: baseScore,
+          delta: delta,
+        });
+      }
+      entries.sort((a, b) => b.score - a.score);
+      for (let i = 0; i < entries.length; i++) entries[i].rank = i + 1;
+      return {
+        entries: entries,
+        my_user_id: 999,
+        matchday: matchday || null,
       };
     },
   };

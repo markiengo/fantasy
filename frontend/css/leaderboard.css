@@ -1,0 +1,325 @@
+/* --- LEADERBOARD SCREEN --------------------------------------------------- */
+
+.lb-shell {
+  max-width: var(--content-max);
+  margin: 0 auto;
+}
+
+/* Pinky-style frosted-glass card */
+.lb-card {
+  background: var(--panel);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid var(--chart-card-border);
+  box-shadow: var(--chart-card-shadow);
+  border-radius: var(--r-2xl);
+  padding: 24px;
+  contain: layout paint;
+  position: relative;
+}
+
+/* Accent-dot header */
+.lb-card__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.lb-card__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted-2);
+  flex-shrink: 0;
+}
+
+.lb-card__eyebrow {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.lb-card__title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--chart-label-text);
+  margin-bottom: 4px;
+}
+
+.lb-card__subtitle {
+  font-size: var(--fs-body);
+  color: var(--chart-legend-text);
+  margin-bottom: 20px;
+}
+
+/* Segmented toggle */
+.lb-toggle {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.lb-toggle__btn {
+  flex: 1;
+  padding: 8px 16px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+
+.lb-toggle__btn.is-active {
+  background: rgba(255,255,255,.08);
+  color: var(--ink);
+  border-color: var(--stroke-mid);
+}
+
+/* Matchday strip (conditional) */
+.lb-md-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding-bottom: 4px;
+}
+
+.lb-md-tab {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+  white-space: nowrap;
+}
+
+.lb-md-tab.is-active {
+  background: rgba(255,255,255,.08);
+  color: var(--ink);
+  border-color: var(--stroke-mid);
+}
+
+.lb-md-tab--empty {
+  opacity: 0.5;
+}
+
+/* Leaderboard list */
+.lb-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 480px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--stroke-soft);
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.lb-row:hover {
+  background: var(--tile);
+}
+
+.lb-row:last-child {
+  border-bottom: none;
+}
+
+.lb-row--rank1 {
+  background: rgba(255,176,108,.08);
+}
+
+.lb-row--rank1:hover {
+  background: rgba(255,176,108,.14);
+}
+
+.lb-row__rank {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--muted);
+  width: 28px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.lb-row--rank1 .lb-row__rank {
+  color: var(--warm);
+}
+
+.lb-row__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  flex-shrink: 0;
+  border: 1px solid var(--stroke);
+}
+
+.lb-row__name {
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lb-row__you {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--warm);
+  margin-left: 6px;
+}
+
+.lb-row__delta {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: var(--r-pill);
+  flex-shrink: 0;
+}
+
+.lb-row__delta--up {
+  background: rgba(91,140,90,.14);
+  color: #6fbf6f;
+}
+
+.lb-row__delta--down {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.lb-row__score {
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--ink);
+  width: 48px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Sticky "Your position" bar */
+.lb-sticky {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  background: var(--panel-strong);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--stroke-mid);
+  border-radius: var(--r-md);
+  box-shadow: 0 -8px 24px -12px rgba(0,0,0,.4);
+  z-index: 5;
+}
+
+.lb-sticky__label {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.lb-sticky__rank {
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.lb-sticky__name {
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink-2);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lb-sticky__score {
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* Empty state */
+.lb-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--muted);
+  font-size: var(--fs-body);
+}
+
+/* Skeleton */
+.lb-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--stroke-soft);
+}
+
+.lb-skeleton-row .skeleton {
+  height: 14px;
+  border-radius: 6px;
+}
+
+/* Responsive */
+@media (max-width: 760px) {
+  .lb-card {
+    padding: 16px;
+    border-radius: var(--r-lg);
+  }
+
+  .lb-list {
+    max-height: 400px;
+  }
+
+  .lb-row {
+    gap: 8px;
+    padding: 8px 8px;
+  }
+
+  .lb-row__name {
+    font-size: var(--fs-sm);
+  }
+}

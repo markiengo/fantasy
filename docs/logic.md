@@ -48,3 +48,13 @@ Hai path, cả hai dùng `tools/maps/idmap.json` + `matchmap.json` để transla
 - `POST /api/load-stats` — backend route cho frontend Update Data button. Auto-discover các match dates thiếu stats bằng cách query completed matches chưa có `playerstat` entries.
 
 `in_tournament` độc lập với stat loading — stats key bằng `player_id`.
+
+## Leaderboard
+
+`GET /api/leaderboard` — aggregate read over existing score data, không cần table riêng.
+
+- Scoring matchday-scoped: join `playerstat` → `match` → `squad.matchday` để chỉ count stats thuộc matchday của squad đó.
+- Captain doubling: dùng cùng `CAPTAIN_SCORE_SQL` (x2 khi `is_captain = true`) như `/api/score`.
+- Shared authenticated route: yêu cầu auth + `is_active`, không yêu cầu admin.
+- Ranking: sort by score DESC, tie-break by `user_id` ASC, rank sequential trong Python.
+- Empty state: trả `200` với `entries: []`.

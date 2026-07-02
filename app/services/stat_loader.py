@@ -3,7 +3,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 
-from app.queries.match import get_match, update_match_score, get_match_dates_without_stats
+from app.queries.match import get_match, update_match_score, get_match_dates_without_stats, advance_bracket_winner
 from app.queries.playerstat import post_playerstats_batch
 from tools import espn_client as espn
 
@@ -42,7 +42,11 @@ def date_range(date_value=None, from_date=None, to_date=None, conn=None):
     if conn is not None:
         missing_dates = get_match_dates_without_stats(conn)
         if missing_dates:
-            return [d.strftime("%Y%m%d") for d in missing_dates]
+            dates = set()
+            for d in missing_dates:
+                dates.add(d.strftime("%Y%m%d"))
+                dates.add((d - timedelta(days=1)).strftime("%Y%m%d"))
+            return sorted(dates)
 
     return [datetime.utcnow().strftime("%Y%m%d")]
 
@@ -167,6 +171,7 @@ def load_stats(conn, date_value=None, from_date=None, to_date=None, dry_run=Fals
         else:
             if update_event_score(conn, match_id, event):
                 totals["matches_updated"] = totals["matches_updated"] + 1
+                advance_bracket_winner(conn, match_id)
 
         event_data = summaries.get(match_id)
         if event_data is None:

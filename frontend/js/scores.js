@@ -1,350 +1,564 @@
+/* ───────────────────────────────────────────────────────────────────────────
+   Scores — Dashboard screen controller.
+   Bento grid with: area trajectory, captain impact, score composition,
+   rank trajectory, top scorers, value scatter, efficiency bars,
+   position donut, transfer history, matchday participation.
+   ─────────────────────────────────────────────────────────────────────────── */
+
 const Scores = (() => {
-  const posColor = {
+  let _scoreByMd = {};       // { md: { matchday, breakdown: [...] } }
+  let _cumulativeData = [];  // [{ matchday, score }]
+  let _compositionByMd = {}; // { md: { goals_pts, ... } }
+  let _rankHistory = [];     // [{ matchday, rank, score, total_managers }]
+  let _squadByMd = {};       // { md: squadObj }
+  let _transfersByMd = {};   // { md: [transferObj, ...] }
+  let _allTransfers = [];
+  let _selectedMd = null;
+  let _scoredMatchdays = []; // matchdays that have score data
+  let _hiddenPositions = {}; // scatter legend toggle state
+
+  const POS_COLORS = {
     GK: "var(--pos-GK)",
     DEF: "var(--pos-DEF)",
     MID: "var(--pos-MID)",
-    FWD: "var(--pos-FWD)",
+    FWD: "var(--pos-FWD)"
   };
 
-  function skeletonBars(n) {
-    const heights = [55, 80, 40, 70, 60];
-    let html = `<div class="bars">`;
-    for (let i = 0; i < n; i++) {
-      const h = heights[i % heights.length];
-      html += `<div class="bar"><div class="skeleton" style="width:100%;max-width:46px;height:${h}%;border-radius:var(--r-sm) var(--r-sm) 0 0"></div></div>`;
-    }
-    html += `</div>`;
-    return html;
+  function mdLabel(md) {
+    if (md <= 3) return "MD" + md;
+    const names = { 4: "R32", 5: "R16", 6: "QF", 7: "SF", 8: "F" };
+    return names[md] || "MD" + md;
   }
 
-  function skeletonTableRows(n) {
-    let html = "";
-    for (let i = 0; i < n; i++) {
-      html += `<li style="list-style:none;padding:8px 4px;border-bottom:1px solid var(--stroke-soft)"><div class="skeleton" style="height:18px;border-radius:6px"></div></li>`;
-    }
-    return html;
-  }
+  /* ── Data loading ──────────────────────────────────────────────────────── */
 
-  function scoreOf(row) {
-    return Number(row.score ?? row.squad_score ?? 0);
-  }
+  async function loadAll() {
+    _cumulativeData = [];
+    _scoreByMd = {};
+    _compositionByMd = {};
+    _rankHistory = [];
+    _squadByMd = {};
+    _transfersByMd = {};
+    _allTransfers = [];
 
-  function setText(id, value) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = value;
-  }
-
-  function renderSparkline(rows) {
-    const root = document.getElementById("scoreTrend");
-    if (!root) return;
-    if (!rows.length) {
-      root.innerHTML = `<span class="muted">No trend yet.</span>`;
-      return;
-    }
-    let max = 1;
-    for (const row of rows) {
-      const value = Math.abs(scoreOf(row));
-      if (value > max) max = value;
-    }
-    let html = "";
-    for (const row of rows) {
-      const value = scoreOf(row);
-      const pct = Math.max(8, Math.abs(value) / max * 100);
-      const meta = _roundMeta.find((r) => r.matchday === row.matchday);
-      const lbl = meta ? meta.label : `R${row.matchday}`;
-      html += `<span class="sparkline__bar" title="${lbl}: ${value}" style="height:${pct}%"></span>`;
-    }
-    root.innerHTML = html;
-  }
-
-  function matchdayByMatchId() {
-    const out = {};
-    for (const match of State.fixtures) {
-      out[match.match_id] = match.matchday;
-    }
-    return out;
-  }
-
-  function sumPlayerScoreForMatchday(stats, playerId, matchday, matchdayById) {
-    let total = 0;
-    for (const stat of stats) {
-      if (stat.player_id !== playerId) continue;
-      if (matchdayById[stat.match_id] !== matchday) continue;
-      total = total + scoreOf(stat);
-    }
-    return total;
-  }
-
-  function playerAvatar(name) {
-    const seed = encodeURIComponent(name);
-    return `https://api.dicebear.com/9.x/micah/svg?seed=${seed}&backgroundColor=c6f24a,a6d92e,7aa2ff,ffb06c&radius=50`;
-  }
-
-  function renderTransferHistory(history) {
-    const root = document.getElementById("transferHistory");
-    if (!root) return;
-    if (!history.length) {
-      root.innerHTML = `<p class="empty-note">No transfers this matchday.</p>`;
-      return;
-    }
-    let html = "";
-    for (const item of history) {
-      html += `<div class="xfer-card">
-        <div class="xfer-card__row xfer-card__row--out">
-          <span class="xfer-arrow xfer-arrow--out">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14V4M5 9l5-5 5 5"/><line x1="4" y1="17" x2="16" y2="17"/></svg>
-          </span>
-          <span class="avatar avatar--32" style="background-image:url('${playerAvatar(item.player_out_name)}')"></span>
-          <span class="xfer-name">${item.player_out_name}</span>
-          <span class="xfer-badge xfer-badge--out">OUT</span>
-        </div>
-        <div class="xfer-card__row xfer-card__row--in">
-          <span class="xfer-arrow xfer-arrow--in">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6v10M5 11l5 5 5-5"/><line x1="4" y1="3" x2="16" y2="3"/></svg>
-          </span>
-          <span class="avatar avatar--32" style="background-image:url('${playerAvatar(item.player_in_name)}')"></span>
-          <span class="xfer-name">${item.player_in_name}</span>
-          <span class="xfer-badge xfer-badge--in">IN</span>
-        </div>
-      </div>`;
-    }
-    root.innerHTML = html;
-  }
-
-  function renderParticipation(stats, matchday, squadPlayers) {
-    const root = document.getElementById("participationList");
-    if (!root) return;
-    const players = (squadPlayers || []).slice(0, 11);
-    if (!players.length) {
-      root.innerHTML = `<p class="empty-note">Save or load a squad to see participation.</p>`;
-      return;
-    }
-    const byMatch = matchdayByMatchId();
-
-    let hasMatchdayStats = false;
-    for (const stat of stats) {
-      if (byMatch[stat.match_id] === matchday) { hasMatchdayStats = true; break; }
-    }
-    if (!hasMatchdayStats) {
-      root.innerHTML = `<p class="empty-note">Matches not played yet — data not available.</p>`;
-      return;
-    }
-
-    const maxMinutes = 90;
-    let html = "";
-    for (const player of players) {
-      let minutes = 0;
-      for (const stat of stats) {
-        if (stat.player_id !== player.player_id) continue;
-        if (byMatch[stat.match_id] !== matchday) continue;
-        minutes = minutes + Number(stat.minutes_played || 0);
+    /* cumulative score */
+    try {
+      const scoreRes = await Api.getSquadScore();
+      if (scoreRes && scoreRes.by_matchday) {
+        _cumulativeData = scoreRes.by_matchday;
+        _scoredMatchdays = [];
+        for (let i = 0; i < scoreRes.by_matchday.length; i++) {
+          _scoredMatchdays.push(scoreRes.by_matchday[i].matchday);
+        }
       }
-      const pct = Math.min(100, Math.round((minutes / maxMinutes) * 100));
-      html += `<div class="participation__row">
-        <span class="name">${player.name}</span>
-        <div class="bar"><i class="bar__fill" style="width:${pct}%"></i></div>
-        <b>${pct}%</b>
-      </div>`;
+    } catch (e) { /* no data yet */ }
+
+    /* rank history */
+    try {
+      const rankRes = await Api.getRankHistory();
+      if (rankRes && rankRes.rank_history) {
+        _rankHistory = rankRes.rank_history;
+      }
+    } catch (e) { /* no data yet */ }
+
+    /* per-matchday data: score breakdown, composition, squad — all in parallel */
+    const mds = _scoredMatchdays.slice();
+    const promises = [];
+    for (let i = 0; i < mds.length; i++) {
+      const md = mds[i];
+      promises.push(
+        Api.getSquadScore(md).then(function (r) { if (r) _scoreByMd[md] = r; }).catch(function () {})
+      );
+      promises.push(
+        Api.getComposition(md).then(function (r) { if (r) _compositionByMd[md] = r; }).catch(function () {})
+      );
+      promises.push(
+        Api.getSquad(md).then(function (r) { if (r) _squadByMd[md] = r; }).catch(function () {})
+      );
     }
-    root.innerHTML = html;
+    await Promise.all(promises);
+
+    /* transfers (all) */
+    try {
+      _allTransfers = await Api.getTransfers();
+      for (let i = 0; i < _allTransfers.length; i++) {
+        const t = _allTransfers[i];
+        const md = t.matchday;
+        if (!_transfersByMd[md]) _transfersByMd[md] = [];
+        _transfersByMd[md].push(t);
+      }
+    } catch (e) { /* skip */ }
+
+    /* default selected matchday = latest scored */
+    if (_scoredMatchdays.length > 0) {
+      _selectedMd = _scoredMatchdays[_scoredMatchdays.length - 1];
+    }
   }
 
-  let _selectedMatchday = null;
+  /* ── Matchday nav ──────────────────────────────────────────────────────── */
 
-  function buildMatchdayNav(allMatchdays, scoredSet) {
+  function renderMatchdayNav() {
     const nav = document.getElementById("dashMatchdayNav");
     if (!nav) return;
-    if (!allMatchdays.length) { nav.hidden = true; return; }
+
     nav.hidden = false;
-    let html = "";
-    for (const md of allMatchdays) {
-      const active = md === _selectedMatchday;
-      const hasData = scoredSet && scoredSet.has(md);
-      const meta = _roundMeta.find((r) => r.matchday === md);
-      const label = meta ? meta.label : `R${md}`;
-      html += `<button class="dash-md-tab${active ? " is-active" : ""}${!hasData ? " dash-md-tab--empty" : ""}" type="button" data-md="${md}">${label}</button>`;
+
+    let html = '<span class="dash-md-nav__header">Matchday</span>';
+    const allMds = _scoredMatchdays.slice();
+    /* add placeholder future matchdays up to 8 */
+    for (let md = 1; md <= 8; md++) {
+      if (allMds.indexOf(md) === -1) allMds.push(md);
+    }
+    allMds.sort(function (a, b) { return a - b; });
+
+    for (let i = 0; i < allMds.length; i++) {
+      const md = allMds[i];
+      const hasData = _scoredMatchdays.indexOf(md) !== -1;
+      const isActive = md === _selectedMd;
+      html += '<button class="dash-md-tab' + (isActive ? " is-active" : "") + (!hasData ? " dash-md-tab--empty" : "") + '" type="button" data-md="' + md + '">' + mdLabel(md) + "</button>";
     }
     nav.innerHTML = html;
-    nav.querySelectorAll(".dash-md-tab").forEach(btn => {
-      btn.addEventListener("click", () => {
-        _selectedMatchday = Number(btn.dataset.md);
-        renderMatchdayDetail(_selectedMatchday, scoredSet);
-        nav.querySelectorAll(".dash-md-tab").forEach(b => b.classList.toggle("is-active", b === btn));
+
+    const tabs = nav.querySelectorAll(".dash-md-tab");
+    for (let i = 0; i < tabs.length; i++) {
+      tabs[i].addEventListener("click", function () {
+        const md = parseInt(tabs[i].dataset.md, 10);
+        if (_scoredMatchdays.indexOf(md) !== -1) {
+          selectMatchday(md);
+        }
       });
+    }
+  }
+
+  function selectMatchday(md) {
+    _selectedMd = md;
+    renderAll();
+  }
+
+  /* ── Hero: total + budget + trajectory ─────────────────────────────────── */
+
+  function renderHero() {
+    const totalEl = document.getElementById("scoreTotal");
+    const budgetEl = document.getElementById("budgetRemainingDash");
+    const gaugeEl = document.getElementById("budgetGauge");
+    const trajectoryEl = document.getElementById("scoreTrajectory");
+
+    /* total points — cumulative up to selected MD */
+    let total = 0;
+    for (let i = 0; i < _cumulativeData.length; i++) {
+      if (_cumulativeData[i].matchday <= _selectedMd) {
+        total += _cumulativeData[i].squad_score;
+      }
+    }
+    if (totalEl) totalEl.textContent = total;
+
+    /* budget from selected matchday squad */
+    const squad = _squadByMd[_selectedMd];
+    if (squad && budgetEl) {
+      budgetEl.textContent = "$" + (squad.budget_remaining || 0).toFixed(1) + "m";
+    }
+
+    /* gauge — update conic gradient based on budget used */
+    if (gaugeEl && squad) {
+      const used = squad.budget_used || 0;
+      const pct = Math.min(1, used / 50);
+      const angle = Math.round(pct * 180);
+      gaugeEl.style.background =
+        "radial-gradient(circle at 50% 100%, #111411 0 42%, transparent 43%)," +
+        "conic-gradient(from 270deg at 50% 100%, var(--blue) 0 " + angle + "deg, rgba(255,255,255,.08) " + angle + "deg 180deg, transparent 180deg 360deg)";
+    }
+
+    /* trajectory area chart */
+    if (trajectoryEl) {
+      const chartData = [];
+      for (let i = 0; i < _cumulativeData.length; i++) {
+        chartData.push({
+          md: _cumulativeData[i].matchday,
+          value: _cumulativeData[i].squad_score,
+          label: mdLabel(_cumulativeData[i].matchday)
+        });
+      }
+      Charts.areaChart(trajectoryEl, chartData, {
+        selectedMatchday: _selectedMd,
+        onPointClick: selectMatchday
+      });
+    }
+  }
+
+  /* ── Captain impact ────────────────────────────────────────────────────── */
+
+  function renderCaptainImpact() {
+    const container = document.getElementById("captainChart");
+    if (!container) return;
+
+    const chartData = [];
+    const mds = _scoredMatchdays.slice();
+    for (let i = 0; i < mds.length; i++) {
+      const md = mds[i];
+      const breakdown = _scoreByMd[md];
+      if (!breakdown || !breakdown.breakdown) continue;
+
+      let captainScore = 0;
+      let squadSum = 0;
+      let squadCount = 0;
+      for (let j = 0; j < breakdown.breakdown.length; j++) {
+        const p = breakdown.breakdown[j];
+        if (p.is_captain) {
+          captainScore = p.player_score;
+        } else {
+          squadSum += p.player_score;
+          squadCount++;
+        }
+      }
+      const squadAvg = squadCount > 0 ? squadSum / squadCount : 0;
+      chartData.push({
+        md: md,
+        label: mdLabel(md),
+        captainScore: captainScore,
+        squadAvg: squadAvg
+      });
+    }
+
+    Charts.captainBars(container, chartData, {
+      selectedMatchday: _selectedMd,
+      onBarClick: selectMatchday
     });
   }
 
-  async function renderMatchdayDetail(matchday, scoredSet) {
-    document.getElementById("contribBody").innerHTML = skeletonTableRows(5);
-    const valueElInit = document.getElementById("valueRows");
-    if (valueElInit) valueElInit.innerHTML = `<div class="skeleton" style="height:120px;border-radius:var(--r-sm)"></div>`;
-    const historyRoot = document.getElementById("transferHistory");
-    if (historyRoot) historyRoot.innerHTML = `<div class="skeleton" style="height:80px;border-radius:var(--r-sm)"></div>`;
-    const participationRoot = document.getElementById("participationList");
-    if (participationRoot) participationRoot.innerHTML = `<div class="skeleton" style="height:80px;border-radius:var(--r-sm)"></div>`;
+  /* ── Score composition ─────────────────────────────────────────────────── */
 
-    let breakdown = [];
-    let matchdaySquad = null;
-    try {
-      const [md, sq] = await Promise.all([
-        Api.getScore(matchday).catch(() => ({ breakdown: [] })),
-        Api.getSquad(matchday).catch(() => null),
-      ]);
-      breakdown = md.breakdown || [];
-      matchdaySquad = sq;
-    } catch (e) {
-      breakdown = [];
+  function renderComposition() {
+    const container = document.getElementById("compositionChart");
+    const legendContainer = document.getElementById("compositionLegend");
+    if (!container) return;
+
+    const chartData = [];
+    const mds = _scoredMatchdays.slice();
+    for (let i = 0; i < mds.length; i++) {
+      const md = mds[i];
+      const comp = _compositionByMd[md];
+      if (!comp) continue;
+      chartData.push({
+        md: md,
+        label: mdLabel(md),
+        goals_pts: comp.goals_pts || 0,
+        assist_pts: comp.assist_pts || 0,
+        cs_pts: comp.cs_pts || 0,
+        minute_pts: comp.minute_pts || 0,
+        card_pts: comp.card_pts || 0,
+        total: comp.total || 0
+      });
     }
 
-    const byPos = { GK: 0, DEF: 0, MID: 0, FWD: 0 };
-    for (const item of breakdown) {
-      byPos[item.position] = byPos[item.position] + Math.max(0, scoreOf(item));
-    }
-    const donutData = [];
-    for (const pos of POSITIONS) {
-      if (byPos[pos] > 0) {
-        donutData.push({ label: pos, value: byPos[pos], color: posColor[pos] });
-      }
-    }
-    Charts.donut(
-      document.getElementById("scoreDonut"),
-      document.getElementById("donutCenter"),
-      document.getElementById("donutLegend"),
-      donutData
-    );
-
-    const priceOf = {};
-    if (matchdaySquad) {
-      for (const player of matchdaySquad.players) {
-        priceOf[player.player_id] = player.base_price;
-      }
-    }
-
-    const noData = !breakdown.length;
-    const tbody = document.getElementById("contribBody");
-    if (noData) {
-      tbody.innerHTML = `<li class="empty-note" style="padding:12px 0;list-style:none;color:var(--muted)">Matches not played yet — data not available.</li>`;
-    } else {
-      const sorted = breakdown.slice().sort((a, b) => scoreOf(b) - scoreOf(a));
-      let html = "";
-      let rank = 1;
-      for (const item of sorted) {
-        const points = scoreOf(item);
-        const seed = encodeURIComponent(item.player_name);
-        const avatarSrc = `https://api.dicebear.com/9.x/micah/svg?seed=${seed}&backgroundColor=c6f24a,a6d92e,7aa2ff,ffb06c&radius=50`;
-        const capBadge = item.is_captain ? `<span class="scorer-cap">(C)</span>` : "";
-        const ptsDisplay = item.is_captain ? `${points} <span class="scorer-x2">(x2)</span>` : `${points}`;
-        html += `<li>
-          <span class="rank">${rank}</span>
-          <span class="avatar avatar--30" style="background-image:url('${avatarSrc}')"></span>
-          <span class="scorer-name">${item.player_name} ${capBadge}</span>
-          <i class="pos pos--${item.position.toLowerCase()}">${item.position}</i>
-          <b class="scorer-pts${points < 0 ? " scorer-pts--neg" : ""}">${ptsDisplay}</b>
-        </li>`;
-        rank = rank + 1;
-      }
-      tbody.innerHTML = html;
-    }
-
-    const valueEl = document.getElementById("valueRows");
-    if (valueEl) {
-      if (noData) {
-        valueEl.innerHTML = `<p class="empty-note">Matches not played yet — data not available.</p>`;
-      } else {
-        const rows = [];
-        for (const item of breakdown) {
-          const price = priceOf[item.player_id];
-          if (price == null || price <= 0) continue;
-          const points = scoreOf(item);
-          const ratio = points / price;
-          rows.push({ name: item.player_name, position: item.position, price, points, ratio });
-        }
-        rows.sort((a, b) => b.ratio - a.ratio);
-        let maxRatio = 1;
-        for (const row of rows) { if (row.ratio > maxRatio) maxRatio = row.ratio; }
-        let html = "";
-        for (const row of rows) {
-          const barPct = maxRatio > 0 ? Math.max(2, (row.ratio / maxRatio) * 100) : 2;
-          const ratioLabel = row.ratio >= 0 ? `+${row.ratio.toFixed(1)}/m` : `${row.ratio.toFixed(1)}/m`;
-          const barColor = row.ratio < 0 ? "var(--danger)" : "var(--accent)";
-          html += `<div class="value-row">
-            <span class="value-name" style="color:${posColor[row.position]}">${row.name}</span>
-            <span class="value-price">$${row.price.toFixed(1)}m</span>
-            <div class="value-bar-wrap"><div class="value-bar" style="width:${barPct}%;background:${barColor}"></div></div>
-            <span class="value-pts ${row.points < 0 ? "contrib__score--neg" : ""}">${row.points} pts</span>
-            <span class="value-ratio">${ratioLabel}</span>
-          </div>`;
-        }
-        valueEl.innerHTML = html || `<p class="empty-note">No priced players in squad.</p>`;
-      }
-    }
-
-    let playerStats = [];
-    let transfers = [];
-    try { playerStats = await Api.getPlayerStats(); } catch (e) { playerStats = []; }
-    try { transfers = await Api.getTransfers(matchday); } catch (e) { transfers = []; }
-    renderTransferHistory(transfers);
-    renderParticipation(playerStats, matchday, matchdaySquad ? matchdaySquad.players : null);
+    Charts.stackedBar(container, chartData, {
+      selectedMatchday: _selectedMd,
+      onBarClick: selectMatchday,
+      legendContainer: legendContainer
+    });
   }
 
-  async function render() {
-    setText("scoreTotal", "-");
-    setText("rankValue", "1 / 1");
-    setText("percentileValue", "100%");
-    setText("budgetRemainingDash", `$${State.budgetRemaining().toFixed(1)}m`);
-    document.getElementById("scoreBars").innerHTML = skeletonBars(5);
-    document.getElementById("scoreDonut").innerHTML = '';
-    document.getElementById("scoreDonut").style.background = "rgba(255,255,255,.06)";
-    setText("donutCenter", "");
-    document.getElementById("donutLegend").innerHTML = `<div class="skeleton" style="height:60px;border-radius:var(--r-sm)"></div>`;
-    document.getElementById("contribBody").innerHTML = skeletonTableRows(5);
-    const valueElInit = document.getElementById("valueRows");
-    if (valueElInit) valueElInit.innerHTML = `<div class="skeleton" style="height:120px;border-radius:var(--r-sm)"></div>`;
-    const historyRoot = document.getElementById("transferHistory");
-    if (historyRoot) historyRoot.innerHTML = `<div class="skeleton" style="height:120px;border-radius:var(--r-sm)"></div>`;
-    const participationRoot = document.getElementById("participationList");
-    if (participationRoot) participationRoot.innerHTML = `<div class="skeleton" style="height:120px;border-radius:var(--r-sm)"></div>`;
+  /* ── Rank trajectory ───────────────────────────────────────────────────── */
 
-    let cumulative = { by_matchday: [] };
-    try {
-      cumulative = await Api.getScore();
-    } catch (e) {
-      cumulative = { by_matchday: [] };
+  function renderRankTrajectory() {
+    const container = document.getElementById("rankChart");
+    if (!container) return;
+
+    const chartData = [];
+    for (let i = 0; i < _rankHistory.length; i++) {
+      chartData.push({
+        matchday: _rankHistory[i].matchday,
+        rank: _rankHistory[i].rank,
+        squad_score: _rankHistory[i].squad_score,
+        total_managers: _rankHistory[i].total_managers,
+        label: mdLabel(_rankHistory[i].matchday)
+      });
     }
-    const by = cumulative.by_matchday || [];
 
-    let total = 0;
-    const barData = [];
-    for (const row of by) {
-      const value = scoreOf(row);
-      total = total + value;
-      const meta = _roundMeta.find((r) => r.matchday === row.matchday);
-      const label = meta ? meta.label : `R${row.matchday}`;
-      barData.push({ label, value });
-    }
-    setText("scoreTotal", total);
-    Charts.bars(document.getElementById("scoreBars"), barData);
-    renderSparkline(by);
-
-    // Build nav from ALL fixture matchdays so every round appears even before data arrives
-    const allMdSet = new Set();
-    for (const fix of State.fixtures) allMdSet.add(fix.matchday);
-    const allMatchdays = Array.from(allMdSet).sort((a, b) => a - b);
-
-    const scoredSet = new Set();
-    for (const row of by) scoredSet.add(row.matchday);
-
-    // Default to latest scored matchday; fall back to first known or currentMatchday
-    if (by.length) {
-      _selectedMatchday = by[by.length - 1].matchday;
-    } else if (allMatchdays.length) {
-      _selectedMatchday = allMatchdays[0];
-    } else {
-      _selectedMatchday = State.currentMatchday;
-    }
-    buildMatchdayNav(allMatchdays, scoredSet);
-    await renderMatchdayDetail(_selectedMatchday, scoredSet);
+    Charts.rankLine(container, chartData, {
+      selectedMatchday: _selectedMd,
+      onPointClick: selectMatchday
+    });
   }
 
-  return { render };
+  /* ── Top scorers (selected matchday breakdown) ─────────────────────────── */
+
+  function renderTopScorers() {
+    const list = document.getElementById("contribBody");
+    if (!list) return;
+
+    const breakdown = _scoreByMd[_selectedMd];
+    if (!breakdown || !breakdown.breakdown || !breakdown.breakdown.length) {
+      list.innerHTML = '<p class="empty-note">No player data for this matchday.</p>';
+      return;
+    }
+
+    const players = breakdown.breakdown.slice();
+    players.sort(function (a, b) { return b.player_score - a.player_score; });
+
+    let html = "";
+    for (let i = 0; i < players.length; i++) {
+      const p = players[i];
+      const seed = encodeURIComponent(p.player_name);
+      const avatarSrc = "https://api.dicebear.com/9.x/micah/svg?seed=" + seed + "&backgroundColor=c6f24a,a6d92e,7aa2ff,ffb06c&radius=50";
+      const posColor = POS_COLORS[p.position] || "var(--ink)";
+      const cls = p.player_score < 0 ? " scorer-pts--neg" : "";
+      const cap = p.is_captain ? '<span class="scorer-cap">C</span>' : "";
+      const x2 = p.is_captain ? '<span class="scorer-x2">x2</span>' : "";
+      html += '<li><span class="rank">' + (i + 1) + "</span>" +
+        '<span class="avatar avatar--30" style="background-image:url(\'' + avatarSrc + '\')"></span>' +
+        '<span class="scorer-name">' + p.player_name + " " + cap + "</span>" +
+        '<i class="pos pos--' + p.position.toLowerCase() + '">' + p.position + "</i>" +
+        x2 +
+        '<b class="scorer-pts' + cls + '" style="color:' + posColor + '">' + p.player_score + "</b></li>";
+    }
+    list.innerHTML = html;
+  }
+
+  /* ── Value scatter + efficiency bars ───────────────────────────────────── */
+
+  function renderValueScatter() {
+    const container = document.getElementById("valueScatter");
+    const legendContainer = document.getElementById("scatterLegend");
+    if (!container) return;
+
+    const breakdown = _scoreByMd[_selectedMd];
+    const squad = _squadByMd[_selectedMd];
+    if (!breakdown || !squad) {
+      container.innerHTML = '<p class="empty-note">No data for this matchday.</p>';
+      if (legendContainer) legendContainer.innerHTML = "";
+      return;
+    }
+
+    /* build player price map from squad */
+    const priceMap = {};
+    for (let i = 0; i < squad.players.length; i++) {
+      priceMap[squad.players[i].player_id] = squad.players[i].base_price;
+    }
+
+    const scatterData = [];
+    for (let i = 0; i < breakdown.breakdown.length; i++) {
+      const p = breakdown.breakdown[i];
+      const price = priceMap[p.player_id] || 0;
+      scatterData.push({
+        name: p.player_name,
+        position: p.position,
+        price: price,
+        points: p.player_score
+      });
+    }
+
+    Charts.scatterPlot(container, scatterData, {
+      posColors: POS_COLORS,
+      hiddenPositions: _hiddenPositions,
+      legendContainer: legendContainer,
+      onLegendToggle: function (pos) {
+        _hiddenPositions[pos] = !_hiddenPositions[pos];
+        renderValueScatter();
+      }
+    });
+  }
+
+  function renderEfficiencyBars() {
+    const container = document.getElementById("valueRows");
+    if (!container) return;
+
+    const breakdown = _scoreByMd[_selectedMd];
+    const squad = _squadByMd[_selectedMd];
+    if (!breakdown || !squad) {
+      container.innerHTML = '<p class="empty-note">No data for this matchday.</p>';
+      return;
+    }
+
+    const priceMap = {};
+    for (let i = 0; i < squad.players.length; i++) {
+      priceMap[squad.players[i].player_id] = squad.players[i].base_price;
+    }
+
+    const rows = [];
+    for (let i = 0; i < breakdown.breakdown.length; i++) {
+      const p = breakdown.breakdown[i];
+      const price = priceMap[p.player_id] || 0;
+      const ratio = price > 0 ? p.player_score / price : 0;
+      rows.push({
+        name: p.player_name,
+        position: p.position,
+        price: price,
+        points: p.player_score,
+        ratio: ratio
+      });
+    }
+    rows.sort(function (a, b) { return b.ratio - a.ratio; });
+
+    let maxRatio = 1;
+    for (let i = 0; i < rows.length; i++) {
+      if (Math.abs(rows[i].ratio) > maxRatio) maxRatio = Math.abs(rows[i].ratio);
+    }
+
+    let html = "";
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      const pct = Math.max(3, Math.abs(r.ratio) / maxRatio * 100);
+      const color = POS_COLORS[r.position] || "var(--accent)";
+      html += '<div class="value-row">' +
+        '<span class="value-name">' + r.name + "</span>" +
+        '<span class="value-ratio">' + r.ratio.toFixed(1) + " pts/$m</span>" +
+        '<div class="value-bar-wrap"><div class="value-bar" style="width:' + pct + "%;background:" + color + '"></div></div>' +
+        "</div>";
+    }
+    container.innerHTML = html;
+  }
+
+  /* ── Position donut (selected matchday) ────────────────────────────────── */
+
+  function renderDonut() {
+    const svgEl = document.getElementById("scoreDonut");
+    const centerEl = document.getElementById("donutCenter");
+    const legendEl = document.getElementById("donutLegend");
+    if (!svgEl) return;
+
+    const breakdown = _scoreByMd[_selectedMd];
+    if (!breakdown || !breakdown.breakdown) {
+      if (centerEl) centerEl.textContent = "0";
+      if (legendEl) legendEl.innerHTML = '<span class="empty-note">No data</span>';
+      return;
+    }
+
+    const posSums = { GK: 0, DEF: 0, MID: 0, FWD: 0 };
+    for (let i = 0; i < breakdown.breakdown.length; i++) {
+      const p = breakdown.breakdown[i];
+      const pos = p.position;
+      if (posSums[pos] !== undefined) posSums[pos] += p.player_score;
+    }
+
+    const data = [
+      { label: "GK", value: Math.max(0, posSums.GK), color: POS_COLORS.GK },
+      { label: "DEF", value: Math.max(0, posSums.DEF), color: POS_COLORS.DEF },
+      { label: "MID", value: Math.max(0, posSums.MID), color: POS_COLORS.MID },
+      { label: "FWD", value: Math.max(0, posSums.FWD), color: POS_COLORS.FWD }
+    ];
+
+    Charts.donut(svgEl, centerEl, legendEl, data);
+  }
+
+  /* ── Transfer history — expandable accordion ───────────────────────────── */
+
+  let _expandedTransferMd = null;
+
+  function renderTransfers() {
+    const container = document.getElementById("transferHistory");
+    if (!container) return;
+
+    if (!_allTransfers.length) {
+      container.innerHTML = '<p class="empty-note">No transfers made yet.</p>';
+      return;
+    }
+
+    /* group by matchday */
+    const mds = [];
+    const mdMap = {};
+    for (let i = 0; i < _allTransfers.length; i++) {
+      const t = _allTransfers[i];
+      const md = t.matchday;
+      if (mdMap[md] === undefined) {
+        mdMap[md] = mds.length;
+        mds.push({ md: md, transfers: [] });
+      }
+      mds[mdMap[md]].transfers.push(t);
+    }
+    mds.sort(function (a, b) { return b.md - a.md; });
+
+    let html = "";
+    for (let i = 0; i < mds.length; i++) {
+      const group = mds[i];
+      const isOpen = group.md === _expandedTransferMd;
+      const count = group.transfers.length;
+
+      /* net budget change */
+      let netCost = 0;
+      for (let j = 0; j < group.transfers.length; j++) {
+        const t = group.transfers[j];
+        const inPrice = t.player_in_price || 0;
+        const outPrice = t.player_out_price || 0;
+        netCost += inPrice - outPrice;
+      }
+      const netCls = netCost >= 0 ? "xfer-md-header__net--neg" : "xfer-md-header__net--pos";
+      const netSign = netCost > 0 ? "+" : "";
+      const netLabel = netCost !== 0 ? "$" + netSign + netCost.toFixed(1) + "m" : "even";
+
+      html += '<div class="xfer-md-group' + (isOpen ? " is-open" : "") + '" data-md="' + group.md + '">';
+      html += '<div class="xfer-md-header">';
+      html += '<svg class="xfer-md-chevron" viewBox="0 0 16 16" fill="none"><path d="M6 4l6 4-6 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      html += '<span class="xfer-md-header__label">' + mdLabel(group.md) + "</span>";
+      html += '<span class="xfer-md-header__count">' + count + " transfer" + (count > 1 ? "s" : "") + "</span>";
+      html += '<span class="xfer-md-header__net ' + netCls + '">' + netLabel + "</span>";
+      html += "</div>";
+      html += '<div class="xfer-md-body">';
+
+      for (let j = 0; j < group.transfers.length; j++) {
+        const t = group.transfers[j];
+        const inPrice = t.player_in_price != null ? "$" + t.player_in_price.toFixed(1) + "m" : "";
+        const outPrice = t.player_out_price != null ? "$" + t.player_out_price.toFixed(1) + "m" : "";
+
+        html += '<div class="xfer-card">';
+        html += '<div class="xfer-card__row xfer-card__row--out">';
+        html += '<span class="xfer-arrow xfer-arrow--out"><svg viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4v8H4" stroke="currentColor" stroke-width="1.5"/></svg></span>';
+        html += '<span class="xfer-name">' + (t.player_out_name || "Unknown") + "</span>";
+        if (outPrice) html += '<span class="xfer-price">' + outPrice + "</span>";
+        html += '<span class="xfer-badge xfer-badge--out">OUT</span>';
+        html += "</div>";
+        html += '<div class="xfer-card__row">';
+        html += '<span class="xfer-arrow xfer-arrow--in"><svg viewBox="0 0 16 16" fill="none"><path d="M12 12L4 4M4 12v-8h8" stroke="currentColor" stroke-width="1.5"/></svg></span>';
+        html += '<span class="xfer-name">' + (t.player_in_name || "Unknown") + "</span>";
+        if (inPrice) html += '<span class="xfer-price">' + inPrice + "</span>";
+        html += '<span class="xfer-badge xfer-badge--in">IN</span>';
+        html += "</div>";
+        html += "</div>";
+      }
+
+      html += "</div></div>";
+    }
+    container.innerHTML = html;
+
+    /* bind click handlers */
+    const groups = container.querySelectorAll(".xfer-md-group");
+    for (let i = 0; i < groups.length; i++) {
+      groups[i].querySelector(".xfer-md-header").addEventListener("click", function () {
+        const md = parseInt(groups[i].dataset.md, 10);
+        if (_expandedTransferMd === md) {
+          _expandedTransferMd = null;
+        } else {
+          _expandedTransferMd = md;
+        }
+        renderTransfers();
+      });
+    }
+  }
+
+  /* ── Master render ─────────────────────────────────────────────────────── */
+
+  function renderAll() {
+    renderMatchdayNav();
+    renderHero();
+    renderCaptainImpact();
+    renderComposition();
+    renderRankTrajectory();
+    renderTopScorers();
+    renderValueScatter();
+    renderEfficiencyBars();
+    renderDonut();
+    renderTransfers();
+  }
+
+  /* ── Public API ────────────────────────────────────────────────────────── */
+
+  async function init() {
+    await loadAll();
+    renderAll();
+  }
+
+  function refresh() {
+    return init();
+  }
+
+  return { init: init, render: refresh, refresh: refresh };
 })();

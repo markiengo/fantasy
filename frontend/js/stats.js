@@ -1,11 +1,11 @@
 const Stats = (() => {
   const CATEGORIES = [
-    { key: "top_fantasy_score", title: "Fantasy points", hint: "Total", isHeadline: true, suffix: "pts" },
-    { key: "top_scorers", title: "Top scorers", hint: "Goals" },
-    { key: "top_assists", title: "Assists", hint: "Assists" },
-    { key: "top_goal_involvements", title: "Goal involvements", hint: "Goals + Assists" },
-    { key: "top_clean_sheets", title: "Clean sheets", hint: "DEF / GK" },
-    { key: "top_cards", title: "Most cards", hint: "Yellow + Red", isCards: true },
+    { key: "top_fantasy_score", title: "Fantasy points", hint: "Total", isHero: true, suffix: "pts", bento: "hero" },
+    { key: "top_scorers", title: "Top scorers", hint: "Goals", bento: "normal" },
+    { key: "top_assists", title: "Assists", hint: "Assists", bento: "normal" },
+    { key: "top_goal_involvements", title: "Goal involvements", hint: "Goals + Assists", bento: "normal" },
+    { key: "top_clean_sheets", title: "Clean sheets", hint: "DEF / GK", bento: "normal" },
+    { key: "top_cards", title: "Most cards", hint: "Yellow + Red", isCards: true, bento: "wide" },
   ];
 
   function faceHtml(player, size) {
@@ -31,7 +31,7 @@ const Stats = (() => {
   function renderRow(entry, index, category) {
     const rank = index + 1;
     const isLeader = rank === 1;
-    const avatarSize = (isLeader && category.isHeadline) ? 44 : 34;
+    const avatarSize = (isLeader && category.isHero) ? 44 : 34;
     const teamId = entry.team_id || "";
 
     let valueHtml;
@@ -63,7 +63,9 @@ const Stats = (() => {
 
   function renderCard(category, data) {
     const entries = data[category.key] || [];
-    const cardClass = category.isHeadline ? "stats-card stats-card--headline" : "stats-card";
+    const bentoClass = category.bento === "hero" ? " stats-card--hero" : category.bento === "wide" ? " stats-card--wide" : " stats-card--normal";
+    const cardClass = "stats-card" + bentoClass;
+    const revealIdx = CATEGORIES.indexOf(category) + 1;
 
     let bodyHtml;
     if (!entries.length) {
@@ -76,8 +78,9 @@ const Stats = (() => {
       bodyHtml += `</ul>`;
     }
 
-    return `<article class="${cardClass}">
+    return `<article class="${cardClass} chart-reveal chart-reveal--${revealIdx}">
       <header class="stats-card__head">
+        <span class="stats-card__dot"></span>
         <span class="stats-card__title">${category.title}</span>
         <span class="stats-card__hint">${category.hint}</span>
       </header>
@@ -88,9 +91,11 @@ const Stats = (() => {
   function renderSkeleton() {
     let html = `<div class="stats-grid">`;
     for (const cat of CATEGORIES) {
-      const cardClass = cat.isHeadline ? "stats-card stats-card--headline" : "stats-card";
+      const bentoClass = cat.bento === "hero" ? " stats-card--hero" : cat.bento === "wide" ? " stats-card--wide" : " stats-card--normal";
+      const cardClass = "stats-card" + bentoClass;
       html += `<article class="${cardClass}">
         <header class="stats-card__head">
+          <span class="stats-card__dot"></span>
           <span class="stats-card__title">${cat.title}</span>
           <span class="stats-card__hint">${cat.hint}</span>
         </header>

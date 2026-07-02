@@ -346,6 +346,39 @@
   to { transform: none; }
 }
 
+/* --- 6. PINKY-STYLE REVEALS ----------------------------------------------- */
+
+@keyframes floatReveal {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.chart-reveal {
+  opacity: 0;
+  animation: floatReveal 300ms var(--ease) forwards;
+}
+
+.chart-reveal--1 { animation-delay: 50ms; }
+.chart-reveal--2 { animation-delay: 100ms; }
+.chart-reveal--3 { animation-delay: 150ms; }
+.chart-reveal--4 { animation-delay: 200ms; }
+.chart-reveal--5 { animation-delay: 250ms; }
+.chart-reveal--6 { animation-delay: 300ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-reveal,
+  .chart-reveal--1,
+  .chart-reveal--2,
+  .chart-reveal--3,
+  .chart-reveal--4,
+  .chart-reveal--5,
+  .chart-reveal--6 {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
 @media (max-width: 760px) {
   .tour-matte {
     backdrop-filter: blur(3px);

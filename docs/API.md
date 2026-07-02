@@ -254,7 +254,47 @@ Profile của authenticated user. Dùng để verify session và lấy `role` ch
 
 ---
 
-## 10. Error Codes
+## 10. Leaderboard
+
+### GET `/leaderboard`
+Bảng xếp hạng tổng điểm hoặc theo matchday. Shared authenticated route — bất kỳ user active nào đều xem được.
+
+**Auth:** Bearer token.
+
+| Param | Type | Required | Description |
+|---|---|---|---|
+| `matchday` | int | No | Lọc theo một matchday; nếu omit thì cumulative |
+
+**200 (cumulative):**
+```json
+{
+  "entries": [
+    { "rank": 1, "user_id": 17, "username": "markiengo", "display_name": "Mark", "score": 128 }
+  ],
+  "my_user_id": 17
+}
+```
+
+**200 (matchday):**
+```json
+{
+  "matchday": 3,
+  "entries": [
+    { "rank": 1, "user_id": 24, "username": "demo_brazil_fan", "display_name": "Demo Brazil Fan", "score": 31 }
+  ],
+  "my_user_id": 17
+}
+```
+
+**200 (empty):** `{ "entries": [], "my_user_id": 17 }`
+
+Ranking: sort by score DESC, tie-break by `user_id` ASC. Ranks sequential (1, 2, 3, ...) — tied scores không chia rank.
+
+**401:** Không có token.
+
+---
+
+## 11. Error Codes
 
 | HTTP | Ý nghĩa |
 |---|---|

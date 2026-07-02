@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="css/fixtures.css" />
   <link rel="stylesheet" href="css/scores.css" />
   <link rel="stylesheet" href="css/stats.css" />
+  <link rel="stylesheet" href="css/leaderboard.css" />
   <link rel="stylesheet" href="css/motion.css" />
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -154,11 +155,10 @@
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2l2.4 5.4L20 8l-4 4 1 6-5-3-5 3 1-6-4-4 5.6-.6L12 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span>Top Stats</span>
         </a>
-        <span class="nav__item sidebar__link nav__item--disabled" aria-disabled="true">
+        <a class="nav__item sidebar__link" href="#" data-screen="leaderboard">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4ZM5 5H3v3a4 4 0 0 0 4 4M19 5h2v3a4 4 0 0 1-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span>Leaderboard</span>
-          <b class="coming-soon">Coming Soon</b>
-        </span>
+        </a>
       </nav>
 
       <div class="sidebar__footer">
@@ -405,9 +405,6 @@
             </div>
             <div class="fixture-pane is-active" id="fixturePaneStandings">
               <div class="fx-grid fixtures-layout">
-                <article class="panel panel--flush group-tables standings-card">
-                  <div class="group-tables__scroll" id="groupGrid"></div>
-                </article>
                 <aside class="panel fixtures fixtures-card">
                   <header class="fixtures__head">
                     <button class="stepper__btn" id="fxPrev" type="button" aria-label="Previous round">&lsaquo;</button>
@@ -416,6 +413,9 @@
                   </header>
                   <div class="fixtures__list" id="fixturesList"></div>
                 </aside>
+                <article class="panel panel--flush group-tables standings-card">
+                  <div class="group-tables__scroll" id="groupGrid"></div>
+                </article>
               </div>
             </div>
             <div class="fixture-pane" id="fixturePaneKnockout">
@@ -428,68 +428,142 @@
 
         <section class="screen" id="screen-scores" aria-label="Dashboard">
           <div class="dashboard-shell dash">
-            <div class="dash__row dash__row--metrics metric-grid">
-              <article class="panel metric metric--total dashboard-hero">
-                <header><span>Total points</span><b class="big" id="scoreTotal">0</b><span class="delta delta--up">Live squad</span></header>
-                <div class="chart chart--spark sparkline" id="scoreTrend"></div>
-                <footer class="axis"><span>MD1</span><span>Current</span><span>Final</span></footer>
+            <!-- Matchday nav — global filter at top -->
+            <div class="dash-md-nav" id="dashMatchdayNav" hidden>
+              <span class="dash-md-nav__header">Matchday</span>
+            </div>
+
+            <!-- HERO CARD — total points + budget gauge + trajectory area chart -->
+            <article class="panel dashboard-hero chart-reveal chart-reveal--1">
+              <div class="dash-hero__top">
+                <div class="dash-hero__left">
+                  <header class="dash-hero__head">
+                    <div class="dash-hero__label">
+                      <span class="dash-hero__dot"></span>
+                      <span class="dash-hero__eyebrow">TOTAL POINTS</span>
+                    </div>
+                    <span class="delta delta--up">Live squad</span>
+                  </header>
+                  <b class="big" id="scoreTotal">0</b>
+                </div>
+                <div class="dash-hero__budget">
+                  <div class="chart chart--gauge gauge" id="budgetGauge"></div>
+                  <div class="dash-hero__budget-info">
+                    <small>In the bank</small>
+                    <b class="big big--accent" id="budgetRemainingDash">$50.0m</b>
+                    <small>Active squad</small>
+                  </div>
+                </div>
+              </div>
+              <div class="chart chart--area" id="scoreTrajectory"></div>
+            </article>
+
+            <!-- ROW 2: Score Composition (left) + Captain Impact & Rank Trajectory (right, stacked) -->
+            <div class="dash__row dash__row--asym">
+              <article class="panel viz-card chart-reveal chart-reveal--2">
+                <div class="dash-card__head">
+                  <span class="dash-card__dot"></span>
+                  <b class="list-card__title">Score composition</b>
+                  <span class="panel__hint">Where points come from</span>
+                </div>
+                <div class="chart chart--composition" id="compositionChart"></div>
+                <div class="comp-legend" id="compositionLegend"></div>
               </article>
-              <article class="panel metric metric-card">
-                <span class="metric__label">Position contribution</span>
+              <div class="dash__col">
+                <article class="panel viz-card chart-reveal chart-reveal--3">
+                  <div class="dash-card__head">
+                    <span class="dash-card__dot"></span>
+                    <b class="list-card__title">Captain impact</b>
+                    <span class="panel__hint">Captain x2 vs squad avg</span>
+                  </div>
+                  <div class="chart chart--captain" id="captainChart"></div>
+                </article>
+                <article class="panel viz-card chart-reveal chart-reveal--4">
+                  <div class="dash-card__head">
+                    <span class="dash-card__dot"></span>
+                    <b class="list-card__title">Rank trajectory</b>
+                    <span class="panel__hint">Your position across matchdays</span>
+                  </div>
+                  <div class="chart chart--rank" id="rankChart"></div>
+                </article>
+              </div>
+            </div>
+
+            <!-- ROW 4: Top scorers + Value scatter + Efficiency bars -->
+            <div class="dash__row dash__row--three dashboard-grid">
+              <article class="panel list-card viz-card chart-reveal chart-reveal--5">
+                <div class="dash-card__head">
+                  <span class="dash-card__dot"></span>
+                  <b class="list-card__title">Top scorers</b>
+                </div>
+                <ol class="scorers" id="contribBody"></ol>
+              </article>
+              <article class="panel list-card viz-card chart-reveal chart-reveal--5">
+                <div class="dash-card__head">
+                  <span class="dash-card__dot"></span>
+                  <b class="list-card__title">Value for money</b>
+                  <span class="panel__hint">Price vs points</span>
+                </div>
+                <div class="chart chart--scatter" id="valueScatter"></div>
+                <div class="scatter-legend" id="scatterLegend"></div>
+              </article>
+              <article class="panel list-card viz-card chart-reveal chart-reveal--5">
+                <div class="dash-card__head">
+                  <span class="dash-card__dot"></span>
+                  <b class="list-card__title">Efficiency</b>
+                  <span class="panel__hint">Points per $m</span>
+                </div>
+                <div class="vfm" id="valueRows"></div>
+              </article>
+            </div>
+
+            <!-- ROW 5: Position donut (small) + Transfer history panel (large) -->
+            <div class="dash__row dash__row--asym">
+              <article class="panel list-card viz-card chart-reveal chart-reveal--6 dash-card--donut">
+                <div class="dash-card__head">
+                  <span class="dash-card__dot"></span>
+                  <b class="list-card__title">Position contribution</b>
+                </div>
                 <div class="metric__split donut-wrap">
                   <div class="chart chart--donut donut" id="scoreDonut"><span class="donut__center" id="donutCenter">0</span></div>
                   <ul class="legend" id="donutLegend"></ul>
                 </div>
               </article>
-              <article class="panel metric metric-card">
-                <span class="metric__label">Budget remaining</span>
-                <div class="metric__split">
-                  <div class="chart chart--gauge gauge" id="budgetGauge"></div>
-                  <div><small>In the bank</small><b class="big big--accent" id="budgetRemainingDash">$50.0m</b><small>Active squad</small></div>
+              <article class="panel list-card viz-card chart-reveal chart-reveal--6 dash-card--transfers">
+                <div class="dash-card__head">
+                  <span class="dash-card__dot"></span>
+                  <b class="list-card__title">Transfer history</b>
+                  <span class="panel__hint">Click a matchday to expand</span>
                 </div>
+                <div class="transfer-panel" id="transferHistory"></div>
               </article>
             </div>
-
-            <div class="metric-grid metric-grid--compact visually-hidden">
-              <div class="metric-card panel"><span class="label">Solo rank</span><b id="rankValue">1 / 1</b></div>
-              <div class="metric-card panel"><span class="label">Percentile</span><b id="percentileValue">100%</b></div>
-            </div>
-
-            <article class="panel viz-card">
-              <header class="panel__head"><b>Points by matchday</b><span class="panel__hint">Last matchdays vs average</span></header>
-              <div class="chart chart--bars"><div class="bars" id="scoreBars"></div></div>
-            </article>
-
-            <div class="dash-md-nav" id="dashMatchdayNav" hidden>
-              <span class="dash-md-nav__header">Matchday detail</span>
-            </div>
-
-            <div class="dash__row dash__row--three dashboard-grid">
-              <article class="panel list-card viz-card">
-                <b class="list-card__title">Top scorers</b>
-                <ol class="scorers" id="contribBody"></ol>
-              </article>
-              <article class="panel list-card viz-card">
-                <b class="list-card__title">Value for money</b>
-                <p class="scores-note muted">Price paid versus points generated this round.</p>
-                <div class="vfm" id="valueRows"></div>
-              </article>
-              <article class="panel list-card viz-card">
-                <b class="list-card__title">Transfer history</b>
-                <div class="transfers" id="transferHistory"></div>
-              </article>
-            </div>
-
-            <article class="panel list-card viz-card">
-              <b class="list-card__title">Matchday participation</b>
-              <div class="participation" id="participationList"></div>
-            </article>
           </div>
         </section>
 
         <section class="screen" id="screen-stats" aria-label="Top Stats">
           <div class="stats-shell">
             <div class="stats-grid"></div>
+          </div>
+        </section>
+
+        <section class="screen" id="screen-leaderboard" aria-label="Leaderboard">
+          <div class="lb-shell">
+            <div class="lb-card chart-reveal chart-reveal--1">
+              <div class="lb-card__header">
+                <span class="lb-card__dot"></span>
+                <span class="lb-card__eyebrow">STANDINGS</span>
+              </div>
+              <h2 class="lb-card__title">Leaderboard</h2>
+              <p class="lb-card__subtitle">See how you stack up against every manager.</p>
+              <div class="lb-toggle">
+                <button class="lb-toggle__btn is-active" type="button" data-mode="overall">Overall</button>
+                <button class="lb-toggle__btn" type="button" data-mode="matchday">By Matchday</button>
+              </div>
+              <div class="lb-md-strip" id="lbMdStrip" hidden></div>
+              <div class="lb-list" id="lbList"></div>
+              <div id="lbSticky"></div>
+            </div>
           </div>
         </section>
       </div>
@@ -558,6 +632,7 @@
   <script src="js/fixtures.js"></script>
   <script src="js/scores.js"></script>
   <script src="js/stats.js"></script>
+  <script src="js/leaderboard.js"></script>
   <script src="js/charts.js"></script>
   <script src="js/tour.js"></script>
   <script src="js/onboarding.js"></script>

@@ -117,6 +117,7 @@ def test_load_stats_inserts_valid_mapped_player(monkeypatch):
     monkeypatch.setattr(stat_loader.espn, "match_player_stats", fake_match_player_stats)
     monkeypatch.setattr(stat_loader, "update_event_score", fake_update_event_score)
     monkeypatch.setattr(stat_loader, "post_playerstats_batch", fake_post_playerstats_batch)
+    monkeypatch.setattr(stat_loader, "advance_bracket_winner", lambda conn, mid: None)
 
     totals = stat_loader.load_stats(object(), date_value="20260611")
 

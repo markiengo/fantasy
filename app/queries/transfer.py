@@ -2,7 +2,10 @@ def get_transfers(conn, user_id, matchday = None):
     cursor = conn.cursor()
     query = '''
         SELECT transfer_id, player_in_id, p_in.name AS player_in_name,
-        player_out_id, p_out.name AS player_out_name, matchday
+        p_in.base_price AS player_in_price,
+        player_out_id, p_out.name AS player_out_name,
+        p_out.base_price AS player_out_price,
+        matchday
         FROM transfers tr
         JOIN player as p_in
             ON tr.player_in_id = p_in.player_id

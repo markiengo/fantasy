@@ -9,12 +9,13 @@ load_dotenv()
 from app.routers import player
 from app.routers import match
 from app.routers import playerstat
-from app.routers import score
+from app.routers import analytics
 from app.routers import squad
 from app.routers import team
 from app.routers import transfer
 from app.routers import load_stats
 from app.routers import me
+from app.routers import leaderboard
 from app.routers import auth as auth_router
 from app.core.validation import SquadValidationError
 
@@ -31,12 +32,13 @@ app.add_middleware(
 app.include_router(player.router, prefix = "/api")
 app.include_router(match.router, prefix = "/api")
 app.include_router(playerstat.router, prefix = "/api")
-app.include_router(score.router, prefix = "/api")
+app.include_router(analytics.router, prefix = "/api")
 app.include_router(squad.router, prefix = "/api")
 app.include_router(team.router, prefix = "/api")
 app.include_router(transfer.router, prefix = "/api")
 app.include_router(load_stats.router, prefix = "/api")
 app.include_router(me.router, prefix = "/api")
+app.include_router(leaderboard.router, prefix = "/api")
 app.include_router(auth_router.router, prefix = "/api")
 
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")

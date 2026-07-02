@@ -94,6 +94,7 @@ const SCREEN_COPY = {
   fixtures: { eyebrow: "TOURNAMENT", title: "Fixtures & standings" },
   scores: { eyebrow: "PERFORMANCE", title: "Season dashboard" },
   stats: { eyebrow: "TOURNAMENT", title: "Top player stats" },
+  leaderboard: { eyebrow: "COMPETITION", title: "Global leaderboard" },
 };
 
 function todayDateOnly() {
@@ -180,6 +181,7 @@ function switchScreen(name) {
   }
   if (name === "scores") Scores.render();
   if (name === "stats") Stats.render();
+  if (name === "leaderboard") Leaderboard.render();
 
   if (bar) {
     bar.style.width = "100%";
@@ -460,11 +462,11 @@ function bindNav() {
 async function refreshLiveData() {
   const md = State.currentMatchday;
   const matches = await Api.getMatches();
-  const cumulative = await Api.getScore().catch(() => ({}));
+  const cumulative = await Api.getSquadScore().catch(() => ({}));
   State.fixtures = matches;
   _scoreByMd = {};
   for (const row of (cumulative.by_matchday || [])) {
-    _scoreByMd[row.matchday] = Number(row.score ?? row.squad_score ?? 0);
+    _scoreByMd[row.matchday] = Number(row.squad_score ?? 0);
   }
   buildRoundMeta();
   renderMatchdayStrip();
@@ -896,6 +898,7 @@ async function continueBoot() {
 
   Squad.init();
   Fixtures.init();
+  Leaderboard.init();
   bindNav();
   bindMatchdayNav();
   bindUpdateData();
@@ -923,7 +926,7 @@ async function continueBoot() {
       Api.getPlayers(),
       Api.getTeams(),
       Api.getMatches(),
-      Api.getScore().catch(() => ({})),
+      Api.getSquadScore().catch(() => ({})),
     ]);
   } catch (e) {
     Toast.show("Could not load data. Retry the request.", "error");
@@ -935,7 +938,7 @@ async function continueBoot() {
 
   _scoreByMd = {};
   for (const row of (cumulative.by_matchday || [])) {
-    _scoreByMd[row.matchday] = Number(row.score ?? row.squad_score ?? 0);
+    _scoreByMd[row.matchday] = Number(row.squad_score ?? 0);
   }
 
   buildRoundMeta();

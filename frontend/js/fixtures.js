@@ -24,9 +24,18 @@ const Fixtures = (() => {
 
   function kickoff(match) {
     if (match.kickoff) {
-      const date = new Date(match.kickoff);
+      const iso = match.kickoff;
+      const t = iso.split("T")[1];
+      if (t) {
+        const h = parseInt(t.slice(0, 2), 10);
+        const m = t.slice(3, 5);
+        const ampm = h >= 12 ? "PM" : "AM";
+        const h12 = h % 12 || 12;
+        return `${h12}:${m} ${ampm}`;
+      }
+      const date = new Date(iso);
       if (!Number.isNaN(date.getTime())) {
-        return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+        return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" });
       }
     }
     const slots = ["18:00", "21:00", "00:00", "03:00"];
@@ -210,6 +219,13 @@ const Fixtures = (() => {
     grid.innerHTML = html;
   }
 
+  function teamGroup(teamId) {
+    for (const team of State.teams) {
+      if (team.team_id === teamId) return team.group_stage || null;
+    }
+    return null;
+  }
+
   function renderFixtures(matches) {
     const list = document.getElementById("fixturesList");
     if (!list) return;
@@ -228,31 +244,57 @@ const Fixtures = (() => {
       return;
     }
 
-    const byDate = {};
-    for (const match of matches) {
-      if (!byDate[match.date]) byDate[match.date] = [];
-      byDate[match.date].push(match);
-    }
+    const isGroupStage = matches[0].stage === "group_stage";
 
-    const dates = Object.keys(byDate).sort();
-    for (const date of dates) {
-      byDate[date].sort((a, b) => {
-        const aTime = a.kickoff || "";
-        const bTime = b.kickoff || "";
+    if (isGroupStage) {
+      const byGroup = {};
+      for (const match of matches) {
+        const grp = teamGroup(match.team1_id) || teamGroup(match.team2_id) || "?";
+        if (!byGroup[grp]) byGroup[grp] = [];
+        byGroup[grp].push(match);
+      }
+
+      const groupKeys = Object.keys(byGroup).sort();
+      let html = "";
+      for (const key of groupKeys) {
+        const groupMatches = byGroup[key];
+        groupMatches.sort((a, b) => {
+          const aTime = a.kickoff || a.date || "";
+          const bTime = b.kickoff || b.date || "";
+          if (aTime !== bTime) return aTime.localeCompare(bTime);
+          return a.match_id - b.match_id;
+        });
+
+        const dateStr = groupMatches[0].date ? fmtDate(groupMatches[0].date) : "";
+
+        html += `<div class="fixtures__group">`;
+        html += `<header class="fixtures__group-head">`;
+        html += `<span class="fixtures__group-label">Group ${key}</span>`;
+        if (dateStr) html += `<span class="fixtures__group-date">${dateStr}</span>`;
+        html += `</header>`;
+        html += `<div class="fixtures__grid">`;
+        for (const match of groupMatches) {
+          html += fixtureCard(match);
+        }
+        html += `</div>`;
+        html += `</div>`;
+      }
+      list.innerHTML = html;
+    } else {
+      const sorted = matches.slice().sort((a, b) => {
+        const aTime = a.kickoff || a.date || "";
+        const bTime = b.kickoff || b.date || "";
         if (aTime !== bTime) return aTime.localeCompare(bTime);
         return a.match_id - b.match_id;
       });
-    }
 
-    let html = "";
-    for (const date of dates) {
-      html += `<div class="fixtures__daygroup"><div class="fixtures__date">${fmtDate(date)}</div>`;
-      for (const match of byDate[date]) {
-        html += matchRow(match);
+      let html = `<div class="fixtures__grid">`;
+      for (const match of sorted) {
+        html += fixtureCard(match);
       }
       html += `</div>`;
+      list.innerHTML = html;
     }
-    list.innerHTML = html;
   }
 
   function scoreLabel(match, side) {
@@ -332,11 +374,40 @@ const Fixtures = (() => {
     </div>`;
   }
 
+  function fixtureCard(match) {
+    const hasScore = match.team1_score != null && match.team2_score != null;
+    const t1Name = match.team1_name || "TBD";
+    const t2Name = match.team2_name || "TBD";
+    const winner = matchWinner(match);
+    const t1Class = winner === 1 ? " fixture-card__team--win" : winner === 2 ? " fixture-card__team--lose" : "";
+    const t2Class = winner === 2 ? " fixture-card__team--win" : winner === 1 ? " fixture-card__team--lose" : "";
+
+    const dateStr = match.date ? fmtDate(match.date) : "";
+    const timeStr = kickoff(match);
+    const dateLine = hasScore
+      ? (dateStr ? `<span class="fixture-card__date">${dateStr} · ${timeStr}</span>` : "")
+      : (dateStr ? `<span class="fixture-card__date">${dateStr}</span>` : "");
+
+    const center = hasScore
+      ? `<span class="fixture-card__score">${scoreLabel(match, 1)} - ${scoreLabel(match, 2)}</span>`
+      : `<span class="fixture-card__time">${timeStr}</span>`;
+
+    const centerWrap = dateLine
+      ? `<span class="fixture-card__center">${center}${dateLine}</span>`
+      : center;
+
+    return `<div class="fixture-card">
+      <span class="fixture-card__team${t1Class}">${flagImg(match.team1_id)}<b>${t1Name}</b></span>
+      ${centerWrap}
+      <span class="fixture-card__team fixture-card__team--right${t2Class}"><b>${t2Name}</b>${flagImg(match.team2_id)}</span>
+    </div>`;
+  }
+
   function renderKnockout() {
     const root = document.getElementById("knockoutBracket");
     if (!root) return;
 
-    const COL_W = 150, GAP = 56, HEIGHT = 1400, TOP = 26;
+    const COL_W = 190, GAP = 56, HEIGHT = 1400, TOP = 26;
     const EXPECTED_NODES = { round_of_32: 16, round_of_16: 8, quarter_final: 4, semi_final: 2, final: 1 };
     const ROUND_NAMES = {
       round_of_32: "ROUND OF 32",
@@ -394,8 +465,8 @@ const Fixtures = (() => {
         let inner;
 
         if (match) {
-          const t1 = shortName(match.team1_name) || (match.team1_id || "TBD");
-          const t2 = shortName(match.team2_name) || (match.team2_id || "TBD");
+          const t1 = match.team1_name || (match.team1_id || "TBD");
+          const t2 = match.team2_name || (match.team2_id || "TBD");
           const hasScore = match.team1_score != null && match.team2_score != null;
           let t1Score = "", t2Score = "";
           let t1Win = "", t2Win = "";

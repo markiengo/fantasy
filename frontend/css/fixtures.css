@@ -36,19 +36,20 @@
 .fx-grid,
 .fixtures-layout {
   display: flex;
+  flex-direction: column;
   gap: 16px;
-  align-items: flex-start;
+  align-items: stretch;
+}
+.fixtures,
+.fixtures-card {
+  flex: 0 0 auto;
+  min-width: 0;
+  padding: 16px;
 }
 .group-tables,
 .standings-card {
   flex: 1;
   min-width: 0;
-}
-.fixtures,
-.fixtures-card {
-  flex: 0 0 380px;
-  min-width: 0;
-  padding: 16px;
 }
 .group-tables__scroll {
   max-height: 620px;
@@ -155,7 +156,7 @@
 .form-badge--d { color: var(--ink-2); background: rgba(255,255,255,.1); }
 .form-badge--l { color: var(--danger); background: rgba(255,143,143,.16); }
 
-/* ===== Fixtures list ===== */
+/* ===== Fixtures list — horizontal card strip ===== */
 .fixtures__head {
   display: flex;
   align-items: center;
@@ -171,24 +172,137 @@
   letter-spacing: .06em;
 }
 .fixtures__list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 600px;
-  overflow-y: auto;
-  padding-right: 3px;
-}
-.fixtures__daygroup + .fixtures__daygroup { margin-top: 10px; }
-.fixtures__date {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .06em;
-  color: var(--muted-2);
-  padding: 10px 4px 4px;
+  display: block;
+  padding: 4px 4px 10px;
 }
 
-/* Fixture row */
-.fixtures__list { gap: 8px; }
+/* Group sections (group stage rounds) */
+.fixtures__group {
+  margin-bottom: 20px;
+}
+.fixtures__group:last-child {
+  margin-bottom: 0;
+}
+.fixtures__group-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
+.fixtures__group-label {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -.01em;
+}
+.fixtures__group-date {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  background: rgba(255,255,255,.06);
+  border: 1px solid var(--stroke-soft);
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  letter-spacing: .02em;
+}
+
+.fixtures__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.fixtures__daygroup {
+  display: contents;
+}
+.fixtures__date {
+  display: none;
+}
+
+/* Fixture card (2-column grid, horizontal match row) */
+.fixture-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: var(--tile-2);
+  border: 1px solid var(--stroke-soft);
+}
+.fixture-card__team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.fixture-card__team--right {
+  justify-content: flex-end;
+  text-align: right;
+}
+.fixture-card__team b {
+  font-size: 17px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+.fixture-card__team--right b {
+  text-align: right;
+}
+.fixture-card__team .flag {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+}
+.fixture-card__score {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink);
+  flex: 0 0 auto;
+  text-align: center;
+  letter-spacing: -.02em;
+}
+.fixture-card__time {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink-2);
+  flex: 0 0 auto;
+  text-align: center;
+  min-width: 56px;
+}
+.fixture-card__center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+  text-align: center;
+}
+.fixture-card__date {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--faint);
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+.fixture-card__team--win b {
+  font-weight: 800;
+  color: var(--ink);
+}
+.fixture-card__team--lose b {
+  font-weight: 600;
+  color: var(--faint);
+  opacity: 0.6;
+}
+.fixture-card__pen {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Keep old fixture-row styles for backward compat (knockout uses them) */
 .fixture-row {
   display: grid;
   grid-template-columns: 1fr 110px 1fr;
@@ -293,7 +407,7 @@
 .bracket-round {
   position: relative;
   z-index: 1;
-  width: 150px;
+  width: 190px;
   display: flex;
   flex-direction: column;
 }
@@ -339,7 +453,7 @@
   padding-top: 3px;
 }
 .bracket-node__slot b {
-  font-size: 11.5px;
+  font-size: 15px;
   font-weight: 700;
   color: #dfe3da;
   min-width: 0;
@@ -348,7 +462,7 @@
   white-space: nowrap;
 }
 .bracket-node__score {
-  font-size: 11px;
+  font-size: 14.3px;
   font-weight: 800;
   color: var(--ink);
   margin-left: auto;
@@ -432,6 +546,7 @@
   .tab,
   .fixture-tab { white-space: nowrap; }
   .group-tables__scroll { padding: 12px; }
+  .fixtures__grid { grid-template-columns: 1fr; }
   /* hide low-priority columns on mobile */
   .group__cols,
   .table-row {
