@@ -57,7 +57,7 @@ def fetch_jwks():
         return {"keys": _jwks_cache["keys"]}
 
     try:
-        response = httpx.get(supabase_jwks_url, timeout=5)
+        response = httpx.get(supabase_jwks_url, timeout=5, trust_env=False)
         response.raise_for_status()
         jwks = response.json()
     except Exception as exc:
@@ -126,6 +126,7 @@ def decode_supabase_token(token):
             audience=supabase_audience,
             issuer=supabase_issuer,
             options={"require": ["exp", "sub"]},
+            leeway=30,
         )
     except InvalidTokenError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token") from exc
