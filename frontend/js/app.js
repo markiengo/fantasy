@@ -888,6 +888,22 @@ async function boot() {
     return;
   }
 
+  const signOutBtn = document.getElementById("signOutBtn");
+  if (signOutBtn) {
+    signOutBtn.addEventListener("click", async () => {
+      try {
+        if (Api.isDemo()) {
+          Api.clearDemoToken();
+        } else {
+          await window.signOut();
+        }
+        window.location.reload();
+      } catch (error) {
+        Toast.show(error.message || "Sign out failed", "error");
+      }
+    });
+  }
+
   if (Api.isDemo()) {
     await swapToApp();
     return;
@@ -912,22 +928,6 @@ async function boot() {
     }
     showLoginScreen();
     return;
-  }
-
-  const signOutBtn = document.getElementById("signOutBtn");
-  if (signOutBtn) {
-    signOutBtn.addEventListener("click", async () => {
-      try {
-        if (Api.isDemo()) {
-          Api.clearDemoToken();
-        } else {
-          await window.signOut();
-        }
-        window.location.reload();
-      } catch (error) {
-        Toast.show(error.message || "Sign out failed", "error");
-      }
-    });
   }
 
   await swapToApp();
