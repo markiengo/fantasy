@@ -24,18 +24,9 @@ const Fixtures = (() => {
 
   function kickoff(match) {
     if (match.kickoff) {
-      const iso = match.kickoff;
-      const t = iso.split("T")[1];
-      if (t) {
-        const h = parseInt(t.slice(0, 2), 10);
-        const m = t.slice(3, 5);
-        const ampm = h >= 12 ? "PM" : "AM";
-        const h12 = h % 12 || 12;
-        return `${h12}:${m} ${ampm}`;
-      }
-      const date = new Date(iso);
+      const date = new Date(match.kickoff);
       if (!Number.isNaN(date.getTime())) {
-        return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" });
+        return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
       }
     }
     const slots = ["18:00", "21:00", "00:00", "03:00"];
