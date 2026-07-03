@@ -176,7 +176,7 @@
   font-size: 13px;
   font-weight: 700;
   color: var(--muted);
-  background: rgba(255,255,255,.05);
+  background: var(--control-bg);
   border: 1px solid var(--stroke-soft);
   transition: background var(--dur-fast) var(--ease-spring), color var(--dur-fast) var(--ease-spring), transform 100ms var(--ease-spring);
 }
@@ -283,7 +283,7 @@
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--stroke-mid);
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0,0,0,.4);
+  box-shadow: var(--shadow-panel);
   padding: 10px 14px;
   font-size: 13px;
   font-family: var(--font-body);
@@ -291,8 +291,8 @@
   white-space: nowrap;
   opacity: 0;
   transition: opacity 120ms var(--ease);
-  transform: translate(-50%, -100%);
-  margin-top: -10px;
+  transform: none;
+  margin-top: 0;
 }
 
 .dash-tooltip.is-visible { opacity: 1; }
@@ -365,7 +365,7 @@
   gap: 6px;
   padding: 4px 10px;
   border-radius: var(--r-pill);
-  background: rgba(255,255,255,.04);
+  background: var(--tile);
   border: 1px solid var(--stroke-soft);
   font-size: 11px;
   font-weight: 700;
@@ -374,7 +374,7 @@
   transition: background var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease);
 }
 
-.scatter-legend__item:hover { background: rgba(255,255,255,.08); }
+.scatter-legend__item:hover { background: var(--control-bg-strong); }
 .scatter-legend__item.is-off { opacity: 0.4; }
 
 .scatter-legend__dot {
@@ -402,7 +402,7 @@
   position: absolute;
   inset: 27px;
   border-radius: 50%;
-  background: #111411;
+  background: var(--gauge-well);
   border: 1px solid var(--stroke-soft);
   pointer-events: none;
 }
@@ -459,8 +459,8 @@
   flex: 0 0 auto;
   border-radius: 999px 999px 0 0;
   background:
-    radial-gradient(circle at 50% 100%, #111411 0 42%, transparent 43%),
-    conic-gradient(from 270deg at 50% 100%, var(--blue) 0 112deg, rgba(255,255,255,.08) 112deg 180deg, transparent 180deg 360deg);
+    radial-gradient(circle at 50% 100%, var(--gauge-well) 0 42%, transparent 43%),
+    conic-gradient(from 270deg at 50% 100%, var(--blue) 0 112deg, var(--gauge-track) 112deg 180deg, transparent 180deg 360deg);
 }
 
 /* ── Bars (existing, kept for compatibility) ─────────────────────────────── */
@@ -595,7 +595,7 @@
   height: 7px;
   overflow: hidden;
   border-radius: var(--r-pill);
-  background: rgba(255,255,255,.07);
+  background: var(--control-bg-strong);
 }
 .value-bar {
   height: 100%;
@@ -609,8 +609,10 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 400px;
+  max-height: 600px;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .xfer-md-group {
@@ -629,7 +631,7 @@
   transition: background var(--dur-fast) var(--ease);
 }
 .xfer-md-header:hover {
-  background: rgba(255,255,255,.04);
+  background: var(--tile);
 }
 .xfer-md-header__label {
   font-size: 13px;
@@ -640,7 +642,7 @@
   font-size: 11px;
   font-weight: 700;
   color: var(--muted);
-  background: rgba(255,255,255,.06);
+  background: var(--control-bg);
   padding: 2px 8px;
   border-radius: var(--r-pill);
 }
@@ -764,3 +766,16 @@
   .dashboard-hero .big { font-size: 36px; }
   .dash .panel { border-radius: var(--r-lg); }
 }
+
+
+:root[data-theme="light"] .dash-md-tab.is-active {
+  background: var(--blue);
+  color: var(--bg);
+}
+
+:root[data-theme="light"] .delta--up,
+:root[data-theme="light"] .big--accent {
+  color: var(--blue);
+}
+
+

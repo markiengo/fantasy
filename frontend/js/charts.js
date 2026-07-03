@@ -31,10 +31,29 @@ const Charts = (() => {
   }
 
   function showTooltip(tip, x, y, html) {
+    const gutter = 12;
+    const offset = 14;
+
     tip.innerHTML = html;
     tip.classList.add("is-visible");
-    tip.style.left = x + "px";
-    tip.style.top = y + "px";
+    tip.style.left = "0px";
+    tip.style.top = "0px";
+
+    const rect = tip.getBoundingClientRect();
+    const maxLeft = Math.max(gutter, window.innerWidth - rect.width - gutter);
+    const preferredLeft = x - (rect.width / 2);
+    const left = Math.min(Math.max(gutter, preferredLeft), maxLeft);
+
+    let top = y - rect.height - offset;
+    if (top < gutter) {
+      top = y + offset;
+    }
+
+    const maxTop = Math.max(gutter, window.innerHeight - rect.height - gutter);
+    top = Math.min(Math.max(gutter, top), maxTop);
+
+    tip.style.left = left + "px";
+    tip.style.top = top + "px";
   }
 
   function hideTooltip(tip) {
@@ -715,3 +734,4 @@ const Charts = (() => {
     donut: donut,
   };
 })();
+

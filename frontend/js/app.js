@@ -97,6 +97,52 @@ const SCREEN_COPY = {
   leaderboard: { eyebrow: "COMPETITION", title: "Global leaderboard" },
 };
 
+const THEME_KEY = "gaffer_theme";
+
+function readStoredTheme() {
+  try {
+    return localStorage.getItem(THEME_KEY) === "light" ? "light" : "dark";
+  } catch (e) {
+    return document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
+  }
+}
+
+function applyTheme(theme) {
+  const nextTheme = theme === "light" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", nextTheme);
+  updateThemeToggle(nextTheme);
+}
+
+function persistTheme(theme) {
+  try {
+    localStorage.setItem(THEME_KEY, theme);
+  } catch (e) {
+    // Ignore storage failures and keep the current session theme.
+  }
+}
+
+function updateThemeToggle(theme) {
+  const btn = document.getElementById("themeToggle");
+  if (!btn) return;
+  const isLight = theme === "light";
+  const nextLabel = isLight ? "Switch to dark mode" : "Switch to light mode";
+  btn.classList.toggle("is-active", isLight);
+  btn.setAttribute("aria-pressed", String(isLight));
+  btn.setAttribute("aria-label", nextLabel);
+  btn.setAttribute("title", nextLabel);
+}
+
+function bindThemeToggle() {
+  const btn = document.getElementById("themeToggle");
+  if (!btn || btn.dataset.bound === "1") return;
+  btn.dataset.bound = "1";
+  updateThemeToggle(readStoredTheme());
+  btn.addEventListener("click", () => {
+    const nextTheme = readStoredTheme() === "light" ? "dark" : "light";
+    persistTheme(nextTheme);
+    applyTheme(nextTheme);
+  });
+}
 function todayDateOnly() {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -662,6 +708,7 @@ function hideGuestBanner() {
 
 async function boot() {
   State.load();
+  applyTheme(readStoredTheme());
 
   window.addEventListener("beforeunload", () => {
     if (sessionStorage.getItem("gaffer_no_persist") === "1") {
@@ -903,6 +950,7 @@ async function continueBoot() {
   bindMatchdayNav();
   bindUpdateData();
   bindHelpButtons();
+  bindThemeToggle();
   initTeamMobileTabs();
   setTeamPane(_teamPane);
 
@@ -983,5 +1031,6 @@ if (document.readyState === "loading") {
 } else {
   boot();
 }
+
 
 

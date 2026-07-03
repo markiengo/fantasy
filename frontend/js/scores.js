@@ -25,9 +25,15 @@ const Scores = (() => {
   };
 
   function mdLabel(md) {
-    if (md <= 3) return "MD" + md;
-    const names = { 4: "R32", 5: "R16", 6: "QF", 7: "SF", 8: "F" };
-    return names[md] || "MD" + md;
+    if (md === 1) return "Round 1";
+    if (md === 2) return "Round 2";
+    if (md === 3) return "Round 3";
+    if (md === 4) return "Round of 32";
+    if (md === 5) return "Round of 16";
+    if (md === 6) return "Quarterfinals";
+    if (md === 7) return "Semifinals";
+    if (md === 8) return "Final";
+    return "Round " + md;
   }
 
   /* ── Data loading ──────────────────────────────────────────────────────── */
@@ -562,3 +568,5 @@ const Scores = (() => {
 
   return { init: init, render: refresh, refresh: refresh };
 })();
+
+
