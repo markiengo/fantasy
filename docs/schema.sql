@@ -40,6 +40,8 @@ CREATE TABLE public.match (
   date date NOT NULL,
   team1_score integer,
   team2_score integer,
+  team1_penalty_score integer,
+  team2_penalty_score integer,
   kickoff timestamp with time zone,
   bracket_order integer,
   CONSTRAINT match_pkey PRIMARY KEY (match_id),
