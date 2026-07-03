@@ -923,8 +923,7 @@ async function boot() {
         } else {
           await window.signOut();
         }
-        _booted = false;
-        swapToLogin();
+        window.location.reload();
       } catch (error) {
         Toast.show(error.message || "Sign out failed", "error");
       }
