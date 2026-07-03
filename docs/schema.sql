@@ -76,6 +76,7 @@ CREATE TABLE public.squadplayer (
   squadplayer_id integer NOT NULL DEFAULT nextval('squadplayer_squadplayer_id_seq'::regclass),
   squad_id integer NOT NULL,
   player_id integer NOT NULL,
+  is_captain boolean DEFAULT false,
   CONSTRAINT squadplayer_pkey PRIMARY KEY (squadplayer_id),
   CONSTRAINT fk_sp_squad FOREIGN KEY (squad_id) REFERENCES public.squad(squad_id),
   CONSTRAINT fk_sp_player FOREIGN KEY (player_id) REFERENCES public.player(player_id),

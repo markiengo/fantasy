@@ -1,243 +1,260 @@
 # SRS - World Cup Fantasy Football 2026
-**Version:** 2.0  
-**Author:** Tân  
-**Last Updated:** 2026-06-25
 
----
+**Version:** 3.1
+**Author:** Tan
+**Last updated:** 2026-07-03
 
 ## 1. Introduction
 
-### 1.1 Overview
-Web app: build đội hình 11 cầu thủ trong budget, tích điểm mỗi matchday dựa thành tích thực tế, thực hiện tối đa 5 transfer giữa các vòng đấu.
+### 1.1 Product Summary
 
-### 1.2 System Scope
-- Backend: FastAPI + Supabase (PostgreSQL) + psycopg2 (raw SQL)
-- Frontend: Vanilla HTML/CSS/JS
-- Multi-user với Supabase JWT auth (email/Google sign-in)
-- Match stats từ ESPN API hoặc manual entry
+World Cup Fantasy Football 2026 is a web app where authenticated users build an 11-player squad, assign a captain, make limited matchday transfers, and score points from real match data.
+
+### 1.2 Scope
+
+- Backend: FastAPI, raw SQL through psycopg2, Supabase-hosted PostgreSQL.
+- Identity: Supabase Auth JWTs.
+- Authorization: FastAPI dependencies and database queries scoped by local `users.user_id`.
+- Frontend: Vanilla HTML, CSS, and JavaScript served by the same FastAPI process.
+- Data: ESPN score/stat ingestion plus seed scripts for teams, players, tournament squads, and demo managers.
 
 ### 1.3 Assumptions
-- Player data seed từ ESPN roster API + Wikipedia squad lists (canonical cho `in_tournament`)
-- Match stats nhập sau mỗi matchday qua ESPN API hoặc manual entry
-- v1 scoring: standard fantasy points
-- Identity từ verified JWT bearer token, không hardcode `user_id`
 
-### 1.4 Out of Scope
-- Real-time live score updates
-- Biến động giá cầu thủ
-- Captain / vice-captain multiplier
-- Scoring multiplier phức tạp hơn (v2)
+- Supabase Auth is the identity provider.
+- Local `users` rows store app-specific username, display name, role, active state, and `auth_user_id`.
+- Raw player stats are loaded after matches complete.
+- `playerstat.score` stores the base score; captain x2 is applied during reads.
+- Demo users are presentation/testing data, not a production security model.
 
----
+### 1.4 Out Of Scope
 
-## 2. Use Cases
+- Real-time live scoring.
+- Dynamic player prices.
+- Vice captain.
+- Paid league/private league mechanics.
+- Full production observability and rate limiting.
+
+## 2. Architecture
+
+```mermaid
+flowchart LR
+  Browser[Browser: vanilla HTML/CSS/JS] -->|REST /api + bearer token| FastAPI[FastAPI app]
+  Browser -->|sign in/sign up| SupabaseAuth[Supabase Auth]
+  FastAPI -->|JWKS fetch/cache| SupabaseAuth
+  FastAPI -->|psycopg2 raw SQL| Postgres[Supabase Postgres]
+  FastAPI -->|admin load stats| ESPN[ESPN public soccer API]
+  Tools[Seed and verification scripts] --> Postgres
+  Tools --> SupabaseAuth
+```
+
+### 2.1 Runtime Components
+
+| Component | Responsibility |
+|---|---|
+| `frontend/` | App shell, auth UI, squad builder, fixtures, stats, leaderboard, mock fallback. |
+| `app/main.py` | FastAPI assembly, CORS middleware, `/api` routers, static frontend mount. |
+| `app/auth.py` | Bearer parsing, Supabase JWT verification, JWKS cache, local user lookup/create. |
+| `app/permissions.py` | Admin gate. |
+| `app/database.py` | Threaded psycopg2 connection pool and transaction dependency. |
+| `app/routers/*` | HTTP request handling and auth dependency boundaries. |
+| `app/queries/*` | Raw SQL reads/writes. |
+| `app/core/*` | Scoring and game-rule validation. |
+| `app/services/stat_loader.py` | ESPN-to-database stats pipeline. |
+| `tools/*` | One-off and repeatable seed/load/verify scripts. |
+
+## 3. Auth And Authorization
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant FE as Frontend
+  participant SA as Supabase Auth
+  participant API as FastAPI
+  participant DB as Postgres
+
+  U->>FE: Sign in
+  FE->>SA: Email/password or OAuth
+  SA-->>FE: Access token
+  FE->>API: Authorization: Bearer token
+  API->>SA: Fetch JWKS if cache is cold
+  API->>API: Verify issuer, audience, exp, sub
+  API->>DB: SELECT users WHERE auth_user_id = sub
+  alt first login
+    API->>DB: INSERT local users row
+  end
+  API->>API: Check is_active and route role rules
+  API-->>FE: Scoped response
+```
+
+Authorization decisions:
+
+- User-owned routes use `current_user["user_id"]`.
+- Client-supplied `user_id` is not accepted for squad, transfer, analytics, or profile routes.
+- `/api/load-stats` requires `role = 'admin'`.
+- Leaderboard is shared but still authenticated and filters inactive users.
+
+## 4. Use Cases
 
 | ID | Actor | Use Case | Description |
 |---|---|---|---|
-| UC-01 | User | View player list | Filter theo vị trí, đội, giá |
-| UC-02 | User | Build squad | Pick 11 cầu thủ trong budget |
-| UC-03 | User | View current squad | Xem squad với giá và vị trí |
-| UC-04 | User | Make transfer | Swap một cầu thủ trong transfer window |
-| UC-05 | User | View transfer history | Theo matchday |
-| UC-06 | User | View fixtures | Lịch thi đấu vòng hiện tại và sắp tới |
-| UC-07 | User | View matchday score | Điểm squad theo từng matchday |
-| UC-08 | User | View score breakdown | Đóng góp điểm từng cầu thủ mỗi vòng |
-| UC-09 | User | View points chart | Biểu đồ điểm tích lũy |
-| UC-10 | User | View budget | Budget còn lại và số transfer còn lại |
-| UC-11 | System | Calculate score | Tự động tính khi insert stats |
-| UC-12 | System | Lock transfers | Khóa transfer khi matchday kickoff |
-| UC-13 | System | Validate squad | Formation, budget, team limit trước khi lưu |
+| `UC-01` | Visitor/User | View player list | Browse and filter tournament players. |
+| `UC-02` | User | Sign up/sign in | Authenticate through Supabase Auth. |
+| `UC-03` | User | Build squad | Pick 11 players under game constraints. |
+| `UC-04` | User | Assign captain | Choose one squad player for x2 scoring. |
+| `UC-05` | User | View squad | Read exact or inherited squad for a matchday. |
+| `UC-06` | User | Make transfer | Swap one player in/out before the lock. |
+| `UC-07` | User | View transfer history | See prior transfers by matchday. |
+| `UC-08` | User | View fixtures | Browse matches, stages, dates, scorelines. |
+| `UC-09` | User | View score | See cumulative and matchday squad score. |
+| `UC-10` | User | View score composition | Understand goals, assists, clean sheets, minutes, cards. |
+| `UC-11` | User | View leaderboard | Compare active users overall or by matchday, and see most-picked players per matchday. |
+| `UC-12` | Admin | Load stats | Update scorelines and player stats from ESPN. |
+| `UC-13` | Operator | Seed demo users | Create presentation accounts and squads. |
 
----
+## 5. Functional Requirements
 
-## 3. Functional Requirements
-
-### 3.1 Squad Management
-
-| ID | Yêu cầu | UC |
+| ID | Requirement | Use Cases |
 |---|---|---|
-| FR-01 | Filter players theo vị trí, đội, giá | UC-01 |
-| FR-02 | Pick 11 cầu thủ để build squad | UC-02 |
-| FR-03 | Formation: 4-3-3 hoặc 4-4-2 (1 GK, 4 DEF, 3/4 MID, 3/2 FWD) | UC-02, UC-13 |
-| FR-04 | Tổng giá ≤ $50M | UC-02, UC-13 |
-| FR-05 | Max 3 cầu thủ cùng đội tuyển | UC-02, UC-13 |
-| FR-06 | Xem squad hiện tại với giá và vị trí | UC-03 |
+| `FR-01` | The app shall list players filtered by name, position, team, and max price. | `UC-01` |
+| `FR-02` | The app shall support Supabase email/password and OAuth auth through the frontend. | `UC-02` |
+| `FR-03` | The backend shall verify bearer JWTs before protected route access. | `UC-02` |
+| `FR-04` | The backend shall map JWT `sub` to local `users.auth_user_id`. | `UC-02` |
+| `FR-05` | The app shall create squads for the authenticated user only. | `UC-03` |
+| `FR-06` | The app shall require exactly one captain on squad creation. | `UC-04` |
+| `FR-07` | The app shall return the latest prior squad when a requested matchday has no exact squad. | `UC-05` |
+| `FR-08` | The app shall let users make at most 5 transfers per matchday. | `UC-06` |
+| `FR-09` | The app shall lock transfers 1 hour before first kickoff of the matchday. | `UC-06` |
+| `FR-10` | The app shall maintain transfer history by user and matchday. | `UC-07` |
+| `FR-11` | The app shall expose fixtures and scorelines by matchday/stage. | `UC-08` |
+| `FR-12` | The app shall compute squad analytics from stored player stats. | `UC-09` |
+| `FR-13` | The app shall apply captain x2 at score-read time. | `UC-09` |
+| `FR-14` | The app shall expose score composition by scoring category. | `UC-10` |
+| `FR-15` | The app shall expose leaderboard rankings for active users. | `UC-11` |
+| `FR-16` | The app shall expose available leaderboard matchdays. | `UC-11` |
+| `FR-17` | The app shall restrict stat loading to admin users. | `UC-12` |
+| `FR-18` | The app shall support deterministic demo-user seeding and verification. | `UC-13` |
+| `FR-19` | The app shall expose popular player picks per matchday, including pick count, pick rate, and captain count. | `UC-11` |
 
-### 3.2 Transfers
+## 6. Game Rules
 
-| ID | Yêu cầu | UC |
-|---|---|---|
-| FR-07 | Max 5 transfer mỗi matchday window | UC-04 |
-| FR-08 | Giá bán cộng lại vào budget | UC-04 |
-| FR-09 | Giá mua trừ khỏi budget | UC-04 |
-| FR-10 | Transfer khóa khi matchday kickoff | UC-12 |
-| FR-11 | Transfer chưa dùng không tích lũy sang vòng sau | UC-04 |
-| FR-12 | Hiển thị transfer còn lại và budget trước khi confirm | UC-10 |
-
-### 3.3 Scoring
-
-| ID | Yêu cầu | UC |
-|---|---|---|
-| FR-13 | Tính điểm từng cầu thủ từ stats thực tế sau mỗi matchday | UC-11 |
-| FR-14 | Bảng điểm v1 (xem §8 API.md) | UC-11 |
-| FR-15 | Điểm matchday = tổng điểm 11 cầu thủ trong squad | UC-07 |
-| FR-16 | Điểm tích lũy = tổng tất cả matchday | UC-07 |
-| FR-17 | Scoring algorithm swappable không ảnh hưởng endpoints | UC-11 |
-
-### 3.4 Stats & Reporting
-
-| ID | Yêu cầu | UC |
-|---|---|---|
-| FR-18 | Xem tổng điểm và breakdown theo từng matchday | UC-07, UC-08 |
-| FR-19 | Xem biểu đồ điểm tích lũy | UC-09 |
-| FR-20 | Xem đóng góp điểm từng cầu thủ mỗi vòng | UC-08 |
-| FR-21 | Xem budget còn lại | UC-10 |
-
-### 3.5 Fixtures
-
-| ID | Yêu cầu | UC |
-|---|---|---|
-| FR-22 | Xem lịch thi đấu vòng hiện tại và sắp tới | UC-06 |
-| FR-23 | Hiển thị: hai đội, ngày giờ, group stage label | UC-06 |
-
-### 3.6 Data Pipeline
-
-| ID | Yêu cầu |
+| ID | Rule |
 |---|---|
-| FR-24 | Player data (tên, vị trí, đội, giá) seed vào DB |
-| FR-25 | Match data (hai đội, matchday, stage) seed vào DB |
-| FR-26 | Match stats nhập qua manual entry, ESPN script, hoặc bulk endpoint |
-| FR-27 | Raw stats lưu riêng biệt với computed score |
+| `GR-01` | Budget cap is $50M. |
+| `GR-02` | Squad size is exactly 11 players. |
+| `GR-03` | Valid formations are 4-3-3 and 4-4-2. |
+| `GR-04` | A squad may include at most 3 players from the same national team. |
+| `GR-05` | A user may make at most 5 transfers per matchday. |
+| `GR-06` | Player prices are fixed in v1. |
+| `GR-07` | Transfer window locks 1 hour before first kickoff. |
+| `GR-08` | Scores count after stats exist in `playerstat`. |
+| `GR-09` | Captain points are doubled during analytics and leaderboard reads. |
+| `GR-10` | Squad reads inherit the most recent prior squad. |
 
----
+## 7. Data Model
 
-## 4. Game Rules
+Existing diagrams:
 
-| ID | Quy tắc |
-|---|---|
-| GR-01 | Budget: $50M |
-| GR-02 | Squad: đúng 11 cầu thủ |
-| GR-03 | Formation: 4-3-3 hoặc 4-4-2 |
-| GR-04 | Max 3 cầu thủ cùng đội tuyển |
-| GR-05 | Max 5 transfer mỗi matchday |
-| GR-06 | Giá cố định trong v1 — giá bán = giá mua |
-| GR-07 | Transfer khóa khi matchday kickoff |
-| GR-08 | Điểm chỉ tính sau khi stats có trong DB |
-| GR-09 | Scoring formula versioned và swappable (v1 = standard, v2 = TBD) |
+- `docs/ERD.png`
+- `docs/DBdesign.jpg`
 
----
-
-## 5. Data Design
-
-### 5.1 ER Diagram
-
-![ERD](ERD.png)
-
-### 5.2 Database Schema
-
-![DB Design](DBdesign.jpg)
-
-### 5.3 Entities
-
-| Entity | Key Attributes |
-|---|---|
-| **users** | user_id, username, auth_user_id, display_name, role, is_active, created_at |
-| **team** | team_id, name, fifa_ranking, elo_rating, group_stage |
-| **player** | player_id, espn_id, name, position, team_id, base_price, in_tournament |
-| **match** | match_id, team1_id, team2_id, matchday, stage, date, kickoff, team1_score, team2_score |
-| **playerstat** | stat_id, player_id, match_id, goals, assists, minutes_played, yellow_cards, red_cards, clean_sheet, score (derived) |
-| **squad** | squad_id, user_id, matchday, budget_used, created_at |
-| **squadplayer** | squadplayer_id, squad_id, player_id |
-| **transfer** | transfer_id, user_id, player_in_id, player_out_id, matchday |
-
-### 5.4 Key Relationships
-
-- `users` 1:N `squad` — một squad per matchday
-- `squad` 1:N `squadplayer` — đúng 11 per squad
-- `player` 1:N `squadplayer` — player có thể xuất hiện trong nhiều squad
-- `player` 1:N `playerstat` — một stat row per match
-- `match` 1:N `playerstat` — một match generates nhiều stats
-- `users` 1:N `transfer` — một user có nhiều transfer records
-- `team` 1:N `player` — một team có nhiều players
-
-### 5.5 Key Constraints
-
-- `UNIQUE (user_id, matchday)` on `squad`
-- `UNIQUE (player_id, match_id)` on `playerstat`
-- `UNIQUE (squad_id, player_id)` on `squadplayer`
-- `UNIQUE (espn_id)` on `player`
-- `CHECK (position IN ('GK', 'DEF', 'MID', 'FWD'))` on `player`
-- `in_tournament boolean DEFAULT false` on `player` — chỉ rows `true` xuất hiện trong player pool. Nguồn: Wikipedia 2026 FIFA World Cup squads.
-
----
-
-## 6. Tech Stack
-
-### 6.1 Stack
-
-| Layer | Technology |
-|---|---|
-| Backend | FastAPI (Python) |
-| Database | Supabase (hosted PostgreSQL) |
-| DB Driver | psycopg2 (raw SQL) |
-| Frontend | Vanilla HTML / CSS / JS |
-
-### 6.2 Python Libraries
-
-| Library | Purpose |
-|---|---|
-| `fastapi` | Web framework |
-| `uvicorn` | ASGI server |
-| `psycopg2-binary` | PostgreSQL driver |
-| `python-dotenv` | Load `.env` credentials |
-| `pydantic` | Request/response validation (v2) |
-| `PyJWT` | Verify Supabase JWT tokens |
-| `cryptography` | JWT key decoding (RS256 + ES256) |
-| `httpx` | HTTP client cho JWKS fetch |
-| `beautifulsoup4` | Parse Wikipedia squad HTML |
-
-### 6.3 Project Structure
-
-```
-fantasy-wc/
-├── app/
-│   ├── main.py         # FastAPI entry point, static frontend mount
-│   ├── auth.py         # Supabase JWT verification (RS256 + ES256)
-│   ├── permissions.py  # require_admin helper
-│   ├── database.py     # get_db() dependency, psycopg2 + RealDictCursor
-│   ├── schemas.py      # Pydantic request models
-│   ├── routers/        # API route handlers
-│   ├── queries/        # Raw SQL query functions
-│   ├── services/       # Backend services (stat loading)
-│   └── core/
-│       ├── scoring.py     # calculate_score()
-│       └── validation.py  # Squad and transfer rules
-├── frontend/           # HTML/CSS/JS frontend
-├── tools/
-│   ├── espn_client.py  # ESPN API wrapper
-│   ├── run-once/       # Pre-tournament setup scripts
-│   ├── repeat/         # Repeatable during tournament
-│   └── maps/           # ESPN ID -> DB ID maps
-├── tests/
-├── .env                # Supabase credentials (never commit)
-├── requirements.txt
-└── docs/
+```mermaid
+erDiagram
+  users ||--o{ squad : owns
+  users ||--o{ transfers : makes
+  squad ||--|{ squadplayer : contains
+  player ||--o{ squadplayer : selected
+  player ||--o{ playerstat : earns
+  match ||--o{ playerstat : records
+  team ||--o{ player : has
+  team ||--o{ match : team1
+  team ||--o{ match : team2
 ```
 
----
+| Entity        | Owns                                                                              |
+| ---------------| -----------------------------------------------------------------------------------|
+| `users`       | Local app identity, username, display name, role, active state, Supabase auth id. |
+| `team`        | National team metadata.                                                           |
+| `player`      | Player catalog, ESPN id, position, price, tournament eligibility.                 |
+| `match`       | Fixture schedule, stage, kickoff, scoreline, bracket order.                       |
+| `playerstat`  | Per-player per-match raw stats and stored base score.                             |
+| `squad`       | User squad header per matchday.                                                   |
+| `squadplayer` | Squad membership and captain flag.                                                |
+| `transfers`   | User transfer audit rows.                                                         |
 
-## 7. Glossary
+## 8. Scoring And Stat Loading
 
-| Term | Definition |
+```mermaid
+sequenceDiagram
+  participant Admin
+  participant API as POST /api/load-stats
+  participant Loader as stat_loader
+  participant ESPN
+  participant DB as Postgres
+
+  Admin->>API: date/range/dry_run
+  API->>API: require_admin(current_user)
+  API->>Loader: load_stats()
+  Loader->>ESPN: scoreboard dates
+  Loader->>ESPN: match summaries
+  Loader->>DB: update match scoreline
+  Loader->>DB: insert playerstat rows
+  Loader->>DB: advance knockout winner
+  Loader-->>API: summary counts
+  API-->>Admin: JSON summary
+```
+
+Base score is stored for fast reads. Captain multipliers are applied in SQL at read time so captain changes and score aggregation logic remain visible.
+
+## 9. Non-Functional Requirements
+
+| ID | Requirement |
 |---|---|
-| Matchday | Một vòng đấu World Cup trong cùng period |
-| Squad | Đội hình 11 cầu thủ cho một matchday |
-| Transfer | Swap một cầu thủ trong transfer window |
-| Transfer window | Khoảng thời gian giữa hai matchday khi được phép thay đổi squad |
-| Budget | Tiền ảo mua cầu thủ ($50M default) |
-| Score | Điểm tích lũy của cầu thủ trong một match, tính bởi scoring engine |
-| Scoring engine | Module tính điểm từ raw stats |
-| Seed | Nhập dữ liệu ban đầu vào database |
-| Stage | Giai đoạn giải đấu: Group Stage, R32, R16, QF, SF, Final |
-| Raw SQL | SQL trực tiếp trong Python, không ORM |
+| `NFR-01` | Protected routes must derive ownership from verified backend auth context. |
+| `NFR-02` | SQL that includes user input must use parameters, not string interpolation. |
+| `NFR-03` | Public catalog endpoints should remain fast for the tournament-sized dataset. |
+| `NFR-04` | Leaderboard and analytics should aggregate from normalized score tables without a separate materialized leaderboard in v1. |
+| `NFR-05` | Stat loading must be idempotent for repeated runs through `ON CONFLICT DO NOTHING`. |
+| `NFR-06` | Docs and API contracts must identify current security limitations plainly. |
+| `NFR-07` | Demo seeding must be deterministic enough to verify and rerun. |
+| `NFR-08` | The app should remain usable with frontend mock fallback when the backend is unreachable, but auth failures must not trigger mock fallback. |
 
+## 10. Key Design Decisions And Tradeoffs
+
+| Decision | Why | Tradeoff |
+|---|---|---|
+| Supabase Auth for identity, FastAPI for authorization | Avoid building password/OAuth security while keeping app rules in Python. | Two user concepts must stay synced: Supabase auth user and local `users` row. |
+| Backend-scoped `current_user["user_id"]` | Prevents horizontal privilege escalation through client-provided ids. | More backend dependencies on every protected route. |
+| Admin-only `/api/load-stats` | It mutates shared match and scoring state. | Admin account setup is required for demos/operations. |
+| Raw SQL | Transparent queries, easy to teach and tune. | Less ORM safety/productivity; more manual mapping and transaction discipline. |
+| Stored `playerstat.score` | Fast reads and simple analytics. | Formula changes require backfill/recompute. |
+| Leaderboard aggregate query | No stale stored leaderboard table. | Query cost grows with users/squads/stats. |
+| Popular players from squadplayer | Shows community meta without extra storage. | Pick counts reflect squads saved, not all users. |
+| Same-origin frontend serving | Simple local/deploy model. | Current code still allows broad CORS and should be tightened. |
+| Demo users | Strong presentation/testing data. | Demo credentials/tokens must be controlled before production. |
+| Mock frontend fallback | App is still inspectable without backend. | Mock mode must not hide real auth/permission errors. |
+
+## 11. Security Model
+
+- Supabase Auth owns credentials and OAuth.
+- FastAPI verifies JWTs with Supabase JWKS.
+- Local `users` owns app role and active-state authorization.
+- User-owned writes are scoped server-side.
+- Admin-only stat loading protects shared state.
+- SQL parameters reduce injection risk.
+
+Known current limits:
+
+- `demo-token` bypass exists.
+- CORS currently allows all origins.
+- Unhandled `500` responses include tracebacks.
+- Username lookup has no documented rate limit.
+- No RLS policy is documented as part of the app boundary.
+- Admin stat loads are not audit-logged.
+
+## 12. Verification Targets
+
+- `pytest tests/ -v`
+- `.\.venv\Scripts\python.exe -m pytest tests\ -q`
+- `git diff --check`
+- Route coverage should be checked against `app/main.py` and `app/routers/*`.
+- Stale docs should not point readers at removed logic notes, legacy score endpoints, or removed stat-write endpoints.

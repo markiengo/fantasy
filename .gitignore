@@ -1,4 +1,4 @@
-# ── Python ────────────────────────────────────────────────────────────────────
+# Python
 .venv/
 **/__pycache__/
 *.pyc
@@ -8,17 +8,17 @@ htmlcov/
 pytest-cache-files-*/
 *.log
 
-# ── Secrets ───────────────────────────────────────────────────────────────────
+# Secrets
 .env
 
-# ── Personal / local-only docs ────────────────────────────────────────────────
+# Personal / local-only docs
 personal/
 memory.md
 CLAUDE.md
 AGENTS.md
 PRODUCT.md
 
-# ── AI tooling ────────────────────────────────────────────────────────────────
+# AI tooling
 .agents
 .codex
 .impeccable
@@ -30,6 +30,8 @@ skills-lock.json
 .devin/
 .windsurf/
 
-# ── Design assets (large, not source) ────────────────────────────────────────
+# Design assets (large, not source)
 frontend/moodboard
-frontend/docs
+frontend/docs/*
+!frontend/docs/
+!frontend/docs/DESIGN.md
