@@ -29,19 +29,19 @@
 .login-screen__ambient .glow--lime {
   top: -180px;
   right: 8%;
-  background: rgba(198, 242, 74, .36);
+  background: var(--surface-lime-glow);
 }
 
 .login-screen__ambient .glow--blue {
   bottom: 5%;
   left: 10%;
-  background: rgba(122, 162, 255, .24);
+  background: var(--surface-blue-glow);
 }
 
 .login-screen__ambient .glow--warm {
   top: 45%;
   right: 4%;
-  background: rgba(255, 176, 108, .14);
+  background: var(--surface-warm-glow);
 }
 
 .login-screen__card {
@@ -292,3 +292,4 @@
     height: 300px;
   }
 }
+
