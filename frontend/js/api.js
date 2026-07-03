@@ -473,10 +473,42 @@ const Mock = (() => {
       }
       entries.sort((a, b) => b.score - a.score);
       for (let i = 0; i < entries.length; i++) entries[i].rank = i + 1;
+
+      const mockPlayers = [
+        { name: "Haaland", position: "FWD", team_id: "NOR", team_name: "Norway" },
+        { name: "Mbapp\\u00e9", position: "FWD", team_id: "FRA", team_name: "France" },
+        { name: "Bellingham", position: "MID", team_id: "ENG", team_name: "England" },
+        { name: "Vinicius Jr", position: "FWD", team_id: "BRA", team_name: "Brazil" },
+        { name: "Lindel\\u00f6f", position: "DEF", team_id: "SWE", team_name: "Sweden" },
+        { name: "De Paul", position: "MID", team_id: "ARG", team_name: "Argentina" },
+        { name: "Olise", position: "MID", team_id: "FRA", team_name: "France" },
+        { name: "Van Dijk", position: "DEF", team_id: "NED", team_name: "Netherlands" },
+        { name: "Kane", position: "FWD", team_id: "ENG", team_name: "England" },
+        { name: "Donnarumma", position: "GK", team_id: "ITA", team_name: "Italy" },
+      ];
+      const totalManagers = 10;
+      const popular_players = [];
+      for (let i = 0; i < mockPlayers.length; i++) {
+        const p = mockPlayers[i];
+        const pickCount = totalManagers - i;
+        popular_players.push({
+          player_id: 100 + i,
+          name: p.name,
+          position: p.position,
+          team_id: p.team_id,
+          team_name: p.team_name,
+          pick_count: pickCount,
+          pick_rate: Math.round(pickCount / totalManagers * 100 * 10) / 10,
+          captain_count: Math.max(0, 4 - i),
+        });
+      }
+
       return {
         entries: entries,
         my_user_id: 999,
         matchday: matchday || null,
+        available_matchdays: matchday ? [1, 2, 3] : [1, 2, 3],
+        popular_players: popular_players,
       };
     },
   };

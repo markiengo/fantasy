@@ -17,6 +17,11 @@ _group_order = """
     ORDER BY squad_score DESC, u.user_id ASC
 """
 
+_matchday_group_order = """
+    GROUP BY u.user_id, u.username, u.display_name, prev.prev_squad_score
+    ORDER BY squad_score DESC, u.user_id ASC
+"""
+
 
 def _cumulative_sql():
     return f"""
@@ -42,7 +47,7 @@ def _matchday_sql():
                 ON sp2.player_id = ps2.player_id
             JOIN match m2
                 ON ps2.match_id = m2.match_id AND m2.matchday = s2.matchday
-            WHERE s2.matchday = %s
+            WHERE s2.matchday <= %s
             GROUP BY s2.user_id
         )
         SELECT u.user_id, u.username, u.display_name, SUM(
@@ -51,8 +56,8 @@ def _matchday_sql():
         prev.prev_squad_score
         {_joins}
         LEFT JOIN prev ON prev.user_id = u.user_id
-        WHERE u.is_active = true AND s.matchday = %s
-        {_group_order}
+        WHERE u.is_active = true AND s.matchday <= %s
+        {_matchday_group_order}
     """
 
 
@@ -92,3 +97,83 @@ def _format_entries(rows):
 def get_leaderboard(conn, matchday=None):
     rows = _fetch_rows(conn, matchday)
     return _format_entries(rows)
+
+
+def get_leaderboard_matchdays(conn):
+    cursor = conn.cursor()
+    cursor.execute(f"""
+        SELECT DISTINCT s.matchday
+        {_joins}
+        WHERE u.is_active = true
+        ORDER BY s.matchday ASC
+    """)
+    rows = cursor.fetchall()
+    cursor.close()
+
+    matchdays = []
+    for row in rows:
+        if "matchday" in row:
+            matchdays.append(row["matchday"])
+    return matchdays
+
+
+def _latest_matchday(conn):
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT MAX(s.matchday) AS md
+        FROM squad s
+        JOIN users u ON s.user_id = u.user_id
+        WHERE u.is_active = true
+    """)
+    row = cursor.fetchone()
+    cursor.close()
+    if row and row["md"] is not None:
+        return row["md"]
+    return None
+
+
+def get_popular_players(conn, matchday, limit=10):
+    if matchday is None:
+        matchday = _latest_matchday(conn)
+    if matchday is None:
+        return []
+
+    cursor = conn.cursor()
+    cursor.execute("""
+        WITH total AS (
+            SELECT COUNT(DISTINCT s.user_id) AS n
+            FROM squad s
+            JOIN users u ON s.user_id = u.user_id
+            WHERE u.is_active = true AND s.matchday = %s
+        )
+        SELECT p.player_id, p.name, p.position, p.team_id, t.name AS team_name,
+               COUNT(*) AS pick_count,
+               ROUND(COUNT(*) * 100.0 / total.n, 1) AS pick_rate,
+               COUNT(CASE WHEN sp.is_captain THEN 1 END) AS captain_count
+        FROM squad s
+        JOIN users u ON s.user_id = u.user_id
+        JOIN squadplayer sp ON s.squad_id = sp.squad_id
+        JOIN player p ON sp.player_id = p.player_id
+        JOIN team t ON p.team_id = t.team_id
+        CROSS JOIN total
+        WHERE u.is_active = true AND s.matchday = %s
+        GROUP BY p.player_id, p.name, p.position, p.team_id, t.name, total.n
+        ORDER BY pick_count DESC, captain_count DESC, p.player_id ASC
+        LIMIT %s
+    """, (matchday, matchday, limit))
+    rows = cursor.fetchall()
+    cursor.close()
+
+    players = []
+    for row in rows:
+        players.append({
+            "player_id": row["player_id"],
+            "name": row["name"],
+            "position": row["position"],
+            "team_id": row["team_id"],
+            "team_name": row["team_name"],
+            "pick_count": row["pick_count"],
+            "pick_rate": float(row["pick_rate"]) if row["pick_rate"] is not None else 0.0,
+            "captain_count": row["captain_count"],
+        })
+    return players
