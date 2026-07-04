@@ -3,8 +3,10 @@ from app.database import get_db
 from app.auth import get_current_user
 from app.queries.squad import get_squad, get_effective_squad, create_squad
 from app.queries.player import get_player
+from app.queries.match import get_matchday_start
 from app.schemas import SquadCreate
 from app.core.validation import validate_squad, SquadValidationError
+from datetime import datetime, timezone
 import psycopg2
 
 router = APIRouter()
@@ -60,7 +62,7 @@ def post_squad_route(
             raise HTTPException(status_code = 404, detail = f"Player {player_id} not found")
         players.append(player)
 
-    validate_squad(players)
+    validate_squad(players, body.matchday)
 
     if body.captain_player_id is None:
         raise HTTPException(status_code=400, detail="Captain is required")
@@ -69,8 +71,15 @@ def post_squad_route(
 
     budget_used = sum(p["base_price"] for p in players)
 
+    first_kickoff = get_matchday_start(conn, body.matchday)
+    time_left = 0
+    if first_kickoff is not None:
+        now_utc = datetime.now(timezone.utc)
+        diff_seconds = (first_kickoff - now_utc).total_seconds()
+        time_left = max(diff_seconds / 3600, 0)
+
     try:
-        create_squad(conn, user_id, body.matchday, budget_used, body.player_ids, body.captain_player_id)
+        create_squad(conn, user_id, body.matchday, budget_used, body.player_ids, body.captain_player_id, time_left)
     except psycopg2.errors.UniqueViolation:
         conn.rollback()
         raise HTTPException(status_code = 400, detail = "Squad already exists for this matchday")

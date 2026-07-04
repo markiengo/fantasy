@@ -26,7 +26,7 @@ def get_transfers(conn, user_id, matchday = None):
     cursor.close()
     return results
 
-def post_transfer(conn, user_id, player_in_id, player_out_id, matchday):
+def post_transfer(conn, user_id, player_in_id, player_out_id, matchday, first_kickoff=None):
     cursor = conn.cursor()
     try:
         # If no squad exists for this matchday, copy forward from the most recent prior one.
@@ -82,6 +82,18 @@ def post_transfer(conn, user_id, player_in_id, player_out_id, matchday):
 
         cursor.execute("SELECT budget_used FROM squad WHERE squad_id = %s", (squad_id,))
         new_budget = cursor.fetchone()["budget_used"]
+
+        # Update created_at and time_left to reflect this transfer
+        from datetime import datetime, timezone
+        time_left = 0
+        if first_kickoff is not None:
+            now_utc = datetime.now(timezone.utc)
+            diff_seconds = (first_kickoff - now_utc).total_seconds()
+            time_left = max(diff_seconds / 3600, 0)
+        cursor.execute(
+            "UPDATE squad SET created_at = NOW(), time_left = %s WHERE squad_id = %s",
+            (time_left, squad_id)
+        )
 
         conn.commit()
     except Exception:

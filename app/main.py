@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+import os
 
 load_dotenv()
 
@@ -21,12 +22,21 @@ from app.core.validation import SquadValidationError
 
 app = FastAPI()
 
+def _cors_origins():
+    raw = os.getenv("CORS_ALLOW_ORIGINS", "")
+    origins = []
+    for origin in raw.split(","):
+        origin = origin.strip()
+        if origin:
+            origins.append(origin)
+    return origins
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_cors_origins(),
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 app.include_router(player.router, prefix = "/api")
@@ -52,7 +62,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     import traceback
     tb = traceback.format_exc()
     print(f"[500 ERROR] {request.method} {request.url.path}: {exc}\n{tb}")
-    return JSONResponse(status_code=500, content={"detail": str(exc), "traceback": tb})
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 # registers routes
 if __name__ == "__main__":

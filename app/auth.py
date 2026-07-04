@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import time
 
 import httpx
@@ -28,6 +29,7 @@ supabase_issuer = f"{supabase_url}/auth/v1"
 supabase_audience = os.getenv("SUPABASE_JWT_AUDIENCE", "authenticated")
 
 jwks_cache_seconds = 60 * 10
+username_regex = re.compile(r"^[a-zA-Z0-9_ ]{3,20}$")
 
 _jwks_cache = {
     "keys": None,
@@ -134,13 +136,7 @@ def decode_supabase_token(token):
     return payload
 
 
-DEMO_TOKEN = "demo-token"
-DEMO_AUTH_USER_ID = "00000000-0000-0000-0000-000000000000"
-
-
 def get_current_auth_payload(token: str = Depends(get_bearer_token)):
-    if token == DEMO_TOKEN:
-        return {"sub": DEMO_AUTH_USER_ID, "email": "demo@gaffer.com"}
     return decode_supabase_token(token)
 
 
@@ -151,7 +147,9 @@ def get_current_user(conn=Depends(get_db), payload: dict = Depends(get_current_a
     user = get_user_by_auth_id(conn, auth_user_id)
     if not user:
         user_metadata = payload.get("user_metadata") or {}
-        username = user_metadata.get("username") or email or f"user_{auth_user_id[:8]}"
+        username = (user_metadata.get("username") or "").strip()
+        if not username or not username_regex.match(username):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Username required")
         try:
             user = create_user_from_auth(conn, auth_user_id, username, username)
         except UniqueViolation:

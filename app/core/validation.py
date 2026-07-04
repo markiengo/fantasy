@@ -4,8 +4,19 @@ from decimal import Decimal
 # Rule constants
 budget_cap = Decimal("50") # GR-01, in $M
 squad_size = 11 # GR-02
-same_country_max = 3 # GR-04
 max_transfers = 5
+
+# National team limit scales by tournament stage (GR-04)
+# MD 1-4: Group Stage + R32 → 3
+# MD 5:   Round of 16       → 4
+# MD 6:   Quarter-finals     → 5
+# MD 7:   Semi-finals        → 6
+# MD 8:   Final              → 8
+_nation_limit_by_md = {1: 3, 2: 3, 3: 3, 4: 3, 5: 4, 6: 5, 7: 6, 8: 8}
+
+
+def nation_limit_for_matchday(matchday):
+    return _nation_limit_by_md.get(matchday, 3)
 
 # Allowed formations
 valid_formations = {
@@ -51,16 +62,17 @@ def validate_formation(players):
             f"Invalid formation {formation}. Must be 4-3-3 or 4-4-2."
         )
 
-### 3. GR-04: maximum 3 players per country
-def validate_nation_limit(players):
+### 3. GR-04: maximum N players per country (scales by matchday)
+def validate_nation_limit(players, matchday=None):
+    limit = nation_limit_for_matchday(matchday) if matchday else 3
     team_ids = []
     for p in players:
         team_ids.append(p["team_id"])
     counts = Counter(team_ids)
     for team_id, count in counts.items():
-        if count > same_country_max:
+        if count > limit:
             raise SquadValidationError(
-                f"Too many players from team {team_id}: {count} (max {same_country_max})"
+                f"Too many players from team {team_id}: {count} (max {limit})"
             )
 
 ### 4. check squad's value against budget cap
@@ -74,10 +86,10 @@ def validate_budget(players):
         )
 
 ### 5. wrap the squad's functions into one
-def validate_squad(players):
+def validate_squad(players, matchday=None):
     validate_squad_size(players)
     validate_formation(players)
-    validate_nation_limit(players)
+    validate_nation_limit(players, matchday)
     validate_budget(players)
 
 ## Section 2: Transfer rules

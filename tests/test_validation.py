@@ -5,7 +5,7 @@ from app.core.validation import (
     validate_squad_size, validate_formation,
     validate_nation_limit, validate_budget,
     validate_transfer_window, simulate_transfer, validate_squad,
-    SquadValidationError, budget_cap,
+    SquadValidationError, budget_cap, nation_limit_for_matchday,
 )
 
 
@@ -90,13 +90,43 @@ def test_bad_formation_raises():
 # validate_nation_limit
 
 def test_nation_limit_ok():
-    # 3 per nation OK
-    validate_nation_limit(make_players(["GK"] * 3, team_ids=[1, 1, 1]))
+    # 3 per nation OK at MD1 (group stage)
+    validate_nation_limit(make_players(["GK"] * 3, team_ids=[1, 1, 1]), matchday=1)
 
 def test_nation_limit_exceeded():
-    # 4 per nation fails
+    # 4 per nation fails at MD1 (group stage, limit=3)
     with pytest.raises(SquadValidationError):
-        validate_nation_limit(make_players(["GK"] * 4, team_ids=[1, 1, 1, 1]))
+        validate_nation_limit(make_players(["GK"] * 4, team_ids=[1, 1, 1, 1]), matchday=1)
+
+def test_nation_limit_scales_r16():
+    # 4 per nation OK at MD5 (Round of 16, limit=4)
+    validate_nation_limit(make_players(["GK"] * 4, team_ids=[1, 1, 1, 1]), matchday=5)
+
+def test_nation_limit_scales_qf():
+    # 5 per nation OK at MD6 (Quarter-finals, limit=5)
+    validate_nation_limit(make_players(["GK"] * 5, team_ids=[1, 1, 1, 1, 1]), matchday=6)
+
+def test_nation_limit_scales_sf():
+    # 6 per nation OK at MD7 (Semi-finals, limit=6)
+    validate_nation_limit(make_players(["GK"] * 6, team_ids=[1, 1, 1, 1, 1, 1]), matchday=7)
+
+def test_nation_limit_scales_final():
+    # 8 per nation OK at MD8 (Final, limit=8)
+    validate_nation_limit(make_players(["GK"] * 8, team_ids=[1] * 8), matchday=8)
+
+def test_nation_limit_exceeded_at_r16():
+    # 5 per nation fails at MD5 (R16, limit=4)
+    with pytest.raises(SquadValidationError):
+        validate_nation_limit(make_players(["GK"] * 5, team_ids=[1, 1, 1, 1, 1]), matchday=5)
+
+def test_nation_limit_helper():
+    assert nation_limit_for_matchday(1) == 3
+    assert nation_limit_for_matchday(4) == 3
+    assert nation_limit_for_matchday(5) == 4
+    assert nation_limit_for_matchday(6) == 5
+    assert nation_limit_for_matchday(7) == 6
+    assert nation_limit_for_matchday(8) == 8
+    assert nation_limit_for_matchday(99) == 3  # default fallback
 
 
 # validate_budget
@@ -176,7 +206,7 @@ def test_realistic_world_cup_squad_433():
         {"player_id": 10, "position": "FWD", "team_id": "ARG", "base_price": Decimal("6.5") * f},
         {"player_id": 11, "position": "FWD", "team_id": "GER", "base_price": Decimal("5.5") * f},
     ]
-    validate_squad(players)  # total = 0.8 * budget_cap; (BRA:3, ARG:3, FRA:2, GER:2, ENG:1)
+    validate_squad(players, matchday=1)  # total = 0.8 * budget_cap; (BRA:3, ARG:3, FRA:2, GER:2, ENG:1)
 
 def test_budget_full_squad_exactly_at_cap():
     # A full 11-player squad summing to EXACTLY the cap passes.
@@ -207,12 +237,12 @@ def test_formation_too_many_defenders():
         validate_formation(make_players(bad_formation))
 
 def test_nation_limit_exactly_three():
-    # Exactly 3 per nation OK
+    # Exactly 3 per nation OK at MD1
     players = make_players(
         ["GK", "DEF", "DEF", "DEF", "MID", "MID", "MID", "MID", "FWD", "FWD", "FWD"],
         team_ids=[1, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9]  # 3 from nation 1
     )
-    validate_nation_limit(players)  # Should pass
+    validate_nation_limit(players, matchday=1)  # Should pass
 
 def test_transfer_window_closes_at_midnight():
     # Window closes at midnight

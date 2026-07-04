@@ -50,9 +50,9 @@ def post_transfer_route(
         raise HTTPException(status_code=404, detail="No squad found. Create a squad first.")
 
     new_squad = simulate_transfer(list(squad_rows), body.player_out_id, dict(player_in))
-    validate_squad(new_squad)
+    validate_squad(new_squad, body.matchday)
 
-    transfer_id, new_budget = post_transfer(conn, user_id, body.player_in_id, body.player_out_id, body.matchday)
+    transfer_id, new_budget = post_transfer(conn, user_id, body.player_in_id, body.player_out_id, body.matchday, first_kickoff)
     result = {
         "transfer_id": transfer_id,
         "player_in_id": body.player_in_id,

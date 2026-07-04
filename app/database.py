@@ -1,5 +1,5 @@
 import psycopg2
-import threading
+import itertools
 from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
@@ -8,8 +8,7 @@ import os
 load_dotenv()
 
 _db_pool = None
-_conn_keys = {}
-_keys_lock = threading.Lock()
+_key_counter = itertools.count(1)
 
 
 def _get_pool():
@@ -25,11 +24,9 @@ def _get_pool():
 
 
 def get_db():
-    key = threading.get_ident()
+    key = next(_key_counter)
     p = _get_pool()
     conn = p.getconn(key)
-    with _keys_lock:
-        _conn_keys[id(conn)] = key
     try:
         yield conn
         conn.commit()
@@ -37,9 +34,7 @@ def get_db():
         conn.rollback()
         raise
     finally:
-        with _keys_lock:
-            stored_key = _conn_keys.pop(id(conn), key)
-        p.putconn(conn, stored_key)
+        p.putconn(conn, key)
 
 
 def close_db_pool():

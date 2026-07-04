@@ -80,6 +80,13 @@ class LoadStatsRequest(BaseModel):
     to_date: Optional[str] = None
     dry_run: bool = False
 
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class CompleteProfileRequest(BaseModel):
+    username: str
+
 
 
 

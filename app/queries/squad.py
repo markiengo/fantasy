@@ -39,14 +39,14 @@ def get_effective_squad(conn, user_id, matchday):
         return []
     return get_squad(conn, user_id, row["matchday"])
 
-def create_squad(conn, user_id, matchday, budget_used, player_ids, captain_player_id=None):
+def create_squad(conn, user_id, matchday, budget_used, player_ids, captain_player_id=None, time_left=0):
     cursor = conn.cursor()
     try:
         cursor.execute('''
-            INSERT INTO squad (user_id, matchday, budget_used)
-            VALUES (%s, %s, %s)
+            INSERT INTO squad (user_id, matchday, budget_used, time_left)
+            VALUES (%s, %s, %s, %s)
             RETURNING squad_id
-            ''', (user_id, matchday, budget_used))
+            ''', (user_id, matchday, budget_used, time_left))
         squad_id = cursor.fetchone()["squad_id"]
         
         for player_id in player_ids:
