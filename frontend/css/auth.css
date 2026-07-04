@@ -48,11 +48,11 @@
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 380px;
+  max-width: 420px;
   border-radius: var(--r-2xl);
   background: var(--panel-strong);
   border: 1px solid var(--stroke-strong);
-  box-shadow: var(--shadow-panel), 0 0 60px -16px rgba(198, 242, 74, .14);
+  box-shadow: var(--shadow-panel), 0 0 60px -16px rgba(184, 232, 80, .14);
   overflow: hidden;
   animation: loginCardIn 400ms var(--ease-spring);
 }
@@ -61,7 +61,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 30% 0%, rgba(198, 242, 74, .10) 0%, transparent 50%),
+  background: radial-gradient(circle at 30% 0%, rgba(184, 232, 80, .10) 0%, transparent 50%),
     radial-gradient(circle at 70% 100%, rgba(122, 162, 255, .06) 0%, transparent 50%);
   pointer-events: none;
 }
@@ -74,18 +74,18 @@
 .login-screen__content {
   position: relative;
   z-index: 1;
-  padding: 32px 32px 28px;
+  padding: 80px 40px 36px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
 
 .login-screen__brand {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 0;
+  justify-content: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .login-screen__brand .brand__mark {
@@ -117,20 +117,20 @@
 }
 
 .login-screen__title {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--ink);
-  text-align: center;
+  text-align: left;
   letter-spacing: -.4px;
 }
 
 .login-screen__subtitle {
   font-size: 13px;
   color: var(--muted);
-  text-align: center;
-  line-height: 1.45;
-  max-width: 300px;
-  margin: 0 auto;
+  text-align: left;
+  line-height: 1.5;
+  max-width: 320px;
+  margin: 0;
   display: none;
 }
 
@@ -195,8 +195,8 @@
   justify-content: center;
   gap: 12px;
   padding: 10px 16px;
-  background: rgba(198, 242, 74, .08);
-  border-bottom: 1px solid rgba(198, 242, 74, .2);
+  background: rgba(184, 232, 80, .08);
+  border-bottom: 1px solid rgba(184, 232, 80, .2);
   color: var(--ink);
   font-size: 13px;
   font-weight: 600;
@@ -214,7 +214,7 @@
   position: relative;
   z-index: 2;
   width: 100%;
-  max-width: 380px;
+  max-width: 420px;
   animation: loginCardIn 400ms var(--ease-spring);
 }
 
@@ -225,11 +225,11 @@
 .auth-overlay__content {
   position: relative;
   z-index: 1;
-  padding: 32px 32px 28px;
+  padding: 40px 40px 36px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
   text-align: center;
 }
 
@@ -240,7 +240,7 @@
   display: grid;
   place-items: center;
   background: var(--accent-12);
-  border: 1px solid rgba(198, 242, 74, .25);
+  border: 1px solid rgba(184, 232, 80, .25);
   color: var(--accent);
 }
 
@@ -274,13 +274,110 @@
   opacity: .65;
 }
 
+/* Username modal (Google users without username) */
+.username-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.username-modal__card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  border-radius: var(--r-2xl);
+  background: var(--panel-strong);
+  border: 1px solid var(--stroke-strong);
+  box-shadow: var(--shadow-panel), 0 0 60px -16px rgba(184, 232, 80, .14);
+  overflow: hidden;
+  animation: loginCardIn 400ms var(--ease-spring);
+}
+
+.username-modal__content {
+  position: relative;
+  z-index: 1;
+  padding: 40px 40px 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.username-modal__profile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 4px;
+}
+
+.username-modal__avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--stroke-strong);
+  flex-shrink: 0;
+}
+
+.username-modal__profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.username-modal__name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.username-modal__email {
+  font-size: 12px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.username-modal__feedback {
+  display: block;
+  min-height: 18px;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+  transition: color var(--dur-fast) var(--ease);
+}
+
+.username-modal__feedback.is-error {
+  color: #f87171;
+}
+
+.username-modal__feedback.is-ok {
+  color: var(--accent);
+}
+
+.username-modal .form-field {
+  display: flex;
+  flex-direction: column;
+}
+
 @media (max-width: 480px) {
   .login-screen {
     padding: 16px;
   }
 
   .login-screen__content {
-    padding: 24px 20px 20px;
+    padding: 28px 24px 24px;
   }
 
   .login-screen__title {
@@ -290,6 +387,14 @@
   .login-screen__ambient .glow {
     width: 300px;
     height: 300px;
+  }
+
+  .username-modal {
+    padding: 16px;
+  }
+
+  .username-modal__content {
+    padding: 28px 24px 24px;
   }
 }
 

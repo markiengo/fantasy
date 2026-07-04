@@ -5,6 +5,33 @@
   gap: 16px;
 }
 
+/* ── Section headings ──────────────────────────────────────────────────── */
+.dash-section__heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.dash-section__heading::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+.dash-section__heading::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--stroke-soft);
+}
+
 /* Pinky frosted-glass panels */
 .dash .panel {
   background: var(--chart-card-bg);
@@ -74,7 +101,7 @@
 .dashboard-hero {
   padding: 28px;
   border-color: var(--accent-18);
-  box-shadow: 0 8px 30px -16px rgba(198,242,74,.2), var(--shadow-panel);
+  box-shadow: 0 8px 30px -16px rgba(184,232,80,.2), var(--shadow-panel);
 }
 
 .dash-hero__top {
@@ -180,13 +207,13 @@
   border: 1px solid var(--stroke-soft);
   transition: background var(--dur-fast) var(--ease-spring), color var(--dur-fast) var(--ease-spring), transform 100ms var(--ease-spring);
 }
-.dash-md-tab:hover { color: var(--ink-2); background: rgba(255,255,255,.09); }
+.dash-md-tab:hover { color: var(--ink-2); background: var(--control-bg-strong); }
 .dash-md-tab:active { transform: scale(.95); }
 .dash-md-tab.is-active {
   color: var(--accent-ink);
   background: var(--accent);
   border-color: transparent;
-  box-shadow: 0 4px 12px -4px rgba(198,242,74,.4);
+  box-shadow: 0 4px 12px -4px rgba(184,232,80,.4);
 }
 .dash-md-tab--empty { opacity: .55; }
 
@@ -503,7 +530,7 @@
   padding: 5px 10px;
   border-radius: var(--r-pill);
   color: var(--blue);
-  background: rgba(122,162,255,.12);
+  background: var(--blue-18);
   font-size: 11px;
   font-weight: 800;
 }

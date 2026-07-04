@@ -67,7 +67,7 @@
 /* Hero card — accent border + glow */
 .stats-card--hero {
   border-color: var(--accent-18);
-  box-shadow: 0 8px 30px -16px rgba(198,242,74,.3), var(--shadow-panel);
+  box-shadow: 0 8px 30px -16px rgba(184,232,80,.3), var(--shadow-panel);
 }
 
 .stats-card--hero .stats-card__dot {
@@ -99,6 +99,7 @@
 .stats-row:hover {
   background: var(--control-bg-strong);
 }
+.stats-row:active { transform: scale(.98); transition: transform 100ms var(--ease-spring); }
 
 .stats-row__rank {
   flex-shrink: 0;

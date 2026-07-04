@@ -22,7 +22,7 @@
   animation-delay: 240ms;
 }
 @keyframes panelEnter {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: none; }
 }
 
@@ -89,7 +89,7 @@
 }
 
 .pool-row {
-  transition: background var(--dur-fast) var(--ease), transform 160ms var(--ease);
+  transition: background var(--dur-fast) var(--ease), transform 160ms var(--ease-spring);
 }
 .pool-row:hover {
   transform: translateX(3px);
@@ -231,9 +231,9 @@
   animation: tokenPop 360ms var(--ease-spring) both;
 }
 @keyframes tokenPop {
-  0% { opacity: 0; transform: scale(0.6); }
-  60% { transform: scale(1.08); }
-  100% { opacity: 1; transform: none; }
+  0% { opacity: 0; transform: translateX(-50%) scale(0.6); }
+  60% { transform: translateX(-50%) scale(1.08); }
+  100% { opacity: 1; transform: translateX(-50%); }
 }
 
 /* --- 5. GUIDED TOUR ------------------------------------------------------- */
@@ -280,6 +280,10 @@
   opacity: 0;
   transition: opacity 160ms var(--ease);
   z-index: 202;
+}
+
+html[lang="vi"] .tour-card {
+  max-width: 420px;
 }
 
 .tour-card.is-ready {
@@ -336,6 +340,29 @@
 
 .tour-card__next {
   margin-left: auto;
+}
+
+@keyframes tourX2Pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(184,232,80,.5); }
+  50% { transform: scale(1.15); box-shadow: 0 0 0 6px rgba(184,232,80,0); }
+}
+
+.tour-x2-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 22px;
+  padding: 0 6px;
+  margin: 0 2px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 6px;
+  vertical-align: middle;
+  animation: tourX2Pulse 1.4s ease-in-out infinite;
 }
 
 @keyframes tourSheetIn {

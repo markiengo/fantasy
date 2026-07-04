@@ -2,24 +2,27 @@
   color-scheme: dark;
 
   /* base */
-  --bg: #0a0b0d;
-  --bg-env: radial-gradient(ellipse at center, #0d1218, #000);
+  --bg: #0c0e1a;
+  --bg-env:
+    radial-gradient(ellipse 80% 50% at 85% 0%, rgba(122,162,255,0.12) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 40% at 10% 90%, rgba(255,176,108,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 30% at 60% 100%, rgba(122,162,255,0.06) 0%, transparent 45%);
 
   /* text */
-  --ink: #eef1ec;
-  --ink-2: #cdd2c8;
-  --muted: #9aa28f;
-  --muted-2: #8b9285;
-  --faint: #8a917e;
-  --faint-2: #7a8273;
+  --ink: #eef0f7;
+  --ink-2: #c8cde0;
+  --muted: #98a0b8;
+  --muted-2: #8892a8;
+  --faint: #8892a8;
+  --faint-2: #7882a0;
 
   /* accent */
-  --accent: #c6f24a;
-  --accent-2: #a6d92e;
-  --accent-12: rgba(198,242,74,.12);
-  --accent-18: rgba(198,242,74,.18);
-  --accent-glow: 0 8px 22px -10px rgba(198,242,74,.7);
-  --accent-ink: #0c100e;
+  --accent: #b8e850;
+  --accent-2: #9cd838;
+  --accent-12: rgba(184,232,80,.12);
+  --accent-18: rgba(184,232,80,.18);
+  --accent-glow: 0 8px 22px -10px rgba(184,232,80,.6);
+  --accent-ink: #0a0c14;
 
   /* status */
   --blue: #7aa2ff;
@@ -32,76 +35,76 @@
   --warning-soft: rgba(255,176,108,.14);
 
   /* position */
-  --pos-GK: #ff7428;
+  --pos-GK: #ffb06c;
   --pos-DEF: #7aa2ff;
-  --pos-MID: #a8eddc;
+  --pos-MID: #7fe8de;
   --pos-FWD: #ff8fb0;
 
   /* surfaces */
-  --panel: linear-gradient(135deg, #14161a, #0d0e10);
-  --panel-flush: linear-gradient(135deg, #121316, #0e0f11);
-  --panel-strong: linear-gradient(135deg, #0e0f12, #08090a);
-  --toast: linear-gradient(135deg, #0c0d0f, #060708);
-  --tile: rgba(255,255,255,.04);
-  --tile-2: rgba(255,255,255,.035);
-  --inset: rgba(0,0,0,.25);
+  --panel: linear-gradient(135deg, #161824, #0e1018);
+  --panel-flush: linear-gradient(135deg, #141622, #101220);
+  --panel-strong: linear-gradient(135deg, #101220, #0a0c14);
+  --toast: linear-gradient(135deg, #0e1018, #080a12);
+  --tile: rgba(122,162,255,.04);
+  --tile-2: rgba(122,162,255,.035);
+  --inset: rgba(10,12,26,.25);
 
   /* themed helpers */
-  --surface-lime-glow: rgba(198,242,74,.34);
+  --surface-lime-glow: rgba(184,232,80,.34);
   --surface-blue-glow: rgba(122,162,255,.22);
   --surface-warm-glow: rgba(255,176,108,.14);
-  --sidebar-bg: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.015)), rgba(9,11,10,.76);
-  --control-bg: rgba(255,255,255,.055);
-  --control-bg-soft: rgba(255,255,255,.045);
-  --control-bg-strong: rgba(255,255,255,.08);
-  --dropdown-bg: rgba(17,20,18,.96);
-  --overlay-scrim: rgba(0,0,0,.62);
-  --tour-scrim: rgba(8,9,10,.62);
-  --tour-card-mix: #0f1412;
+  --sidebar-bg: linear-gradient(180deg, rgba(122,162,255,.055), rgba(122,162,255,.015)), rgba(9,11,20,.76);
+  --control-bg: rgba(122,162,255,.055);
+  --control-bg-soft: rgba(122,162,255,.045);
+  --control-bg-strong: rgba(122,162,255,.08);
+  --dropdown-bg: rgba(16,18,28,.96);
+  --overlay-scrim: rgba(10,12,26,.62);
+  --tour-scrim: rgba(8,10,20,.62);
+  --tour-card-mix: #0f1020;
   --pitch-bg:
-    radial-gradient(circle at 50% 50%, rgba(198,242,74,.08), transparent 18%),
+    radial-gradient(circle at 50% 50%, rgba(184,232,80,.08), transparent 18%),
     linear-gradient(180deg, rgba(255,255,255,.045), transparent 22%),
     linear-gradient(180deg, #142017, #0d1310);
-  --pitch-stroke: rgba(198,242,74,.13);
-  --pitch-line: rgba(198,242,74,.16);
-  --pitch-midline: rgba(198,242,74,.14);
-  --pitch-spot: rgba(198,242,74,.35);
-  --pitch-shadow: inset 0 1px 0 rgba(255,255,255,.08), inset 0 -70px 100px rgba(0,0,0,.26);
-  --token-bg: linear-gradient(150deg, rgba(255,255,255,.12), rgba(255,255,255,.035)), rgba(6,8,7,.62);
-  --token-border: rgba(255,255,255,.11);
-  --token-empty-bg: rgba(255,255,255,.035);
-  --token-empty-border: rgba(255,255,255,.16);
-  --gauge-well: #111411;
-  --gauge-track: rgba(255,255,255,.08);
-  --list-well: rgba(0,0,0,.08);
-  --table-head-bg: linear-gradient(180deg, rgba(24,28,22,.96), rgba(18,21,17,.94));
-  --sticky-panel-bg: linear-gradient(145deg, rgba(34,40,28,.92), rgba(17,20,15,.9));
-  --sticky-panel-border: rgba(198,242,74,.22);
-  --sticky-panel-shadow: 0 -8px 24px -12px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.07);
-  --rule-alert-bg: rgba(18,21,19,.94);
+  --pitch-stroke: rgba(184,232,80,.13);
+  --pitch-line: rgba(184,232,80,.16);
+  --pitch-midline: rgba(184,232,80,.14);
+  --pitch-spot: rgba(184,232,80,.35);
+  --pitch-shadow: inset 0 1px 0 rgba(122,162,255,.08), inset 0 -70px 100px rgba(10,12,26,.26);
+  --token-bg: linear-gradient(150deg, rgba(122,162,255,.12), rgba(122,162,255,.035)), rgba(6,8,16,.62);
+  --token-border: rgba(122,162,255,.11);
+  --token-empty-bg: rgba(122,162,255,.035);
+  --token-empty-border: rgba(122,162,255,.16);
+  --gauge-well: #111420;
+  --gauge-track: rgba(122,162,255,.08);
+  --list-well: rgba(10,12,26,.08);
+  --table-head-bg: linear-gradient(180deg, rgba(22,26,38,.96), rgba(16,20,32,.94));
+  --sticky-panel-bg: linear-gradient(145deg, rgba(28,34,52,.92), rgba(14,18,30,.9));
+  --sticky-panel-border: rgba(184,232,80,.22);
+  --sticky-panel-shadow: 0 -8px 24px -12px rgba(10,12,26,.4), inset 0 1px 0 rgba(122,162,255,.07);
+  --rule-alert-bg: rgba(18,20,28,.94);
   --rule-alert-border: rgba(255,122,122,.32);
-  --tour-spotlight-border: rgba(198,242,74,.7);
+  --tour-spotlight-border: rgba(184,232,80,.7);
   --tour-spotlight-shadow:
-    0 0 0 1px rgba(255,255,255,.08),
-    0 18px 48px rgba(0,0,0,.42),
-    0 0 32px rgba(198,242,74,.2);
-  --tour-card-border: rgba(255,255,255,.08);
-  --tour-card-shadow: 0 24px 64px rgba(0,0,0,.4);
-  --avatar-flag-bg: #1a1f18;
-  --avatar-flag-border: #11150f;
-  --skeleton-shine: linear-gradient(90deg, rgba(255,255,255,.045), rgba(255,255,255,.1), rgba(255,255,255,.045));
+    0 0 0 1px rgba(122,162,255,.08),
+    0 18px 48px rgba(10,12,26,.42),
+    0 0 32px rgba(184,232,80,.2);
+  --tour-card-border: rgba(122,162,255,.08);
+  --tour-card-shadow: 0 24px 64px rgba(10,12,26,.4);
+  --avatar-flag-bg: #1a1e2a;
+  --avatar-flag-border: #111420;
+  --skeleton-shine: linear-gradient(90deg, rgba(122,162,255,.045), rgba(122,162,255,.1), rgba(122,162,255,.045));
 
   /* strokes */
-  --stroke: rgba(255,255,255,.085);
-  --stroke-soft: rgba(255,255,255,.06);
-  --stroke-mid: rgba(255,255,255,.1);
-  --stroke-strong: rgba(255,255,255,.14);
-  --hairline: rgba(255,255,255,.085);
-  --inset-hl: inset 0 1px 0 rgba(255,255,255,.06);
+  --stroke: rgba(122,162,255,.12);
+  --stroke-soft: rgba(122,162,255,.08);
+  --stroke-mid: rgba(122,162,255,.15);
+  --stroke-strong: rgba(122,162,255,.20);
+  --hairline: rgba(122,162,255,.10);
+  --inset-hl: inset 0 1px 0 rgba(122,162,255,.12);
 
   /* shadows */
-  --shadow-panel: 0 24px 60px -30px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.06);
-  --shadow-toast: 0 18px 50px -16px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.1);
+  --shadow-panel: 0 24px 60px -30px rgba(10,12,26,.7), inset 0 1px 0 rgba(122,162,255,.06);
+  --shadow-toast: 0 18px 50px -16px rgba(10,12,26,.7), inset 0 1px 0 rgba(122,162,255,.1);
 
   /* type */
   --font-body: "Hanken Grotesk", "Segoe UI", system-ui, sans-serif;
@@ -141,7 +144,7 @@
   --fs-h2: 14px;
 
   /* charts */
-  --chart-card-bg: rgba(255,255,255,.04);
+  --chart-card-bg: rgba(122,162,255,.04);
   --chart-card-border: var(--stroke);
   --chart-card-shadow: var(--shadow-panel);
   --chart-accent: var(--muted-2);
@@ -155,118 +158,122 @@
 :root[data-theme="light"] {
   color-scheme: light;
 
-  /* base */
-  --bg: #e9eee6;
-  --bg-env: radial-gradient(ellipse at center, #dde6ea, #eef2e7);
+  /* base — warm off-white with pink aurora */
+  --bg: #FAF9FB;
+  --bg-env:
+    radial-gradient(ellipse 80% 50% at 85% 0%, rgba(244,137,154,0.12) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 40% at 10% 90%, rgba(159,122,234,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 30% at 60% 100%, rgba(244,137,154,0.06) 0%, transparent 45%);
 
   /* text */
-  --ink: #111920;
-  --ink-2: #263039;
-  --muted: #566169;
-  --muted-2: #6c757d;
-  --faint: #808991;
-  --faint-2: #8e969d;
+  --ink: #1E1B3A;
+  --ink-2: #25224A;
+  --muted: #4A4662;
+  --muted-2: #3A3650;
+  --faint: #58546E;
+  --faint-2: #48445E;
 
-  /* accent */
-  --accent: #7aa313;
-  --accent-2: #5f840c;
-  --accent-12: rgba(122,163,19,.18);
-  --accent-18: rgba(122,163,19,.26);
-  --accent-glow: 0 10px 24px -14px rgba(95,132,12,.78);
-  --accent-ink: #0d1404;
+  /* accent — coral pink */
+  --accent: #F4899A;
+  --accent-2: #E87A8B;
+  --accent-12: rgba(244,137,154,.16);
+  --accent-18: rgba(244,137,154,.24);
+  --accent-glow: 0 8px 24px -12px rgba(244,137,154,.48);
+  --accent-ink: #FFFFFF;
 
-  /* status */
-  --blue: #244f9f;
-  --blue-12: rgba(36,79,159,.16);
-  --blue-18: rgba(36,79,159,.24);
-  --warm: #9d5212;
-  --danger: #9f2e2e;
-  --danger-soft: rgba(159,46,46,.14);
-  --warning: #9d5212;
-  --warning-soft: rgba(157,82,18,.15);
+  /* status — blue mapped to orchid, coral as warm */
+  --blue: #9F7AEA;
+  --blue-12: rgba(159,122,234,.12);
+  --blue-18: rgba(159,122,234,.18);
+  --warm: #F4899A;
+  --danger: #C05656;
+  --danger-soft: rgba(192,86,86,.14);
+  --warning: #E89548;
+  --warning-soft: rgba(232,149,72,.15);
 
-  /* position */
-  --pos-GK: #b34c10;
-  --pos-DEF: #244f9f;
-  --pos-MID: #0f7465;
-  --pos-FWD: #b83d69;
+  /* position — pink palette harmonized */
+  --pos-GK: #E89548;
+  --pos-DEF: #9F7AEA;
+  --pos-MID: #4ECDC4;
+  --pos-FWD: #F4899A;
 
-  /* surfaces */
-  --panel: linear-gradient(135deg, #f2f5ee, #dfe7dc);
-  --panel-flush: linear-gradient(135deg, #edf2e8, #d8e1d6);
-  --panel-strong: linear-gradient(135deg, #f6f8f2, #dce4da);
-  --toast: linear-gradient(135deg, #f6f8f2, #dde5da);
-  --tile: rgba(17,25,32,.08);
-  --tile-2: rgba(17,25,32,.06);
-  --inset: rgba(17,25,32,.075);
+  /* surfaces — white with faint pink tint */
+  --panel: linear-gradient(135deg, #FFFFFF, #FDF8FA);
+  --panel-flush: linear-gradient(135deg, #FDFBFC, #F8F4F8);
+  --panel-strong: linear-gradient(135deg, #FFFFFF, #F5F0F4);
+  --toast: linear-gradient(135deg, #FFFFFF, #FDF8FA);
+  --tile: rgba(30,27,58,.14);
+  --tile-2: rgba(30,27,58,.10);
+  --inset: rgba(30,27,58,.16);
 
   /* themed helpers */
-  --surface-lime-glow: rgba(122,163,19,.22);
-  --surface-blue-glow: rgba(36,79,159,.16);
-  --surface-warm-glow: rgba(157,82,18,.12);
-  --sidebar-bg: linear-gradient(180deg, rgba(245,249,241,.9), rgba(229,236,227,.8)), rgba(223,231,220,.78);
-  --control-bg: rgba(17,25,32,.08);
-  --control-bg-soft: rgba(17,25,32,.07);
-  --control-bg-strong: rgba(17,25,32,.12);
-  --dropdown-bg: rgba(244,248,240,.97);
-  --overlay-scrim: rgba(20,29,37,.34);
-  --tour-scrim: rgba(20,29,37,.3);
-  --tour-card-mix: #e4ebdf;
+  --surface-lime-glow: rgba(244,137,154,.16);
+  --surface-blue-glow: rgba(159,122,234,.12);
+  --surface-warm-glow: rgba(244,137,154,.10);
+  --sidebar-bg: linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,244,250,.90)), rgba(245,240,244,.82);
+  --control-bg: rgba(30,27,58,.12);
+  --control-bg-soft: rgba(30,27,58,.08);
+  --control-bg-strong: rgba(30,27,58,.18);
+  --dropdown-bg: rgba(255,255,255,.97);
+  --overlay-scrim: rgba(30,27,58,.32);
+  --tour-scrim: rgba(30,27,58,.28);
+  --tour-card-mix: #F5F0F4;
   --pitch-bg:
-    radial-gradient(circle at 50% 50%, rgba(122,163,19,.10), transparent 18%),
+    radial-gradient(circle at 50% 50%, rgba(244,137,154,.06), transparent 18%),
     linear-gradient(180deg, rgba(255,255,255,.38), transparent 22%),
-    linear-gradient(180deg, #d0e1ce, #b2c9af);
-  --pitch-stroke: rgba(122,163,19,.24);
-  --pitch-line: rgba(122,163,19,.26);
-  --pitch-midline: rgba(122,163,19,.24);
-  --pitch-spot: rgba(122,163,19,.5);
-  --pitch-shadow: inset 0 1px 0 rgba(255,255,255,.82), inset 0 -50px 70px rgba(57,79,60,.12);
-  --token-bg: linear-gradient(150deg, rgba(255,255,255,.86), rgba(247,250,244,.62)), rgba(225,233,222,.88);
-  --token-border: rgba(17,25,32,.15);
-  --token-empty-bg: rgba(17,25,32,.045);
-  --token-empty-border: rgba(17,25,32,.22);
-  --gauge-well: #e1e8de;
-  --gauge-track: rgba(17,25,32,.16);
-  --list-well: rgba(17,25,32,.06);
-  --table-head-bg: linear-gradient(180deg, rgba(239,244,235,.98), rgba(223,231,220,.95));
-  --sticky-panel-bg: linear-gradient(145deg, rgba(247,250,244,.96), rgba(223,231,220,.92));
-  --sticky-panel-border: rgba(122,163,19,.34);
-  --sticky-panel-shadow: 0 -8px 24px -14px rgba(34,48,59,.22), inset 0 1px 0 rgba(255,255,255,.92);
-  --rule-alert-bg: rgba(250,244,244,.97);
-  --rule-alert-border: rgba(159,46,46,.28);
-  --tour-spotlight-border: rgba(36,79,159,.48);
+    linear-gradient(180deg, #F0EBF4, #E4DEEC);
+  --pitch-stroke: rgba(159,122,234,.14);
+  --pitch-line: rgba(159,122,234,.16);
+  --pitch-midline: rgba(159,122,234,.14);
+  --pitch-spot: rgba(159,122,234,.36);
+  --pitch-shadow: inset 0 1px 0 rgba(255,255,255,.82), inset 0 -50px 70px rgba(30,27,58,.08);
+  --token-bg: linear-gradient(150deg, rgba(255,255,255,.92), rgba(252,248,250,.72)), rgba(245,240,244,.86);
+  --token-border: rgba(30,27,58,.14);
+  --token-empty-bg: rgba(30,27,58,.04);
+  --token-empty-border: rgba(30,27,58,.18);
+  --gauge-well: #E0DCE8;
+  --gauge-track: rgba(30,27,58,.22);
+  --list-well: rgba(30,27,58,.12);
+  --table-head-bg: linear-gradient(180deg, rgba(255,255,255,.98), rgba(245,240,244,.95));
+  --sticky-panel-bg: linear-gradient(145deg, rgba(255,255,255,.96), rgba(240,235,242,.92));
+  --sticky-panel-border: rgba(244,137,154,.28);
+  --sticky-panel-shadow: 0 -8px 24px -14px rgba(30,27,58,.18), inset 0 1px 0 rgba(255,255,255,.92);
+  --rule-alert-bg: rgba(255,248,248,.97);
+  --rule-alert-border: rgba(192,86,86,.28);
+  --tour-spotlight-border: rgba(244,137,154,.44);
   --tour-spotlight-shadow:
     0 0 0 1px rgba(255,255,255,.6),
-    0 18px 48px rgba(36,50,65,.22),
-    0 0 24px rgba(36,79,159,.18);
-  --tour-card-border: rgba(17,25,32,.14);
-  --tour-card-shadow: 0 24px 64px rgba(36,50,65,.24);
-  --avatar-flag-bg: #e4ebe1;
-  --avatar-flag-border: #ced8cb;
-  --skeleton-shine: linear-gradient(90deg, rgba(17,25,32,.08), rgba(17,25,32,.13), rgba(17,25,32,.08));
+    0 18px 48px rgba(30,27,58,.16),
+    0 0 24px rgba(244,137,154,.14);
+  --tour-card-border: rgba(30,27,58,.14);
+  --tour-card-shadow: 0 24px 64px rgba(30,27,58,.18);
+  --avatar-flag-bg: #F5F0F4;
+  --avatar-flag-border: #D8D0DC;
+  --skeleton-shine: linear-gradient(90deg, rgba(30,27,58,.04), rgba(30,27,58,.08), rgba(30,27,58,.04));
 
   /* strokes */
-  --stroke: rgba(17,25,32,.16);
-  --stroke-soft: rgba(17,25,32,.11);
-  --stroke-mid: rgba(17,25,32,.2);
-  --stroke-strong: rgba(17,25,32,.28);
-  --hairline: rgba(17,25,32,.15);
-  --inset-hl: inset 0 1px 0 rgba(255,255,255,.85);
+  --stroke: rgba(30,27,58,.28);
+  --stroke-soft: rgba(30,27,58,.20);
+  --stroke-mid: rgba(30,27,58,.34);
+  --stroke-strong: rgba(30,27,58,.46);
+  --hairline: rgba(30,27,58,.22);
+  --inset-hl: inset 0 1px 0 rgba(255,255,255,.90);
 
-  /* shadows */
-  --shadow-panel: 0 22px 54px -34px rgba(34,44,52,.4), inset 0 1px 0 rgba(255,255,255,.88);
-  --shadow-toast: 0 18px 44px -24px rgba(34,44,52,.42), inset 0 1px 0 rgba(255,255,255,.88);
+  /* shadows — layered soft elevation */
+  --shadow-panel: 0 1px 2px rgba(30,27,58,.04), 0 4px 12px rgba(30,27,58,.06), inset 0 1px 0 rgba(255,255,255,.90);
+  --shadow-toast: 0 2px 4px rgba(30,27,58,.06), 0 8px 24px rgba(30,27,58,.10), inset 0 1px 0 rgba(255,255,255,.90);
+  --shadow-hover: 0 2px 4px rgba(30,27,58,.06), 0 8px 20px rgba(30,27,58,.08), inset 0 1px 0 rgba(255,255,255,.90);
 
   /* charts */
-  --chart-card-bg: rgba(248,251,245,.82);
+  --chart-card-bg: rgba(255,255,255,.92);
   --chart-card-border: var(--stroke);
   --chart-card-shadow: var(--shadow-panel);
-  --chart-accent: var(--blue);
-  --chart-grid-stroke: rgba(17,25,32,.14);
+  --chart-accent: #F4899A;
+  --chart-grid-stroke: rgba(30,27,58,.20);
   --chart-axis-text: var(--muted);
   --chart-label-text: var(--ink);
   --chart-legend-text: var(--muted);
-  --chart-dot-fill: #e9eee6;
+  --chart-dot-fill: #FAF9FB;
 }
 
 
