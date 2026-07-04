@@ -1,30 +1,17 @@
 import os
-import re
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.database import get_db
-from app.queries.user import check_username_taken, get_email_by_username
+from app.queries.user import get_email_by_username
 from app.rate_limit import enforce_rate_limit
 from app.schemas import LoginRequest
 
 router = APIRouter()
 
-username_regex = re.compile(r"^[a-zA-Z0-9_ ]{3,20}$")
-
 supabase_url = os.getenv("SUPABASE_URL", "").rstrip("/")
 supabase_anon_key = os.getenv("SUPABASE_ANON_KEY", "")
-
-
-@router.get("/check-username")
-def check_username(username: str = Query(...), request: Request = None, conn=Depends(get_db)):
-    enforce_rate_limit(request, "check-username", 60, 60)
-    username = username.strip()
-    if not username_regex.match(username):
-        return {"available": False, "reason": "invalid"}
-    taken = check_username_taken(conn, username)
-    return {"available": not taken, "reason": "taken" if taken else "ok"}
 
 
 @router.post("/auth/login")

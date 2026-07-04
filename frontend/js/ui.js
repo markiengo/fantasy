@@ -25,7 +25,7 @@ const Dropdown = (() => {
       let html = "";
       for (const it of items) {
         const sel = it.value === value ? " is-sel" : "";
-        html += `<div class="dropdown__opt${sel}" role="option" data-value="${it.value}" aria-selected="${it.value === value}">${labelText(it)}</div>`;
+        html += `<div class="dropdown__opt${sel}" role="option" data-value="${escapeHtml(it.value)}" aria-selected="${it.value === value}">${escapeHtml(labelText(it))}</div>`;
       }
       panel.innerHTML = html;
       const match = items.find((i) => i.value === value);

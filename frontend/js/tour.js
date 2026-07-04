@@ -106,8 +106,7 @@ const Tour = (() => {
   }
 
   function fixedPx(value) {
-    const zoom = parseFloat(window.getComputedStyle(document.documentElement).zoom) || 1;
-    return px(value / zoom);
+    return px(value);
   }
 
   function nextFrame(fn) {
@@ -320,7 +319,7 @@ const Tour = (() => {
       placements.push({ top: frame.top - cardH - CARD_GAP, left: centerLeft });
     }
     if (!placements.length) {
-      placements.push({ top: centerTop, left: centerLeft });
+      placements.push({ top: centerTop, left: viewportW - cardW - EDGE_MARGIN });
     }
 
     const chosen = placements[0];

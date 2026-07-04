@@ -1,4 +1,5 @@
 import re
+import unicodedata
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from psycopg2.errors import UniqueViolation
@@ -11,7 +12,26 @@ from app.schemas import CompleteProfileRequest
 
 router = APIRouter()
 
-username_regex = re.compile(r"^[a-zA-Z0-9_ ]{3,20}$")
+
+def _slugify(text):
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(c for c in text if not unicodedata.combining(c))
+    text = re.sub(r"[^a-zA-Z0-9_ ]", "", text)
+    text = text.strip().replace(" ", "_")
+    if len(text) < 3:
+        text = (text + "user")[:5]
+    return text[:20].lower()
+
+
+def _generate_unique_username(conn, base):
+    username = base
+    suffix = 1
+    while check_username_taken(conn, username):
+        suffix_str = str(suffix)
+        max_base = 20 - len(suffix_str)
+        username = base[:max_base] + suffix_str
+        suffix += 1
+    return username
 
 
 @router.get("/me")
@@ -21,10 +41,11 @@ def get_me_route(payload: dict = Depends(get_current_auth_payload), conn=Depends
 
     if not user:
         user_metadata = payload.get("user_metadata") or {}
-        username = (user_metadata.get("username") or "").strip()
-        if username and username_regex.match(username):
+        display_name = (user_metadata.get("display_name") or user_metadata.get("full_name") or user_metadata.get("name") or "").strip()
+        if display_name and len(display_name) >= 2:
+            username = _generate_unique_username(conn, _slugify(display_name))
             try:
-                user = create_user_from_auth(conn, auth_user_id, username, username)
+                user = create_user_from_auth(conn, auth_user_id, username, display_name)
             except UniqueViolation:
                 if hasattr(conn, "rollback"):
                     conn.rollback()
@@ -54,15 +75,11 @@ def complete_profile_route(body: CompleteProfileRequest, request: Request = None
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Profile already completed")
 
-    username = body.username.strip()
-    if not username_regex.match(username):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username must be 3-20 chars: ASCII letters (A-Z), numbers, underscores, and spaces only. No accents or diacritics.")
+    display_name = body.display_name.strip()
+    if len(display_name) < 2 or len(display_name) > 30:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Display name must be 2-30 characters.")
 
-    if check_username_taken(conn, username):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already taken")
-
-    user_metadata = payload.get("user_metadata") or {}
-    display_name = user_metadata.get("full_name") or user_metadata.get("name") or username
+    username = _generate_unique_username(conn, _slugify(display_name))
 
     user = create_user_from_auth(conn, auth_user_id, username, display_name)
 

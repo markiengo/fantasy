@@ -43,9 +43,9 @@ const Stats = (() => {
         <span class="stats-card-icon stats-card-icon--red${rc === 0 ? " stats-card-icon--zero" : ""}">${rc}</span>
       </span>`;
     } else if (category.suffix) {
-      valueHtml = `<span class="stats-row__value">${entry.value}<small class="stats-row__unit">${typeof category.suffix === "function" ? category.suffix() : category.suffix}</small></span>`;
+      valueHtml = `<span class="stats-row__value">${escapeHtml(entry.value)}<small class="stats-row__unit">${typeof category.suffix === "function" ? category.suffix() : category.suffix}</small></span>`;
     } else {
-      valueHtml = `<span class="stats-row__value">${entry.value}</span>`;
+      valueHtml = `<span class="stats-row__value">${escapeHtml(entry.value)}</span>`;
     }
 
     return `<li class="stats-row${isLeader ? " stats-row--leader" : ""}" role="button" tabindex="0">
@@ -55,7 +55,7 @@ const Stats = (() => {
       </span>
       <span class="stats-row__info">
         ${flagImg(teamId, "flag--sm")}
-        <span class="stats-row__name">${entry.name}</span>
+        <span class="stats-row__name">${escapeHtml(entry.name)}</span>
       </span>
       ${valueHtml}
     </li>`;
@@ -124,7 +124,7 @@ const Stats = (() => {
       html += `</div>`;
       shell.innerHTML = html;
     } catch (err) {
-      shell.innerHTML = `<div class="stats-empty">${t("stats.failed")} ${err.message || ""}</div>`;
+      shell.innerHTML = `<div class="stats-empty">${escapeHtml(t("stats.failed"))} ${escapeHtml(err.message || "")}</div>`;
     }
     Progress.done();
   }

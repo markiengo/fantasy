@@ -9,12 +9,6 @@ _buckets = {}
 def _client_id(request):
     if request is None:
         return "test-client"
-    forwarded = request.headers.get("x-forwarded-for") if request.headers else None
-    if forwarded:
-        for part in forwarded.split(","):
-            value = part.strip()
-            if value:
-                return value
     if request.client and request.client.host:
         return request.client.host
     return "unknown"

@@ -4,22 +4,14 @@ const API_BASE = (location.hostname === "127.0.0.1" || location.hostname === "lo
 
 const Api = (() => {
   let useMock = false; // trips to true on first backend failure
-  let demoToken = sessionStorage.getItem("gaffer_demo_token") || null;
 
-  function announceMode() {
-    window.dispatchEvent(new CustomEvent("backend-mode-changed", {
-      detail: { isMock: useMock },
-    }));
-  }
 
   async function call(path, opts) {
     if (useMock) throw new Error("mock-mode");
 
     const headers = { "Content-Type": "application/json" };
 
-    if (demoToken) {
-      headers["Authorization"] = `Bearer ${demoToken}`;
-    } else if (window.getAccessToken) {
+    if (window.getAccessToken) {
       try {
         const token = await window.getAccessToken();
         if (token) {
@@ -80,19 +72,12 @@ const Api = (() => {
         useMock = true;
         console.warn("[Api] backend unreachable — using mock data.", e.message);
         if (window.Toast) Toast.show(t("toast.backend_offline"), "info");
-        announceMode();
       }
       return mockFn();
     }
   }
 
   return {
-    isMock: () => useMock,
-    isDemo: () => false,
-    forceMock: () => { useMock = true; announceMode(); },
-    setDemoToken: () => {},
-    clearDemoToken: () => { demoToken = null; sessionStorage.removeItem("gaffer_demo_token"); },
-
     getPlayers: (params = {}) =>
       withFallback(() => call("/players" + qs(params)), () => Mock.getPlayers(params)),
     getTeams: () =>
@@ -115,8 +100,8 @@ const Api = (() => {
     updateData: (body = {}) =>
       call("/load-stats", { method: "POST", body: JSON.stringify(body) }),
     getMe: () => call("/me"),
-    completeProfile: (username) =>
-      call("/complete-profile", { method: "POST", body: JSON.stringify({ username }) }),
+    completeProfile: (displayName) =>
+      call("/complete-profile", { method: "POST", body: JSON.stringify({ display_name: displayName }) }),
     getTopStats: (limit = 5) =>
       withFallback(() => call("/playerstats/top" + qs({ limit })), () => Mock.getTopStats(limit)),
     getLeaderboard: (matchday) => call("/leaderboard" + qs({ matchday })),
@@ -521,7 +506,7 @@ function flagSrc(team_id) {
 function flagImg(team_id, cls) {
   const src = flagSrc(team_id);
   if (src) {
-    return `<span class="flag ${cls || ""}" style="background-image:url('${src}')" title="${team_id || ""}"></span>`;
+    return `<span class="flag ${escapeHtml(cls || "")}" style="background-image:url('${src}')" title="${escapeHtml(team_id || "")}"></span>`;
   }
-  return `<span class="flag flag--placeholder ${cls || ""}" title="${team_id || ""}"></span>`;
+  return `<span class="flag flag--placeholder ${escapeHtml(cls || "")}" title="${escapeHtml(team_id || "")}"></span>`;
 }

@@ -7,7 +7,6 @@ from app.queries.match import get_matchday_start
 from app.schemas import SquadCreate
 from app.core.validation import validate_squad, SquadValidationError
 from datetime import datetime, timezone
-import psycopg2
 
 router = APIRouter()
 
@@ -78,10 +77,6 @@ def post_squad_route(
         diff_seconds = (first_kickoff - now_utc).total_seconds()
         time_left = max(diff_seconds / 3600, 0)
 
-    try:
-        create_squad(conn, user_id, body.matchday, budget_used, body.player_ids, body.captain_player_id, time_left)
-    except psycopg2.errors.UniqueViolation:
-        conn.rollback()
-        raise HTTPException(status_code = 400, detail = "Squad already exists for this matchday")
+    create_squad(conn, user_id, body.matchday, budget_used, body.player_ids, body.captain_player_id, time_left)
 
     return build_squad(get_squad(conn, user_id, body.matchday))

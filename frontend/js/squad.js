@@ -189,7 +189,7 @@ const Squad = (() => {
     popover.style.position = "fixed";
     popover.style.zIndex = "99999";
     popover.innerHTML = `
-      <div class="captain-popover__header">${player.name}</div>
+      <div class="captain-popover__header">${escapeHtml(player.name)}</div>
       <button class="captain-popover__btn" type="button">${isCap ? t("squad.remove_captain") : t("squad.make_captain")}</button>
     `;
     document.body.appendChild(popover);
@@ -246,7 +246,7 @@ const Squad = (() => {
   }
 
   function emptySlot(pos, target, pulse, style) {
-    return `<button class="player-token player-token--empty${target ? " player-token--target" : ""}${pulse ? " is-pulse" : ""}" type="button" data-pos="${pos}" style="${style}" aria-label="${t("pitch.add_a", pos)}">
+    return `<button class="player-token player-token--empty${target ? " player-token--target" : ""}${pulse ? " is-pulse" : ""}" type="button" data-pos="${pos}" style="${style}" aria-label="${escapeHtml(t("pitch.add_a", pos))}">
       <span class="player-token__plus">+</span>
       <span class="player-token__pos">${t("squad.add_position", pos)}</span>
     </button>`;
@@ -255,7 +255,7 @@ const Squad = (() => {
   function filledSlot(player, isCaptain, style) {
     const editable = State.mode === "build" || State.mode === "transfer";
     const removeBtn = editable
-      ? `<button class="player-token__remove" type="button" aria-label="${t("pitch.remove", player.name)}">
+      ? `<button class="player-token__remove" type="button" aria-label="${escapeHtml(t("pitch.remove", player.name))}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="10" height="10"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>`
       : "";
@@ -268,7 +268,7 @@ const Squad = (() => {
         ${flagImg(player.team_id, "avatar__flag")}
         ${capBadge}
       </span>
-      <span class="player-token__name">${player.name}</span>
+      <span class="player-token__name">${escapeHtml(player.name)}</span>
       <span class="player-token__pts">$${Number(player.base_price).toFixed(1)}m</span>
     </div>`;
   }
@@ -433,22 +433,22 @@ const Squad = (() => {
             ? t("squad.aria_blocked", player.name, reason)
             : t("squad.aria_add", player.name);
 
-      html += `<div class="pool-row ${rowCls}" data-pos="${player.position}" data-pid="${player.player_id}" role="button" tabindex="0" aria-label="${ariaLabel}">
+      html += `<div class="pool-row ${rowCls}" data-pos="${player.position}" data-pid="${player.player_id}" role="button" tabindex="0" aria-label="${escapeHtml(ariaLabel)}">
         <span class="pool-row__photo">
           ${faceHtml(player, true)}
           ${flagImg(player.team_id, "avatar__flag avatar__flag--sm")}
         </span>
         <span class="pool-row__id">
-          <b>${player.name}</b>
-          <small><i class="pos pos--${player.position.toLowerCase()}">${player.position}</i> \u00b7 ${player.team_name}</small>
+          <b>${escapeHtml(player.name)}</b>
+          <small><i class="pos pos--${player.position.toLowerCase()}">${player.position}</i> \u00b7 ${escapeHtml(player.team_name)}</small>
         </span>
         <span class="pool-row__num">
           <b>$${Number(player.base_price).toFixed(1)}m</b>
         </span>
         ${showAdd
-          ? `<button class="add-btn" type="button" aria-label="${t("squad.aria_add_btn", player.name)}" data-action="add"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg></button>`
+          ? `<button class="add-btn" type="button" aria-label="${escapeHtml(t("squad.aria_add_btn", player.name))}" data-action="add"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg></button>`
           : badge
-            ? `<span class="pool-badge ${badge.cls}">${badge.text()}</span>`
+            ? `<span class="pool-badge ${badge.cls}">${escapeHtml(badge.text())}</span>`
             : ""
         }
       </div>`;
@@ -518,7 +518,7 @@ const Squad = (() => {
         const selected = filter.teams.has(team.team_id);
         html += `<div class="team-opt ${selected ? "is-sel" : ""}" data-team="${team.team_id}" role="button" tabindex="0" aria-pressed="${selected}">
           ${flagImg(team.team_id)}
-          <span class="team-opt__name">${team.name}</span>
+          <span class="team-opt__name">${escapeHtml(team.name)}</span>
           <span class="team-opt__check">&#10003;</span>
         </div>`;
       }
@@ -544,7 +544,7 @@ const Squad = (() => {
       let html = "";
       filter.teams.forEach((teamId) => {
         const team = State.teams.find((item) => item.team_id === teamId);
-        html += `<span class="team-chip">${team ? team.name : teamId}<button type="button" data-team="${teamId}" aria-label="Remove ${team ? team.name : teamId}">&times;</button></span>`;
+        html += `<span class="team-chip">${escapeHtml(team ? team.name : teamId)}<button type="button" data-team="${escapeHtml(teamId)}" aria-label="${escapeHtml(t("squad.remove_team", team ? team.name : teamId))}">&times;</button></span>`;
       });
       chipsEl.innerHTML = html;
       chipsEl.querySelectorAll("button").forEach((btn) => {

@@ -43,19 +43,39 @@ def create_squad(conn, user_id, matchday, budget_used, player_ids, captain_playe
     cursor = conn.cursor()
     try:
         cursor.execute('''
-            INSERT INTO squad (user_id, matchday, budget_used, time_left)
-            VALUES (%s, %s, %s, %s)
-            RETURNING squad_id
-            ''', (user_id, matchday, budget_used, time_left))
-        squad_id = cursor.fetchone()["squad_id"]
-        
+            SELECT squad_id
+            FROM squad
+            WHERE user_id = %s AND matchday = %s
+            FOR UPDATE
+            ''', (user_id, matchday))
+        existing = cursor.fetchone()
+
+        if existing:
+            squad_id = existing["squad_id"]
+            cursor.execute('''
+                UPDATE squad
+                SET budget_used = %s, time_left = %s
+                WHERE squad_id = %s
+                ''', (budget_used, time_left, squad_id))
+            cursor.execute('''
+                DELETE FROM squadplayer
+                WHERE squad_id = %s
+                ''', (squad_id,))
+        else:
+            cursor.execute('''
+                INSERT INTO squad (user_id, matchday, budget_used, time_left)
+                VALUES (%s, %s, %s, %s)
+                RETURNING squad_id
+                ''', (user_id, matchday, budget_used, time_left))
+            squad_id = cursor.fetchone()["squad_id"]
+
         for player_id in player_ids:
             is_cap = player_id == captain_player_id
             cursor.execute('''
                 INSERT INTO squadplayer (squad_id, player_id, is_captain)
                 VALUES (%s, %s, %s)
                 ''', (squad_id, player_id, is_cap))
-        
+
         conn.commit()
         return squad_id
     except Exception:

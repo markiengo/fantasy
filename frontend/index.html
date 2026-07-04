@@ -67,8 +67,8 @@
 
         <form id="emailLoginForm" class="auth-form">
           <div class="field field--auth" id="authUsernameField" hidden>
-            <label class="label" for="authUsername" data-i18n="login.username">Username</label>
-            <input type="text" id="authUsername" class="input input--auth" data-i18n-placeholder="login.username_placeholder" placeholder="3-20 chars: ASCII letters, numbers, spaces, _">
+            <label class="label" for="authUsername" data-i18n="login.display_name">Display name</label>
+            <input type="text" id="authUsername" class="input input--auth" data-i18n-placeholder="login.display_name_placeholder" placeholder="2-30 characters" maxlength="30">
           </div>
           <div class="field field--auth">
             <label class="label" for="authEmail" data-i18n="login.email_or_username">Email or Username</label>
@@ -108,8 +108,6 @@
           <span id="googleSignInText" data-i18n="login.sign_in_google">Sign In with Google</span>
         </button>
 
-        <button type="button" class="btn btn--primary btn--block btn--auth" id="guestBtn" style="margin-top:12px;background:var(--accent);color:var(--accent-ink);font-weight:800" data-i18n="login.try_demo" hidden>Try as demo</button>
-
         <div class="login-screen__mode" id="authModeRow">
           <span id="authModeText" data-i18n="login.dont_have_account">Don't have an account?</span>
           <button type="button" class="auth-form__link" id="authToggleBtn" data-i18n="login.sign_up">Sign Up</button>
@@ -142,14 +140,14 @@
               <span id="usernameModalEmail" class="username-modal__email"></span>
             </div>
           </div>
-          <h2 class="login-screen__title" data-i18n="username.choose">Choose your username</h2>
-          <p class="login-screen__subtitle" style="display:block" data-i18n="username.subtitle">Pick a unique username for the fantasy league.</p>
+          <h2 class="login-screen__title" data-i18n="username.choose">Choose your display name</h2>
+          <p class="login-screen__subtitle" style="display:block" data-i18n="username.subtitle">Pick a name for the fantasy league.</p>
           <form id="usernameForm">
             <div class="form-field">
-              <input type="text" id="usernameInput" class="input input--auth" data-i18n-placeholder="username.placeholder" placeholder="3-20 chars: ASCII letters, numbers, spaces, _" maxlength="20" autocomplete="off">
+              <input type="text" id="usernameInput" class="input input--auth" data-i18n-placeholder="username.placeholder" placeholder="2-30 characters" maxlength="30" autocomplete="off">
               <span id="usernameFeedback" class="username-modal__feedback"></span>
             </div>
-            <button type="submit" class="btn btn--primary btn--block btn--auth" id="usernameSubmitBtn" data-i18n="username.choose_btn">Choose username</button>
+            <button type="submit" class="btn btn--primary btn--block btn--auth" id="usernameSubmitBtn" data-i18n="username.choose_btn">Choose display name</button>
           </form>
         </div>
       </div>
@@ -698,14 +696,6 @@
         <button class="btn btn--danger" id="transferWarningLeave" type="button" data-i18n="warning.leave">Leave anyway</button>
       </footer>
     </div>
-  </div>
-
-  <!-- Guest mode banner (shown inside app screen) -->
-  <div class="guest-banner" id="guestBanner" hidden>
-    <span data-i18n="guest.banner">You're in demo mode — data may be limited. <button type="button" class="auth-form__link" id="guestBannerSignIn" data-i18n="guest.sign_in">Sign in</button></span>
-    <button type="button" class="icon-btn" id="guestBannerClose" data-i18n-aria-label="guest.dismiss" aria-label="Dismiss">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 6l12 12M18 6 6 18" stroke-linecap="round"/></svg>
-    </button>
   </div>
 
   <script src="js/i18n.js"></script>

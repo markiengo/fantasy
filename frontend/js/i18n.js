@@ -7,8 +7,8 @@ const I18n = (() => {
       /* ── Login screen ── */
       "login.welcome_back": "Welcome back",
       "login.subtitle": "Sign in to manage your fantasy squad and track your World Cup journey",
-      "login.username": "Username",
-      "login.username_placeholder": "3-20 chars: ASCII letters, numbers, spaces, _",
+      "login.display_name": "Display name",
+      "login.display_name_placeholder": "2-30 characters",
       "login.email_or_username": "Email or Username",
       "login.email": "Email",
       "login.enter_email_or_username": "Enter email or username",
@@ -23,7 +23,6 @@ const I18n = (() => {
       "login.sign_in_google": "Sign In with Google",
       "login.sign_up_google": "Sign Up with Google",
       "login.or": "Or",
-      "login.try_demo": "Try as demo",
       "login.dont_have_account": "Don't have an account?",
       "login.already_have_account": "Already have an account?",
       "login.remember_password": "Remember your password?",
@@ -42,14 +41,14 @@ const I18n = (() => {
       "auth.back_to_login": "Back to login",
 
       /* ── Username modal ── */
-      "username.choose": "Choose your username",
-      "username.subtitle": "Pick a unique username for the fantasy league.",
-      "username.placeholder": "3-20 chars: ASCII letters, numbers, spaces, _",
-      "username.choose_btn": "Choose username",
+      "username.choose": "Choose your display name",
+      "username.subtitle": "Pick a name for the fantasy league.",
+      "username.placeholder": "2-30 characters",
+      "username.choose_btn": "Choose display name",
       "username.available": "Available",
       "username.taken": "Already taken",
-      "username.invalid": "3-20 chars: ASCII letters (A-Z), numbers, underscores, and spaces only. No accents or diacritics.",
-      "username.could_not_set": "Could not set username.",
+      "username.invalid": "Display name must be 2-30 characters.",
+      "username.could_not_set": "Could not set display name.",
       "username.profile_completed": "Profile already completed.",
 
       /* ── Sidebar ── */
@@ -315,11 +314,6 @@ const I18n = (() => {
       "warning.leave": "Leave anyway",
       "warning.pending_transfers": "You have pending transfer changes",
 
-      /* ── Guest banner ── */
-      "guest.banner": "You're in demo mode \u2014 data may be limited.",
-      "guest.sign_in": "Sign in",
-      "guest.dismiss": "Dismiss",
-
       /* ── Stage labels ── */
       "stage.group_stage": "Round {0}",
       "stage.round_of_32": "Round of 32",
@@ -332,15 +326,12 @@ const I18n = (() => {
       /* ── Toasts & messages ── */
       "toast.session_expired": "Session expired. Please sign in again.",
       "toast.no_permission": "You do not have permission to do that.",
-      "toast.demo_user": "Logged in as demo user.",
       "toast.google_failed": "Google sign-in failed",
       "toast.auth_failed": "Authentication failed",
       "toast.load_failed": "Could not load data. Retry the request.",
       "toast.verify_failed": "Could not verify your session. Please sign in again.",
       "toast.save_before_transfers": "Save a squad before making transfers.",
       "toast.wrong_credentials": "Wrong email or password. Please try again.",
-      "toast.username_invalid": "Username must be 3-20 chars: ASCII letters (A-Z), numbers, underscores, and spaces only. No accents or diacritics.",
-      "toast.username_taken": "Username already taken.",
       "toast.signout_failed": "Sign out failed",
       "toast.squad_saved": "Squad saved for Round {0}.",
       "toast.could_not_save": "Could not save squad.",
@@ -366,9 +357,6 @@ const I18n = (() => {
       "update.failed": "Update failed",
       "update.data": "Update Data",
 
-      /* ── Backend state ── */
-      "backend.demo": "Demo data",
-      "backend.live": "Live backend",
 
       /* ── Transfer window ── */
       "window.open": "Transfers open",
@@ -540,8 +528,8 @@ const I18n = (() => {
       /* ── Login screen ── */
       "login.welcome_back": "Chào mừng trở lại",
       "login.subtitle": "Đăng nhập để quản lý đội hình fantasy và theo dõi hành trình World Cup",
-      "login.username": "Tên người dùng",
-      "login.username_placeholder": "3-20 chars: ASCII letters, numbers, spaces, _",
+      "login.display_name": "Tên hiển thị",
+      "login.display_name_placeholder": "2-30 ký tự",
       "login.email_or_username": "Email hoặc tên người dùng",
       "login.email": "Email",
       "login.enter_email_or_username": "Nhập email hoặc tên người dùng",
@@ -556,7 +544,6 @@ const I18n = (() => {
       "login.sign_in_google": "Đăng nhập bằng Google",
       "login.sign_up_google": "Đăng ký bằng Google",
       "login.or": "Hoặc",
-      "login.try_demo": "Dùng thử demo",
       "login.dont_have_account": "Chưa có tài khoản?",
       "login.already_have_account": "Đã có tài khoản?",
       "login.remember_password": "Nhớ mật khẩu?",
@@ -575,14 +562,14 @@ const I18n = (() => {
       "auth.back_to_login": "Quay lại đăng nhập",
 
       /* ── Username modal ── */
-      "username.choose": "Chọn tên người dùng",
-      "username.subtitle": "Chọn tên hiển thị duy nhất cho giải fantasy.",
-      "username.placeholder": "3-20 chars: ASCII letters, numbers, spaces, _",
-      "username.choose_btn": "Chọn tên người dùng",
+      "username.choose": "Chọn tên hiển thị",
+      "username.subtitle": "Chọn tên cho giải fantasy.",
+      "username.placeholder": "2-30 ký tự",
+      "username.choose_btn": "Chọn tên hiển thị",
       "username.available": "Khả dụng",
       "username.taken": "Đã được dùng",
-      "username.invalid": "3-20 k\u00fd t\u1ef1: ch\u1ec9 d\u00f9ng ch\u1eef c\u00e1i ASCII (A-Z), s\u1ed1, d\u1ea5u c\u00e1ch v\u00e0 d\u1ea5u g\u1ea1ch d\u01b0\u1edbi. Kh\u00f4ng d\u00f9ng d\u1ea5u ti\u1ebfng Vi\u1ec7t.",
-      "username.could_not_set": "Không thể đặt tên người dùng.",
+      "username.invalid": "Tên hiển thị phải từ 2-30 ký tự.",
+      "username.could_not_set": "Không thể đặt tên hiển thị.",
       "username.profile_completed": "H\u1ed3 s\u01a1 \u0111\u00e3 ho\u00e0n t\u1ea5t.",
 
       /* ── Sidebar ── */
@@ -849,11 +836,6 @@ const I18n = (() => {
       "warning.leave": "Vẫn rời đi",
       "warning.pending_transfers": "Bạn có thay đổi chuyển nhượng đang chờ",
 
-      /* ── Guest banner ── */
-      "guest.banner": "Bạn đang ở chế độ demo \u2014 dữ liệu có thể bị giới hạn.",
-      "guest.sign_in": "Đăng nhập",
-      "guest.dismiss": "Bỏ qua",
-
       /* ── Stage labels ── */
       "stage.group_stage": "Vòng {0}",
       "stage.round_of_32": "Vòng 1/32",
@@ -866,15 +848,12 @@ const I18n = (() => {
       /* ── Toasts & messages ── */
       "toast.session_expired": "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.",
       "toast.no_permission": "Bạn không có quyền thực hiện thao tác này.",
-      "toast.demo_user": "Đăng nhập bằng tài khoản demo.",
       "toast.google_failed": "Đăng nhập Google thất bại",
       "toast.auth_failed": "Xác thực thất bại",
       "toast.load_failed": "Không thể tải dữ liệu. Vui lòng thử lại.",
       "toast.verify_failed": "Không thể xác minh phiên đăng nhập. Vui lòng đăng nhập lại.",
       "toast.save_before_transfers": "Lưu đội hình trước khi chuyển nhượng.",
       "toast.wrong_credentials": "Sai email hoặc mật khẩu. Vui lòng thử lại.",
-      "toast.username_invalid": "T\u00ean ng\u01b0\u1eddi d\u00f9ng ph\u1ea3i d\u00e0i 3-20 k\u00fd t\u1ef1: ch\u1ec9 d\u00f9ng ch\u1eef c\u00e1i ASCII (A-Z), s\u1ed1, d\u1ea5u c\u00e1ch v\u00e0 d\u1ea5u g\u1ea1ch d\u01b0\u1edbi. Kh\u00f4ng d\u00f9ng d\u1ea5u ti\u1ebfng Vi\u1ec7t.",
-      "toast.username_taken": "Tên người dùng đã được dùng.",
       "toast.signout_failed": "Đăng xuất thất bại",
       "toast.squad_saved": "Đội hình đã lưu cho Vòng {0}.",
       "toast.could_not_save": "Không thể lưu đội hình.",
@@ -900,9 +879,6 @@ const I18n = (() => {
       "update.failed": "Cập nhật thất bại",
       "update.data": "Cập nhật dữ liệu",
 
-      /* ── Backend state ── */
-      "backend.demo": "Dữ liệu demo",
-      "backend.live": "Backend trực tiếp",
 
       /* ── Transfer window ── */
       "window.open": "Chuyển nhượng đã mở",
@@ -1131,17 +1107,28 @@ const I18n = (() => {
   }
 
   function setLang(lang) {
-    localStorage.setItem(STORAGE_KEY, lang);
-    _lang = lang;
-    document.documentElement.lang = _lang;
-    applyI18n();
-    initToggle();
-    var event = new CustomEvent("lang-changed", { detail: { lang: _lang } });
-    window.dispatchEvent(event);
+    var root = document.documentElement;
+    root.classList.add("lang-transitioning");
+    setTimeout(function () {
+      localStorage.setItem(STORAGE_KEY, lang);
+      _lang = lang;
+      document.documentElement.lang = _lang;
+      applyI18n();
+      initToggle();
+      root.classList.remove("lang-transitioning");
+      var event = new CustomEvent("lang-changed", { detail: { lang: _lang } });
+      window.dispatchEvent(event);
+    }, 120);
   }
 
   function getLang() {
     return _lang;
+  }
+
+  function escapeHtml(value) {
+    var div = document.createElement("div");
+    div.textContent = value == null ? "" : String(value);
+    return div.innerHTML;
   }
 
   function initToggle() {
@@ -1161,11 +1148,12 @@ const I18n = (() => {
     });
   }
 
-  return { init: init, t: t, setLang: setLang, getLang: getLang, applyI18n: applyI18n };
+  return { init: init, t: t, setLang: setLang, getLang: getLang, applyI18n: applyI18n, escapeHtml: escapeHtml };
 })();
 
 window.t = I18n.t;
 window.I18n = I18n;
+window.escapeHtml = I18n.escapeHtml;
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", I18n.init);

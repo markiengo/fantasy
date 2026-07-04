@@ -183,32 +183,6 @@
   height: 18px;
 }
 
-/* Guest banner inside app screen */
-.guest-banner {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 90;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 10px 16px;
-  background: rgba(184, 232, 80, .08);
-  border-bottom: 1px solid rgba(184, 232, 80, .2);
-  color: var(--ink);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.guest-banner .icon-btn {
-  position: absolute;
-  right: 12px;
-  width: 28px;
-  height: 28px;
-}
-
 /* Auth overlay (check-email / reset-sent) */
 .auth-overlay {
   position: relative;

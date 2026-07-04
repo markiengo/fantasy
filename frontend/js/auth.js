@@ -93,12 +93,12 @@ async function signInWithGoogle() {
   return data;
 }
 
-async function signUp(email, password, username) {
+async function signUp(email, password, displayName) {
   const { data, error } = await supabaseClient.auth.signUp({
     email,
     password,
     options: {
-      data: { username },
+      data: { display_name: displayName },
       emailRedirectTo: window.location.origin,
     },
   });

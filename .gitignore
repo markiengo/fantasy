@@ -35,3 +35,6 @@ frontend/moodboard
 frontend/docs/*
 !frontend/docs/
 !frontend/docs/DESIGN.md
+
+# External tooling
+mcp_excalidraw/

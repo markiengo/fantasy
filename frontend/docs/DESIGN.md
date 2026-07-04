@@ -1,17 +1,9 @@
 # Frontend Design Specification
 
-**Product:** Gaffer - WC26 Fantasy
-**Status:** Canonical frontend design doc
-**Last updated:** 2026-07-03
-**Runtime sources:** `frontend/index.html`, `frontend/css/tokens.css`, `frontend/css/*.css`, `frontend/js/*.js`
+**Product:** Gaffer — WC26 Fantasy
+**Last updated:** 2026-07-04
 
-This is the only active document in `frontend/docs`. It replaces the previous split planning notes. Runtime code wins if this document ever drifts.
-
-**2026-07-03 change:** `--bg`, `--bg-env`, `--panel`, `--panel-flush`, `--panel-strong`, `--toast` moved from green-tinted dark to neutral charcoal with a faint cool/blue undertone. Values and rationale are in Section 4 (Base, Surfaces). No other tokens changed in this pass.
-
-**2026-07-03 change:** the frontend now supports both `dark` and `light` themes. Theme is stored in `localStorage` under `gaffer_theme`, applied on `<html data-theme>`, and switched from the sidebar profile controls.
-
-**2026-07-03 change:** the frontend is now bilingual (English / Vietnamese). Language is stored in `localStorage` under `gaffer_lang`, applied via `i18n.js`. Static text uses `data-i18n` attributes; dynamic text uses `t()` calls. Dates render via `toLocaleDateString()` with the `date.locale` key. Language toggle uses text labels (EN / Tiếng Việt) instead of flag emojis for cross-platform rendering.
+This is the canonical design document for the Gaffer frontend. It describes what users see, how the interface behaves, and the visual rules that keep the product consistent. Runtime code wins if this document ever drifts.
 
 ## 1. Product Direction
 
@@ -22,604 +14,317 @@ Design principles:
 - Prioritize scan speed over decoration.
 - Keep controls close to the data they affect.
 - Use compact panels and rows for repeated information.
-- Treat mock/demo state as visibly different from live/authenticated state.
+- Treat demo state as visibly different from live/authenticated state.
 - Never hide real auth or permission failures behind demo data.
-- **Lime is a single-purpose signal, not a house color.** It marks exactly one thing at a time (the primary commit action, live status, or "you are here"). Everywhere else, structure and hierarchy come from blue, neutrals, and the existing status/position colors.
+- **Lime is a single-purpose signal, not a house color.** It marks exactly one thing at a time — the primary commit action, a live status, or "you are here." Everywhere else, structure and hierarchy come from blue, neutrals, and the existing status/position colors.
 
-## 2. Runtime Structure
+## 2. Screen Structure
 
-The frontend is a static vanilla HTML/CSS/JS app served by FastAPI from `frontend/`.
+The app has two main states: the login screen and the authenticated dashboard.
 
-```text
-frontend/
-|-- index.html              # DOM shell and script/style wiring
-|-- assets/                 # logo and brand imagery
-|-- css/
-|   |-- tokens.css          # design tokens and palette
-|   |-- main.css            # app shell, shared primitives, topbar/sidebar
-|   |-- auth.css            # login/signup/demo/auth overlay
-|   |-- squad.css           # squad builder, pitch, pool, summary
-|   |-- fixtures.css        # fixtures, standings, knockout bracket
-|   |-- scores.css          # dashboard analytics
-|   |-- stats.css           # top stats screen
-|   |-- leaderboard.css     # leaderboard screen
-|   `-- motion.css          # animation/tour/motion helpers
-|-- js/
-|   |-- auth.js             # Supabase browser auth wrapper
-|   |-- api.js              # API client and mock fallback
-|   |-- app.js              # boot, navigation, global shell state
-|   |-- state.js            # client-side squad state and rule mirror
-|   |-- squad.js            # Squad screen
-|   |-- transfers.js        # Transfer mode
-|   |-- fixtures.js         # Fixtures/standings/knockout
-|   |-- scores.js           # Dashboard analytics
-|   |-- stats.js            # Top Stats screen
-|   |-- leaderboard.js      # Leaderboard screen
-|   |-- charts.js           # Chart helpers
-|   |-- howtoscore.js       # Scoring explanation overlay
-|   |-- i18n.js              # Bilingual EN/VI translation dictionary and t() function
-|   |-- onboarding.js       # Welcome overlay
-|   |-- progress.js          # Loading overlay with localized quips
-|   |-- tour.js             # Guided tour
-|   `-- ui.js               # Reusable dropdown primitive
-`-- docs/
-    `-- DESIGN.md           # This file
-```
+### Login Screen — UC-02
 
-## 3. App Shell
+A full-screen centered card with the brand mark, a welcome title, and an email-or-username login form. A signup toggle reveals a display name field. Google sign-in is available as an alternative. The submit button is the only lime element on this screen — everything else uses blue and neutral tones.
 
-### Login Shell
+After Google OAuth redirect, users without a local profile see a blocking modal asking them to choose a display name (2–30 characters) before the app loads.
 
-Source: `frontend/index.html`, `frontend/css/auth.css`, `frontend/js/auth.js`, `frontend/js/app.js`
+### Authenticated Dashboard — UC-03 to UC-11
 
-Structure:
+A two-column layout on desktop:
 
-- Full-screen `#loginScreen`.
-- Centered `.login-screen__card.panel`.
-- Brand mark, title/subtitle, email-or-username login form.
-- Signup mode reveals username field.
-- Google sign-in starts Supabase OAuth. If the OAuth user has no local profile, the app shows a blocking username modal before any authenticated feature data loads.
-- Demo/guest mode is hidden for production; `Api.setDemoToken()` is a no-op and there is no backend bearer `demo-token` shortcut.
-- `#authOverlay` handles confirmation/reset messaging.
-- `#usernameModal` is a blocking onboarding modal for OAuth users without a local username.
-- Username rules: 3-20 chars after trimming; ASCII letters, numbers, spaces, and underscores only. Vietnamese accents/diacritics and punctuation are invalid. Errors use `t("username.*")` so Vietnamese settings render Vietnamese copy.
+- **Left sidebar** (248px): brand, navigation links, deadline status, admin data controls, and profile controls (theme toggle, language toggle, sign out). The manager's avatar appears here, generated from their display name using Dicebear personas style with randomized pastel backgrounds.
+- **Main area** (max 1140px): top bar with screen title and total points, a horizontal matchday strip, and the active screen content.
 
-Behavior:
+Five screens:
 
-- Username login posts to `/api/auth/login`, which resolves the local username to a Supabase email and returns a Supabase session.
-- Auth state changes drive app/login shell switching. `INITIAL_SESSION` after OAuth can enter the app shell, but `/api/me` must pass before user feature data loads.
-- Real auth failures should show auth UI, not mock app state.
-- The submit button is the only lime element on this screen. Everything else (links, secondary buttons, focus rings) uses blue/neutral tokens.
+1. **Squad** — Build and manage your 11-player squad on a visual pitch. (UC-03, UC-04, UC-05, UC-06)
+2. **Fixtures** — Browse match schedules, group standings, and knockout brackets. (UC-08)
+3. **Dashboard** — View your squad's score breakdown, rank trajectory, and transfer history. (UC-09, UC-10)
+4. **Top Stats** — See the tournament's top fantasy performers by category. (UC-10)
+5. **Leaderboard** — Compare your ranking against all active managers. (UC-11)
 
-### Authenticated App Shell
+On mobile, the sidebar remains usable, horizontal strips scroll, and panels stack before content becomes cramped.
 
-Source: `frontend/index.html`, `frontend/css/main.css`, `frontend/js/app.js`
+## 3. Localization
 
-Structure:
+The app supports English and Vietnamese. The user's language preference is saved and restored on return.
 
-- `#appScreen.app`: two-column desktop grid.
-- `.sidebar`: persistent left navigation and operational status, including the theme toggle in profile controls.
-- `.main`: active screen container.
-- `.topbar`: page title, total points, tour/help buttons.
-- `.matchday-strip`: horizontal matchday selector.
-- Screens:
-  - `#screen-team`: Squad builder.
-  - `#screen-fixtures`: Fixtures, standings, knockout.
-  - `#screen-scores`: Dashboard analytics.
-  - `#screen-stats`: Top Stats.
-  - `#screen-leaderboard`: Leaderboard.
-
-Desktop layout:
-
-- Sidebar width: `--sidebar-w` = `248px`.
-- Main content max width: `--content-max` = `1140px`.
-- Main content padding: `30px 40px 56px`.
-- Topbar height is compact, not hero-like.
-
-Mobile/responsive expectations:
-
-- Keep the sidebar/nav usable on narrow screens.
-- Horizontal strips may scroll.
-- Dense tables/lists must avoid text overlap.
-- Panels should stack before content becomes cramped.
-
-### Localization (i18n)
-
-Source: `frontend/js/i18n.js`
-
-The frontend supports English (`en`) and Vietnamese (`vi`).
-
-- **Storage:** `localStorage` key `gaffer_lang`, defaults to `en`.
-- **Static text:** `data-i18n="key"` attributes on HTML elements, applied by `applyI18n()` on load.
-- **Dynamic text:** `t("key", ...args)` calls in JS for strings generated at runtime (toasts, chart labels, tour steps, etc.).
-- **Aria-labels:** `data-i18n-aria-label="key"` and `data-i18n-title="key"` attributes for accessibility labels.
-- **Pluralization/params:** `t()` supports `{0}`, `{1}`, … substitution.
-- **Function-based values:** Some translation values are functions returning `t()` calls (e.g. tour step titles, dropdown labels) for live re-translation on language switch.
-- **Dates:** `fmtShortDate()` in `app.js` uses `toLocaleDateString()` with the `date.locale` key (`en-US` / `vi-VN`).
-- **Language toggle:** `.lang-toggle` button in topbar. Uses text labels ("EN" / "Tiếng Việt") instead of flag emojis for cross-platform rendering (Windows does not render country flag emojis).
-- **Rule alerts:** `state.js` returns internal English reason strings ("Already in squad", "Over budget", etc.) as keys. `app.js` `resolveTitle`/`resolveDetail` and `squad.js` `BADGE_MAP` translate these at display time.
-- **Loading quips:** `progress.js` uses function-based `t()` calls for 12 loading messages.
+- All static text uses translation keys — no hardcoded English anywhere.
+- Dynamic text (toasts, chart labels, tour steps) is translated at render time.
+- Dates render using the user's locale format.
+- The language toggle uses text labels ("EN" / "Tiếng Việt") instead of flag emojis for cross-platform rendering (Windows does not render country flag emojis).
+- All user-supplied text (player names, team names, display names) is HTML-escaped to prevent XSS.
+- Loading messages are localized — 12 rotating quips that cycle while data loads.
 
 ## 4. Palette
 
-Source: `frontend/css/tokens.css`
+### Theme
 
-Theme modes:
-
-- Default: dark.
-- Optional: light via persisted sidebar toggle.
-- Light mode keeps the same information density and accent rules; it swaps the base from charcoal to editorial off-white, darkens structural blue for contrast, and keeps lime reserved for primary/live/current-user emphasis.
+The app defaults to dark mode. An optional light mode swaps the base from charcoal to editorial off-white (#f8f8f5), darkens structural blue for contrast, and keeps lime reserved for the same single-purpose uses.
 
 ### Base
 
-| Token | Value | Preview | Use |
-|---|---|---|---|
-| `--bg` | `#0a0b0d` | <span style="background:#0a0b0d;width:28px;height:14px;display:inline-block;border:1px solid #555;border-radius:2px"></span> | App base background. Neutral near-black with a faint cool undertone (was green-tinted). |
-| `--bg-env` | radial dark navy/black gradient | <span style="background:radial-gradient(ellipse at center,#0d1218,#000);width:28px;height:14px;display:inline-block;border:1px solid #555;border-radius:2px"></span> | Environmental backdrop, not component fill. Cool undertone instead of green. |
-| `--accent-ink` | `#0c100e` | <span style="background:#0c100e;width:28px;height:14px;display:inline-block;border:1px solid #555;border-radius:2px"></span> | Text on bright lime accent. |
+The dark base is a neutral near-black (#0a0b0d) with a faint cool undertone — not green-tinted. The environmental backdrop uses a radial dark navy-to-black gradient. Text on bright lime uses a dark ink color (#0c100e).
 
 ### Text
 
-| Token | Value | Preview | Use |
-|---|---|---|---|
-| `--ink` | `#eef1ec` | <span style="background:#eef1ec;width:28px;height:14px;display:inline-block;border:1px solid #555;border-radius:2px"></span> | Primary text. |
-| `--ink-2` | `#cdd2c8` | <span style="background:#cdd2c8;width:28px;height:14px;display:inline-block;border:1px solid #555;border-radius:2px"></span> | Secondary strong text. |
-| `--muted` | `#9aa28f` | <span style="background:#9aa28f;width:28px;height:14px;display:inline-block;border:1px solid #555;border-radius:2px"></span> | Secondary labels/body. |
-| `--muted-2` | `#8b9285` | <span style="background:#8b9285;width:28px;height:14px;display:inline-block;border:1px solid #555;border-radius:2px"></span> | Tertiary metadata. |
-| `--faint` | `#8a917e` | <span style="background:#8a917e;width:28px;height:14px;display:inline-block;border:1px solid #555;border-radius:2px"></span> | Low-emphasis hints. |
-| `--faint-2` | `#7a8273` | <span style="background:#7a8273;width:28px;height:14px;display:inline-block;border:1px solid #555;border-radius:2px"></span> | Lowest-emphasis text. |
+| Role | Color | Hex |
+|---|---|---|
+| Primary text | off-white | #eef1ec |
+| Secondary strong | light gray-green | #cdd2c8 |
+| Secondary body | muted sage | #9aa28f |
+| Tertiary metadata | dimmer sage | #8b9285 |
+| Low-emphasis hints | faint sage | #8a917e |
+| Lowest-emphasis | dim sage | #7a8273 |
 
-### Primary Accent — now single-purpose, not a house color
+### Primary Accent — Lime
 
-**Rule of one:** at most one lime element active per screen at a time — the primary commit button, OR a live-status pill, OR the current-user marker. Never stack more than one. Lime must not appear as a background tint, secondary button, hover state, or decorative fill anywhere else.
+**Rule of one:** at most one lime element active per screen at a time — the primary commit button, OR a live-status pill, OR the current-user marker on the leaderboard. Never stack more than one.
 
-| Token | Value | Preview | Use |
-|---|---|---|---|
-| `--accent` | `#c6f24a` | <span style="background:#c6f24a;width:28px;height:14px;display:inline-block;border:1px solid #555;border-radius:2px"></span> | Primary commit action per screen (Save squad, Confirm transfer, auth submit), the "live/open" status pill, and the current-user marker on Leaderboard. Nothing else. |
-| `--accent-2` | `#a6d92e` | <span style="background:#a6d92e;width:28px;height:14px;display:inline-block;border:1px solid #555;border-radius:2px"></span> | Gradient end for that one primary button only. |
-| `--accent-12` | `rgba(198,242,74,.12)` | <span style="background:#08090a;display:inline-block;width:28px;height:14px;border:1px solid #555;border-radius:2px;box-shadow:inset 0 0 0 100px rgba(198,242,74,.12)"></span> | Deprecated for general use. Reserve for the live-status pill fill only. Use `--blue-12` for all other soft-highlight backgrounds. |
-| `--accent-18` | `rgba(198,242,74,.18)` | <span style="background:#08090a;display:inline-block;width:28px;height:14px;border:1px solid #555;border-radius:2px;box-shadow:inset 0 0 0 100px rgba(198,242,74,.18)"></span> | Deprecated for general use. Reserve for the live-status pill border/hover only. Use `--blue-18` elsewhere. |
-| `--accent-glow` | `0 8px 22px -10px rgba(198,242,74,.7)` | <span style="background:#08090a;display:inline-block;width:28px;height:14px;border:1px solid #555;border-radius:2px;box-shadow:0 0 8px 2px rgba(198,242,74,.7)"></span> | Reserved for the primary commit button only. |
+| Role | Color | Hex |
+|---|---|---|
+| Primary accent | bright lime green | #c6f24a |
+| Gradient end | darker lime | #a6d92e |
+| Soft fill (live pill only) | 12% lime | rgba(198,242,74,.12) |
+| Border/hover (live pill only) | 18% lime | rgba(198,242,74,.18) |
+| Glow shadow | lime glow | 0 8px 22px -10px rgba(198,242,74,.7) |
 
-Rule: use `--accent-ink` on solid `--accent`; do not put white text on bright lime.
+Lime must never appear as a background tint, secondary button, hover state, decorative fill, or "currently viewing" indicator. Use dark ink text on solid lime — never white.
 
-### Secondary Accent — promoted to do the structural work lime used to do
+### Secondary Accent — Blue
 
-| Token | Value | Preview | Use |
-|---|---|---|---|
-| `--blue` | `#7aa2ff` | <span style="background:#7aa2ff;width:28px;height:14px;display:inline-block;border:1px solid #555;border-radius:2px"></span> | Active nav item, active matchday pill, focus rings, chart primary series, secondary/emphasis buttons, Leaderboard top zone. This is now the default "something is selected/active/important" color. |
-| `--blue-12` *(new)* | `rgba(122,162,255,.12)` | <span style="background:#08090a;display:inline-block;width:28px;height:14px;border:1px solid #555;border-radius:2px;box-shadow:inset 0 0 0 100px rgba(122,162,255,.12)"></span> | Soft background for active/selected rows, tiles, and chips. Replaces most former `--accent-12` uses. |
-| `--blue-18` *(new)* | `rgba(122,162,255,.18)` | <span style="background:#08090a;display:inline-block;width:28px;height:14px;border:1px solid #555;border-radius:2px;box-shadow:inset 0 0 0 100px rgba(122,162,255,.18)"></span> | Stronger active background/border, e.g. active nav item, active matchday pill. Replaces most former `--accent-18` uses. |
-| `--warm` | `#ffb06c` | <span style="background:#ffb06c;width:28px;height:14px;display:inline-block;border:1px solid #555;border-radius:2px"></span> | Warning state, Leaderboard europa/warm zone, budget-nearing-limit indicators. |
-| `--danger` | `#ff8f8f` | <span style="background:#ff8f8f;width:28px;height:14px;display:inline-block;border:1px solid #555;border-radius:2px"></span> | Error/destructive/locked state, Leaderboard drop zone. |
-| `--danger-soft` | `rgba(255,143,143,.14)` | <span style="background:#08090a;display:inline-block;width:28px;height:14px;border:1px solid #555;border-radius:2px;box-shadow:inset 0 0 0 100px rgba(255,143,143,.14)"></span> | Soft danger background. |
-| `--warning` | `#ffb06c` | <span style="background:#ffb06c;width:28px;height:14px;display:inline-block;border:1px solid #555;border-radius:2px"></span> | Warning alias. |
-| `--warning-soft` | `rgba(255,176,108,.14)` | <span style="background:#08090a;display:inline-block;width:28px;height:14px;border:1px solid #555;border-radius:2px;box-shadow:inset 0 0 0 100px rgba(255,176,108,.14)"></span> | Soft warning background. |
+Blue is the everyday "active/selected/important" color across navigation, filters, charts, and focus states.
 
-Net effect: blue becomes the everyday "active/selected/important" color across nav, filters, charts, and focus states. Lime gets freed up to mean one thing — "act now" or "this is live" — which actually makes it more noticeable, not less.
+| Role | Color | Hex |
+|---|---|---|
+| Active/selected | soft blue | #7aa2ff |
+| Soft background | 12% blue | rgba(122,162,255,.12) |
+| Stronger background/border | 18% blue | rgba(122,162,255,.18) |
+
+Additional accent colors:
+
+| Role | Color | Hex |
+|---|---|---|
+| Warning / warm zone | warm orange | #ffb06c |
+| Error / locked / drop zone | soft red | #ff8f8f |
+| Soft danger background | 14% red | rgba(255,143,143,.14) |
+| Soft warning background | 14% orange | rgba(255,176,108,.14) |
 
 ### Position Colors
 
-| Token | Value | Preview | Position |
-|---|---|---|---|
-| `--pos-GK` | `#ff7428` | <span style="background:#ff7428;width:28px;height:14px;display:inline-block;border:1px solid #555;border-radius:2px"></span> | Goalkeeper. |
-| `--pos-DEF` | `#7aa2ff` | <span style="background:#7aa2ff;width:28px;height:14px;display:inline-block;border:1px solid #555;border-radius:2px"></span> | Defender. |
-| `--pos-MID` | `#a8eddc` | <span style="background:#a8eddc;width:28px;height:14px;display:inline-block;border:1px solid #555;border-radius:2px"></span> | Midfielder. |
-| `--pos-FWD` | `#ff8fb0` | <span style="background:#ff8fb0;width:28px;height:14px;display:inline-block;border:1px solid #555;border-radius:2px"></span> | Forward. |
+| Position | Color | Hex |
+|---|---|---|
+| Goalkeeper | orange | #ff7428 |
+| Defender | blue | #7aa2ff |
+| Midfielder | mint | #a8eddc |
+| Forward | pink | #ff8fb0 |
 
-Position colors already give the Squad Builder plenty of non-lime color variety (orange/blue/mint/pink). Lean on them harder for pitch/pool visuals instead of tinting slots or filters with accent.
+These four colors give the squad builder plenty of variety without needing lime.
 
 ### Surfaces
 
-| Token | Value | Preview | Use |
-|---|---|---|---|
-| `--panel` | neutral dark gradient, cool undertone | <span style="background:linear-gradient(135deg,#14161a,#0d0e10);width:28px;height:14px;display:inline-block;border:1px solid #555;border-radius:2px"></span> | Default panel/card surface. Was green-tinted; now neutral so blue/lime accents pop instead of competing with the base. |
-| `--panel-flush` | slightly flatter neutral gradient | <span style="background:linear-gradient(135deg,#121316,#0e0f11);width:28px;height:14px;display:inline-block;border:1px solid #555;border-radius:2px"></span> | Compact nested panel. |
-| `--panel-strong` | stronger neutral dark gradient | <span style="background:linear-gradient(135deg,#0e0f12,#08090a);width:28px;height:14px;display:inline-block;border:1px solid #555;border-radius:2px"></span> | Modals/important panels. |
-| `--toast` | neutral high-opacity gradient | <span style="background:linear-gradient(135deg,#0c0d0f,#060708);width:28px;height:14px;display:inline-block;border:1px solid #555;border-radius:2px"></span> | Toast surface. |
-| `--tile` | `rgba(255,255,255,.04)` | <span style="background:#08090a;display:inline-block;width:28px;height:14px;border:1px solid #555;border-radius:2px;box-shadow:inset 0 0 0 100px rgba(255,255,255,.04)"></span> | Small tile fill. |
-| `--tile-2` | `rgba(255,255,255,.035)` | <span style="background:#08090a;display:inline-block;width:28px;height:14px;border:1px solid #555;border-radius:2px;box-shadow:inset 0 0 0 100px rgba(255,255,255,.035)"></span> | Subtler tile fill. |
-| `--inset` | `rgba(0,0,0,.25)` | <span style="background:#08090a;display:inline-block;width:28px;height:14px;border:1px solid #555;border-radius:2px;box-shadow:inset 0 0 0 100px rgba(0,0,0,.25)"></span> | Inner recessed areas. |
+| Surface | Description |
+|---|---|
+| Default panel | Neutral dark gradient with a cool undertone (#14161a → #0d0e10) |
+| Compact nested panel | Slightly flatter neutral gradient (#121316 → #0e0f11) |
+| Modal / important panel | Stronger dark gradient (#0e0f12 → #08090a) |
+| Toast | High-opacity neutral gradient (#0c0d0f → #060708) |
+| Small tile fill | 4% white |
+| Subtler tile | 3.5% white |
+| Inner recess | 25% black |
 
-### Borders And Elevation
+### Borders
 
-| Token | Value | Preview | Use |
-|---|---|---|---|
-| `--stroke` | `rgba(255,255,255,.085)` | <span style="background:#08090a;display:inline-block;width:28px;height:14px;border:1px solid #555;border-radius:2px;box-shadow:inset 0 0 0 100px rgba(255,255,255,.085)"></span> | Default panel border. |
-| `--stroke-soft` | `rgba(255,255,255,.06)` | <span style="background:#08090a;display:inline-block;width:28px;height:14px;border:1px solid #555;border-radius:2px;box-shadow:inset 0 0 0 100px rgba(255,255,255,.06)"></span> | Subtle separators. |
-| `--stroke-mid` | `rgba(255,255,255,.1)` | <span style="background:#08090a;display:inline-block;width:28px;height:14px;border:1px solid #555;border-radius:2px;box-shadow:inset 0 0 0 100px rgba(255,255,255,.1)"></span> | Medium border. |
-| `--stroke-strong` | `rgba(255,255,255,.14)` | <span style="background:#08090a;display:inline-block;width:28px;height:14px;border:1px solid #555;border-radius:2px;box-shadow:inset 0 0 0 100px rgba(255,255,255,.14)"></span> | Strong border. |
-| `--hairline` | `rgba(255,255,255,.085)` | <span style="background:#08090a;display:inline-block;width:28px;height:14px;border:1px solid #555;border-radius:2px;box-shadow:inset 0 0 0 100px rgba(255,255,255,.085)"></span> | Layout separators. |
-| `--inset-hl` | inset white highlight | <span style="background:#08090a;display:inline-block;width:28px;height:14px;border:1px solid #555;border-radius:2px;box-shadow:inset 0 1px 0 rgba(255,255,255,.12)"></span> | Panel top highlight. |
-| `--shadow-panel` | large soft black shadow + inset highlight | <span style="background:#08090a;display:inline-block;width:28px;height:14px;border:1px solid #555;border-radius:2px;box-shadow:0 4px 12px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06)"></span> | Default elevation. |
-| `--shadow-toast` | toast elevation | <span style="background:#08090a;display:inline-block;width:28px;height:14px;border:1px solid #555;border-radius:2px;box-shadow:0 6px 16px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05)"></span> | Toasts. |
+| Role | Value |
+|---|---|
+| Default panel border | 8.5% white |
+| Subtle separator | 6% white |
+| Medium border | 10% white |
+| Strong border | 14% white |
+| Layout separator | 8.5% white |
+| Panel top highlight | inset 12% white |
+| Default elevation | soft black shadow + inset top highlight |
+| Toast elevation | slightly stronger shadow |
 
 ## 5. Typography
 
-Source: `frontend/index.html`, `frontend/css/tokens.css`
+**Font:** Hanken Grotesk (weights 400–800), with Segoe UI and system UI as fallbacks.
 
-Font family:
-
-- Primary: `Hanken Grotesk`.
-- Fallback: `Segoe UI`, system UI, sans-serif.
-- Mono token currently also uses Hanken first, then `Cascadia Mono`, `ui-monospace`, monospace.
-
-Type scale:
-
-| Token | Value | Use |
+| Size | Value | Use |
 |---|---:|---|
-| `--fs-body` | `13px` | Base UI text. |
-| `--fs-xs` | `11px` | Small metadata. |
-| `--fs-sm` | `12px` | Compact body/labels. |
-| `--fs-label` | `10px` | Uppercase labels. |
-| `--fs-h1` | `22px` | Page title. |
-| `--fs-h2` | `14px` | Panel headings/small section titles. |
+| Body | 13px | Base UI text |
+| Extra small | 11px | Small metadata |
+| Small | 12px | Compact body and labels |
+| Label | 10px | Uppercase labels |
+| Page title | 22px | Screen headings |
+| Panel heading | 14px | Section titles |
 
 Rules:
 
-- Do not introduce oversized marketing hero typography inside the app.
+- No oversized marketing hero typography inside the app.
 - Use weight, color, and position for hierarchy before increasing size.
 - Labels use uppercase, high weight, and wide but controlled letter spacing.
-- Keep chart/table text compact and tabular-feeling.
+- Keep chart and table text compact and tabular-feeling.
 
-## 6. Layout Tokens
+## 6. Layout
 
-| Token | Value | Use |
+| Measurement | Value | Use |
 |---|---:|---|
-| `--sidebar-w` | `248px` | Desktop sidebar column. |
-| `--content-max` | `1140px` | Main content max width. |
-| `--r-xs` | `8px` | Small controls. |
-| `--r-sm` | `10px` | Small pills/cards. |
-| `--r-md` | `13px` | Mid controls. |
-| `--r-lg` | `16px` | Panels. |
-| `--r-xl` | `16px` | Large panels. |
-| `--r-2xl` | `22px` | Default `.panel` radius. |
-| `--r-pill` | `999px` | Pills/chips. |
+| Sidebar width | 248px | Desktop sidebar column |
+| Content max width | 1140px | Main content area |
+| Small radius | 8px | Small controls |
+| Small pill radius | 10px | Small pills and cards |
+| Medium radius | 13px | Mid controls |
+| Large radius | 16px | Panels |
+| Extra-large radius | 22px | Default panel radius |
+| Pill radius | 999px | Fully rounded pills and chips |
 
-Radius rule: ordinary cards and panels stay controlled; avoid large decorative radii outside deliberate pill controls.
+Ordinary cards and panels stay controlled — no large decorative radii outside deliberate pill controls.
 
 ## 7. Motion
 
-Source: `frontend/css/tokens.css`, `frontend/css/motion.css`
+| Feel | Duration | Use |
+|---|---:|---|
+| Fast | 140ms | Hover and focus |
+| Base | 240ms | Standard state change |
+| Mid | 320ms | Screen and panel transitions |
+| Slow | 480ms | Larger enter animations |
+| Entry | 380ms | Entry motion |
 
-Tokens:
-
-| Token | Value | Use |
-|---|---|---|
-| `--ease` | `cubic-bezier(.16,1,.3,1)` | General smooth transition. |
-| `--ease-spring` | `cubic-bezier(.34,1.56,.64,1)` | Small press/pop effects. |
-| `--ease-smooth` | `cubic-bezier(.4,0,.2,1)` | Progress/loading transitions. |
-| `--dur-fast` | `140ms` | Hover/focus. |
-| `--dur-base` | `240ms` | Standard state change. |
-| `--dur-mid` | `320ms` | Screen/panel transitions. |
-| `--dur-slow` | `480ms` | Larger enter animations. |
-| `--dur-enter` | `380ms` | Entry motion. |
+Easing: a smooth cubic-bezier for general transitions, a spring curve for small press/pop effects, and a steady ease for progress/loading.
 
 Rules:
 
-- Motion should confirm state change, not decorate static content.
-- Buttons may use small press/hover movement.
-- Screen changes use short enter animation.
-- Respect `prefers-reduced-motion` behavior in `motion.css`.
+- Motion confirms state change — it doesn't decorate static content.
+- Buttons use small press and hover movement.
+- Screen changes use a short enter animation.
+- Respect reduced-motion preferences.
 
-## 8. Component Specs
+## 8. Components
 
 ### Panels
 
-Classes: `.panel`, `.surface`, `.glass-panel`, `.glass`, `.glass-subpanel`
-
-Use:
-
-- Default grouped UI surface.
-- Background: `--panel`.
-- Border: `--stroke`.
-- Radius: `--r-2xl`.
-- Shadow: `--shadow-panel`.
-- Padding defaults to `20px`.
-
-Rules:
-
-- Avoid nesting decorative panels inside panels unless there is a real sub-tool or modal.
-- Dense rows should use subtle tile surfaces, not full heavy cards.
-- No lime tint on panel backgrounds or borders, ever.
+The default grouped UI surface: a dark gradient card with a subtle border, 22px radius, and a soft shadow. Padding is 20px. Avoid nesting decorative panels inside panels. Dense rows use subtle tile surfaces instead of heavy cards. No lime tint on panel backgrounds or borders.
 
 ### Buttons
 
-Classes: `.btn`, `.btn--primary`, `.btn--ghost`, `.btn--text`, `.btn--block`, `.icon-btn`, `.btn-update`
+**Primary button** — lime gradient with dark text. Used only for the single main commit action per screen (Save squad, Confirm transfer, auth submit). If a screen has no commit action, it has no lime button.
 
-Primary button:
+**Secondary button** — soft blue fill with a blue border and blue text. For actions that need more weight than a ghost button but aren't the primary commit (e.g. "View details", "Edit filters").
 
-- Background: lime gradient `--accent` to `--accent-2`.
-- Text: `--accent-ink`.
-- Used **only** for the single main commit action per screen (Save squad, Confirm transfer, auth submit). If a screen has no such action, it has no lime button.
+**Ghost button** — translucent white with a hairline border. For ordinary secondary actions.
 
-Secondary/emphasis button *(new tier — takes over lime's old "important but not primary" role)*:
+**Icon button** — square, 36px (or 42px for large). Used for help, sign out, onboarding, password visibility.
 
-- Background: `--blue-12` fill, `--blue-18` border.
-- Text: `--blue`.
-- Used for secondary actions that need more visual weight than a ghost button but aren't the primary commit (e.g. "View details", "Edit filters").
-
-Ghost button:
-
-- Background: translucent white.
-- Border: `--hairline`.
-- Used for ordinary secondary actions.
-
-Icon button:
-
-- Square, 36px or 42px for large variant.
-- Used for help, sign out, onboarding, password visibility.
-
-Update Data button:
-
-- Sidebar operational control.
-- Uses neutral/blue-tinted background and icon block, not accent — this is an admin/ops control, not a commit action, so it should not compete visually with the primary lime button.
-- Should remain visibly admin/operations-like, not a generic CTA.
+**Update Data button** — sidebar admin control. Uses neutral/blue-tinted styling, not lime — this is an admin operation, not a commit action.
 
 ### Navigation
 
-Classes: `.sidebar`, `.brand`, `.nav`, `.nav__item`, `.topbar`, `.matchday-strip`, `.round`
+The sidebar contains brand, nav links, deadline status, admin controls, and profile controls. The active nav item has a blue background and a left blue accent bar. Lime is not used for "currently viewing" — that happens on every screen load and shouldn't spend the scarce accent.
 
-Sidebar:
+The top bar shows the current screen title, total points chip, and help/tour buttons. The points chip uses blue styling, unless the matchday is currently live, in which case it may use the lime live-status pill.
 
-- Sticky desktop column.
-- Contains brand, nav links, deadline status, Update Data, profile controls.
-- Active nav uses `--blue-18` background and a left `--blue` accent bar (was lime — lime is no longer used for "currently viewing" state, since that happens on every screen load and shouldn't spend the scarce accent).
+The matchday strip is a horizontal scroller with prev/next buttons. The active round is solid blue. A separate small live-status pill (lime) appears only on the matchday that is actually in progress — meaning "this matchday is live" rather than just "selected."
 
-Topbar:
+### Squad Builder — UC-03, UC-04, UC-06, GR-01 to GR-04, GR-07, GR-09, GR-10
 
-- Contains screen eyebrow/title, total points chip, help/tour actions.
-- Copy changes by screen through `SCREEN_COPY` in `app.js`.
-- Total points chip uses `--blue-12`/`--blue` instead of accent, unless the matchday is currently live, in which case it may use the accent live-status pill styling.
-
-Matchday strip:
-
-- Horizontal scroller with prev/next buttons.
-- Active round uses solid `--blue` with `--ink` text (was solid lime with dark text).
-- Points chip uses `--blue-12`.
-- A separate small live-status pill (accent) appears only on the matchday that is actually in progress — this is the one place lime shows up here, and it now means something specific instead of just "selected."
-
-### Auth UI
-
-Files: `auth.css`, `auth.js`, `app.js`
-
-States:
-
-- Login.
-- Signup.
-- Forgot password.
-- Check-email/reset overlay.
-- Demo mode.
-
-Rules:
-
-- Auth form should be calm and direct.
-- Demo mode must remain visibly non-production.
-- Google sign-in is implemented through Supabase OAuth and must keep the username-completion gate visible until `/api/complete-profile` succeeds.
-- Only the submit button is lime; links and secondary actions use blue/neutral tokens.
-
-### Squad Builder
-
-Files: `squad.css`, `squad.js`, `state.js`
-
-Primary zones:
-
-- Top summary row.
-- Tournament/matchday flow row.
-- Pitch with formation slots.
-- Player pool and filters.
-- Summary/action panel.
+Primary zones: top summary row, matchday flow row, visual pitch with formation slots, player pool with filters, and a summary/action panel.
 
 Key components:
 
-- Player token: filled/empty/captain states.
-- Captain popover.
-- Position filters.
-- Team search chips.
+- Player tokens on the pitch: filled, empty, or captain states. Filled tokens are colored by position (orange/blue/mint/pink), not by accent.
+- Captain popover for assigning the captain.
+- Position filters and team search chips.
 - Rule badges: already selected, slot full, over budget, team limit, locked.
 - Save/transfer action area.
 
 Rules:
 
-- Formation is only 4-3-3 or 4-4-2.
-- Budget cap is 50M.
-- Squad target is 11 players.
-- National team limit scales by tournament stage: 3 (GS + R32), 4 (R16), 5 (QF), 6 (SF), 8 (Final). Mirrored in `state.js::nationLimitForMatchday()` and `validation.py::nation_limit_for_matchday()`.
-- The UI may mirror rules, but backend validation remains authoritative.
-- Filled player tokens are colored by `--pos-*` (already four distinct colors), not by accent. Selected/hover states on pool rows use `--blue-12`. Accent appears only on the Save button and, where used, the captain badge.
+- Formation is 4-3-3 or 4-4-2 (GR-03).
+- Budget cap is $50M (GR-01).
+- Squad target is 11 players (GR-02).
+- National team limit scales by tournament stage: 3 (Group Stage + R32), 4 (R16), 5 (QF), 6 (SF), 8 (Final) (GR-04).
+- The UI mirrors rules, but backend validation is authoritative.
+- Selected/hover states on pool rows use soft blue. Lime appears only on the Save button and the captain badge.
 
-### Fixtures
+**Draft persistence:** Unsaved squad drafts are saved to the browser's local storage, so accidental page refreshes don't lose in-progress squad building. The draft is only cleared on a fresh login, not on a page reload. The before-refresh warning is shown for unsaved transfers and typed search input, but not for build-mode drafts since they persist automatically.
 
-Files: `fixtures.css`, `fixtures.js`
+### Fixtures — UC-08
 
-Views:
+Three views: standings/snapshot, fixture list, and knockout bracket.
 
-- Standings/Snapshot.
-- Fixture list.
-- Knockout bracket.
+Components include match cards with team flags and scores, group standings tables, qualification markers, and knockout bracket nodes with connector lines. Live match indicators use the lime live-status pill; everything else uses blue and neutral tones.
 
-Components:
+### Dashboard — UC-09, UC-10, GR-08, GR-09
 
-- Match card/row.
-- Team flag/name block.
-- Score and penalty display.
-- Group standings table.
-- Qualification markers.
-- Knockout node and connector lines.
+Components: matchday score hero, matchday navigation, captain impact, score composition, rank trajectory, top scorers, value scatter, efficiency bars, donut composition, and transfer summary.
 
-Rules:
+Chart primary lines and series use blue. Lime is reserved for a single "this is you" data point or marker, if one exists.
 
-- Group standings are computed from loaded matches.
-- Knockout bracket should reflect live match slots and winners.
-- Live match indicators use the accent live-status pill; everything else (qualification markers, winner paths) uses blue/neutral, not lime.
+### Top Stats — UC-10, GR-08
 
-### Dashboard
+Six categories: top fantasy score, top scorers, top assists, top goal involvements, top clean sheets, and top cards.
 
-Files: `scores.css`, `scores.js`, `charts.js`
+The lead row gets stronger visual emphasis using soft blue. This screen has no primary action, so it gets no lime at all. Cards stay dense and comparable.
 
-Views/components:
+### Leaderboard — UC-11, GR-08, GR-09
 
-- Matchday score hero.
-- Matchday nav.
-- Captain impact.
-- Score composition.
-- Rank trajectory.
-- Top scorers.
-- Value scatter.
-- Efficiency bars.
-- Donut composition.
-- Transfer summary.
+Two modes: overall and matchday.
 
-Rules:
+Components: summary block, overall/matchday toggle, matchday tab strip, ranking table, sticky current-user row, zone color coding, and admin badge.
 
-- Chart primary series/lines use `--blue`, not accent. Reserve accent in charts for a single "this is you" data point or marker, if one exists, so it still reads as special.
+**Admin handling:** Admin users are excluded from normal ranking. They receive rank 0 and are displayed separately with a distinct admin tag. The frontend filters them from the ranked list so they don't take a spot from regular managers.
 
-Data sources:
+**User avatars:** Dicebear personas style with randomized pastel backgrounds (pink, lavender, mint, peach, light blue).
 
-- `/api/analytics/squad-score`
-- `/api/analytics/composition`
-- `/api/analytics/rank-history`
-- `/api/transfers`
-- `/api/playerstats/top`
+Zone colors:
 
-### Top Stats
+| Zone | Color | Hex |
+|---|---|---|
+| Top | blue | #7aa2ff |
+| Europa/warm | warm orange | #ffb06c |
+| Conference | pink | #ff8fb0 |
+| Pack | muted sage | #8b9285 |
+| Drop/danger | soft red | #ff8f8f |
+| Current user | lime outline | #c6f24a border |
 
-Files: `stats.css`, `stats.js`
+The current-user marker is one of the three sanctioned lime uses — it's a single, meaningful, non-repeating highlight that doesn't collide with the zone colors.
 
-Components:
+### Toasts, Alerts, and Overlays — UC-03, UC-06
 
-- Top fantasy score.
-- Top scorers.
-- Top assists.
-- Top goal involvements.
-- Top clean sheets.
-- Top cards.
+- **Toast stack:** fixed bottom center. Short and specific messages.
+- **Rule alerts:** explain why a player or action is blocked.
+- **Welcome overlay:** first-run onboarding.
+- **Score overlay:** scoring explanation with game rules, prize pool, and nation-limit scaling table.
+- **Guided tour:** target highlight with an instruction card. The highlight ring uses blue, not lime, to avoid confusion with live-status or primary-action pills.
+- **Transfer warning modal:** when the user tries to leave with unsaved changes, a blocking modal asks them to stay or leave. The modal must be fully visible when shown — it uses the overlay open state with full opacity and pointer events.
 
-Rules:
+## 9. Data Flow — UC-01 to UC-12
 
-- Use compact stat rows.
-- The lead row may receive stronger visual emphasis using `--blue-12`/`--blue` (was accent) — this screen has no single "primary action," so it gets no lime at all.
-- Cards should remain dense and comparable.
+The frontend exchanges data with the backend API. Public data (players, teams, matches, stats) is available without authentication. User-specific data (squad, transfers, analytics, leaderboard) requires authentication. Admin operations (stats loading) require admin role.
 
-### Leaderboard
+If the backend is unreachable, the app falls back to mock data for public catalog reads only. Authenticated calls never fall back — real auth failures show the login screen, not fake data.
 
-Files: `leaderboard.css`, `leaderboard.js`
+## 10. Accessibility
 
-Modes:
+- A skip link is always available.
+- The sidebar is labeled as primary navigation.
+- Each screen has a meaningful aria-label.
+- Dialog overlays use proper role and aria-modal attributes with labeled headings.
+- Icon-only controls have aria-labels.
+- Active/current/locked/error states never rely on color alone.
+- Focus states are visible on all interactive elements.
 
-- Overall.
-- Matchday.
+## 11. Copy Voice
 
-Components:
+Short, operational, specific. Use football/fantasy terms only where they reduce explanation. Avoid marketing copy inside tool surfaces.
 
-- Summary block.
-- Overall/matchday toggle.
-- Matchday tab strip.
-- Ranking table.
-- Sticky current-user row.
-- Zone color coding.
-- Admin crown badge (`.lb-admin-badge`) — top-right of card header, admin-only.
+- **Good:** "Sync completed match stats", "No leaderboard data for this matchday yet.", "Captain is required"
+- **Avoid:** long onboarding-style explanations inside panels
 
-Zone colors currently use:
-
-- Top: blue (`#7aa2ff`) <span style="background:#7aa2ff;width:18px;height:10px;display:inline-block;border:1px solid #555;border-radius:2px;vertical-align:middle"></span>.
-- Europa/warm zone: warm (`#ffb06c`) <span style="background:#ffb06c;width:18px;height:10px;display:inline-block;border:1px solid #555;border-radius:2px;vertical-align:middle"></span>.
-- Conference/forward-pink zone: `#ff8fb0` <span style="background:#ff8fb0;width:18px;height:10px;display:inline-block;border:1px solid #555;border-radius:2px;vertical-align:middle"></span>.
-- Pack: muted (`#8b9285`) <span style="background:#8b9285;width:18px;height:10px;display:inline-block;border:1px solid #555;border-radius:2px;vertical-align:middle"></span>.
-- Drop/danger: `#ff8f8f` <span style="background:#ff8f8f;width:18px;height:10px;display:inline-block;border:1px solid #555;border-radius:2px;vertical-align:middle"></span>.
-- Current user: accent lime outline <span style="background:transparent;width:18px;height:10px;display:inline-block;border:2px solid #c6f24a;border-radius:2px;vertical-align:middle"></span>.
-
-This screen is already the most color-diverse in the app (blue/warm/pink/muted/danger) and is a good model for the rest of the product. The current-user marker is one of the three sanctioned lime uses — keep it, since it's a single, meaningful, non-repeating highlight and doesn't collide with the zone colors.
-
-Rules:
-
-- Current user must be visually findable.
-- Empty matchdays should be clearly disabled/empty.
-- Scores should use `squad_score`; tolerate legacy `score` only as compatibility.
-
-### Toasts, Alerts, Overlays
-
-Files: `main.css`, `howtoscore.js`, `onboarding.js`, `tour.js`
-
-Components:
-
-- Toast stack: fixed bottom center.
-- Rule alert: explains why a player/action is blocked.
-- Welcome overlay: first-run onboarding.
-- Score overlay: scoring explanation with game rules, prize pool, and nation-limit scaling table (3 → 4 → 5 → 6 → 8 by stage).
-- Guided tour: target highlight and instruction card.
-
-Rules:
-
-- Overlay panels use strong panel surfaces.
-- Toasts should be short and specific.
-- Rule alerts should explain the exact constraint.
-- Guided tour highlight ring uses `--blue`, not accent, so it doesn't get visually confused with a live-status or primary-action pill.
-
-## 9. Data And API Contracts Used By Frontend
-
-Source: `frontend/js/api.js`, `docs/API.md`
-
-Public/catalog calls:
-
-- `GET /api/players`
-- `GET /api/teams`
-- `GET /api/matches`
-- `GET /api/matches/{id}`
-- `GET /api/playerstats`
-- `GET /api/playerstats/top`
-
-Authenticated user calls:
-
-- `GET /api/me`
-- `POST /api/complete-profile`
-- `GET /api/squad?matchday=N`
-- `POST /api/squad`
-- `GET /api/transfers?matchday=N`
-- `POST /api/transfer`
-- `GET /api/analytics/squad-score`
-- `GET /api/analytics/composition?matchday=N`
-- `GET /api/analytics/rank-history`
-- `GET /api/leaderboard`
-
-Admin operation:
-
-- `POST /api/load-stats`
-
-Fallback rule:
-
-- API mock fallback is allowed only for public catalog/stat reads when the backend is unreachable.
-- Authenticated user, leaderboard, squad, transfer, analytics, and admin calls must not fall back to mock data.
-- HTTP errors from the backend must propagate, especially 401 and 403.
-
-## 10. Accessibility Rules
-
-- Keep the skip link.
-- Keep sidebar labeled as primary navigation.
-- Screens need meaningful `aria-label` values.
-- Dialog overlays should keep `role="dialog"`, `aria-modal="true"`, and labeled headings.
-- Icon-only controls need `aria-label`.
-- Do not rely on color alone for active/current/locked/error state.
-- Make focus states visible on buttons, links, inputs, and tabs.
-
-## 11. Copy Rules
-
-Voice:
-
-- Short, operational, specific.
-- Use football/fantasy terms only where they reduce explanation.
-- Avoid marketing copy inside tool surfaces.
-
-Examples:
-
-- Good: `Sync completed match stats`, `No leaderboard data for this matchday yet.`, `Captain is required`.
-- Avoid: long onboarding-style explanations inside panels.
-
-Labels:
-
-- Nav labels: Squad, Fixtures, Dashboard, Top Stats, Leaderboard.
-- Status labels: DEADLINE, OPEN/LOCKED, Live backend, Demo mode.
-- Action labels: Save squad, Make transfers, Update Data.
+Nav labels: Squad, Fixtures, Dashboard, Top Stats, Leaderboard.
+Status labels: DEADLINE, OPEN/LOCKED, Live backend.
+Action labels: Save squad, Make transfers, Update Data.
 
 ## 12. Design Bans
 
@@ -638,25 +343,24 @@ Do not add:
 
 ## 13. When Adding A New Frontend Feature
 
-Update this file when a feature changes:
+Update this document when a feature changes:
 
 - Navigation or screen structure.
-- Design tokens or palette.
+- Color palette or visual tokens.
 - Core component vocabulary.
-- API route usage.
-- Auth/demo/mock behavior.
+- Data flow or API usage.
+- Auth or demo behavior.
 - Accessibility contract.
 - Responsive behavior.
 
 Implementation checklist:
 
-1. Use existing tokens before adding raw colors.
-2. Add markup in `index.html` only when it is real runtime structure.
+1. Use existing colors before adding new ones.
+2. Add markup only when it is real runtime structure.
 3. Put screen-specific styles in the matching CSS file.
-4. Put shared primitives in `main.css` or `tokens.css` only if reused.
-5. Keep backend API calls inside `api.js`.
-6. Keep app orchestration in `app.js`; screen modules own their own rendering.
+4. Put shared primitives in shared CSS only if reused.
+5. Keep backend API calls in the API client module.
+6. Keep app orchestration in the boot module; screen modules own their own rendering.
 7. Verify text fits at mobile and desktop widths.
 8. Run the relevant API route against mock and live/error states.
 9. **Before shipping any new color, check: is this lime? If yes — is it the primary commit action, the live pill, or the current-user marker? If not, use blue or a neutral instead.**
-

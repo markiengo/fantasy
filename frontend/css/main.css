@@ -1,6 +1,6 @@
 *, *::before, *::after { box-sizing: border-box; }
 * { margin: 0; padding: 0; }
-html { -webkit-text-size-adjust: 100%; zoom: 1.1; }
+html { -webkit-text-size-adjust: 100%; }
 body {
   min-height: 100dvh;
   font-family: var(--font-body);
@@ -79,7 +79,7 @@ ul { list-style: none; }
   z-index: 2;
   height: 100dvh;
   max-height: 100dvh;
-  padding: 8px 12px;
+  padding: 30px 12px 8px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -397,17 +397,45 @@ ul { list-style: none; }
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  transition: opacity var(--dur-fast) var(--ease), transform var(--dur-base) var(--ease-spring);
+  transition: opacity var(--dur-base) var(--ease), transform var(--dur-base) var(--ease-spring);
 }
-:root:not([data-theme="light"]) .theme-icon--sun { opacity: 1; transform: translate(-50%, -50%) rotate(0deg); }
-:root:not([data-theme="light"]) .theme-icon--moon { opacity: 0; transform: translate(-50%, -50%) rotate(-90deg); }
-:root[data-theme="light"] .theme-icon--sun { opacity: 0; transform: translate(-50%, -50%) rotate(90deg); }
-:root[data-theme="light"] .theme-icon--moon { opacity: 1; transform: translate(-50%, -50%) rotate(0deg); }
+:root:not([data-theme="light"]) .theme-icon--sun { opacity: 1; transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+:root:not([data-theme="light"]) .theme-icon--moon { opacity: 0; transform: translate(-50%, -50%) rotate(-90deg) scale(0.85); }
+:root[data-theme="light"] .theme-icon--sun { opacity: 0; transform: translate(-50%, -50%) rotate(90deg) scale(0.85); }
+:root[data-theme="light"] .theme-icon--moon { opacity: 1; transform: translate(-50%, -50%) rotate(0deg) scale(1); }
 
 /* Smooth theme transition — only during toggle */
 :root.theme-transitioning,
 :root.theme-transitioning * {
-  transition: background-color var(--dur-base) var(--ease-smooth), border-color var(--dur-base) var(--ease-smooth), color var(--dur-base) var(--ease-smooth) !important;
+  transition: background-color var(--dur-base) var(--ease),
+              border-color var(--dur-base) var(--ease),
+              color var(--dur-base) var(--ease),
+              box-shadow var(--dur-base) var(--ease),
+              fill var(--dur-base) var(--ease),
+              stroke var(--dur-base) var(--ease) !important;
+}
+
+/* Smooth language transition — fade + blur during text swap */
+:root,
+:root.lang-transitioning {
+  transition: opacity var(--dur-fast) var(--ease), filter var(--dur-fast) var(--ease);
+}
+:root.lang-transitioning {
+  opacity: 0.55;
+  filter: blur(1.5px);
+}
+
+/* Reduced motion: strip transitions for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  :root.theme-transitioning,
+  :root.theme-transitioning * {
+    transition: none !important;
+  }
+  :root.lang-transitioning {
+    opacity: 1;
+    filter: none;
+    transition: none;
+  }
 }
 
 .lang-toggle {

@@ -190,7 +190,7 @@ const Fixtures = (() => {
         const qualClass = rank <= 2 ? " is-qualifying" : "";
         body += `<div class="table-row${qualClass}"${qualAttr}>
           <span class="table-row__rank"${qualAttr}><i class="qbar"></i>${rank}</span>
-          <span class="table-row__team">${flagImg(row.team_id)}<b>${row.name}</b></span>
+          <span class="table-row__team">${flagImg(row.team_id)}<b>${escapeHtml(row.name)}</b></span>
           <span>${row.played}</span>
           <span>${row.wins}</span>
           <span>${row.draws}</span>
@@ -204,7 +204,7 @@ const Fixtures = (() => {
         rank = rank + 1;
       }
       html += `<section class="group">
-        <header class="group__head"><h3>${t("fixtures.group", key)}</h3><span class="hr"></span></header>
+        <header class="group__head"><h3>${escapeHtml(t("fixtures.group", key))}</h3><span class="hr"></span></header>
         <div class="group__cols">
           <span>#</span><span>${t("fixtures.col_team")}</span><span>${t("fixtures.col_pl")}</span><span>${t("fixtures.col_w")}</span><span>${t("fixtures.col_d")}</span>
           <span>${t("fixtures.col_l")}</span><span>+/-</span><span>${t("fixtures.col_gd")}</span><span>${t("fixtures.col_pts")}</span><span>${t("fixtures.col_form")}</span><span>${t("fixtures.col_next")}</span>
@@ -265,7 +265,7 @@ const Fixtures = (() => {
 
         html += `<div class="fixtures__group">`;
         html += `<header class="fixtures__group-head">`;
-        html += `<span class="fixtures__group-label">${t("fixtures.group", key)}</span>`;
+        html += `<span class="fixtures__group-label">${escapeHtml(t("fixtures.group", key))}</span>`;
         if (dateStr) html += `<span class="fixtures__group-date">${dateStr}</span>`;
         html += `</header>`;
         html += `<div class="fixtures__grid">`;
@@ -361,11 +361,11 @@ const Fixtures = (() => {
 
     return `<div class="fixture-row">
       <span class="fixture-row__team fixture-row__team--home${t1Class}">
-        <b>${t1Name}</b>${flagImg(match.team1_id)}
+        <b>${escapeHtml(t1Name)}</b>${flagImg(match.team1_id)}
       </span>
       <span class="fixture-row__mid">${center}</span>
       <span class="fixture-row__team${t2Class}">
-        ${flagImg(match.team2_id)}<b>${t2Name}</b>
+        ${flagImg(match.team2_id)}<b>${escapeHtml(t2Name)}</b>
       </span>
     </div>`;
   }
@@ -393,9 +393,9 @@ const Fixtures = (() => {
       : center;
 
     return `<div class="fixture-card">
-      <span class="fixture-card__team${t1Class}">${flagImg(match.team1_id)}<b>${t1Name}</b></span>
+      <span class="fixture-card__team${t1Class}">${flagImg(match.team1_id)}<b>${escapeHtml(t1Name)}</b></span>
       ${centerWrap}
-      <span class="fixture-card__team fixture-card__team--right${t2Class}"><b>${t2Name}</b>${flagImg(match.team2_id)}</span>
+      <span class="fixture-card__team fixture-card__team--right${t2Class}"><b>${escapeHtml(t2Name)}</b>${flagImg(match.team2_id)}</span>
     </div>`;
   }
 
@@ -478,8 +478,8 @@ const Fixtures = (() => {
               t2Win = " bracket-node__slot--win";
             }
           }
-          inner = `<div class="bracket-node__slot${t1Win}">${flagImg(match.team1_id)}<b>${t1}</b>${t1Score ? `<span class="bracket-node__score">${t1Score}</span>` : ""}</div>
-            <div class="bracket-node__slot${t2Win}">${flagImg(match.team2_id)}<b>${t2}</b>${t2Score ? `<span class="bracket-node__score">${t2Score}</span>` : ""}</div>`;
+          inner = `<div class="bracket-node__slot${t1Win}">${flagImg(match.team1_id)}<b>${escapeHtml(t1)}</b>${t1Score ? `<span class="bracket-node__score">${t1Score}</span>` : ""}</div>
+            <div class="bracket-node__slot${t2Win}">${flagImg(match.team2_id)}<b>${escapeHtml(t2)}</b>${t2Score ? `<span class="bracket-node__score">${t2Score}</span>` : ""}</div>`;
         } else {
           inner = `<div class="bracket-node__slot"><span class="shield"></span><b>${t("fixtures.tbd")}</b></div>
             <div class="bracket-node__slot"><span class="shield"></span><b>${t("fixtures.tbd")}</b></div>`;

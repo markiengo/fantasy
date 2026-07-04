@@ -310,7 +310,7 @@ const Scores = (() => {
       const x2 = p.is_captain ? '<span class="scorer-x2">x2</span>' : "";
       html += '<li><span class="rank">' + (i + 1) + "</span>" +
         '<span class="avatar avatar--30" style="background-image:url(\'' + avatarSrc + '\')"></span>' +
-        '<span class="scorer-name">' + p.player_name + " " + cap + "</span>" +
+        '<span class="scorer-name">' + escapeHtml(p.player_name) + " " + cap + "</span>" +
         '<i class="pos pos--' + p.position.toLowerCase() + '">' + p.position + "</i>" +
         x2 +
         '<b class="scorer-pts' + cls + '" style="color:' + posColor + '">' + p.player_score + "</b></li>";
@@ -404,7 +404,7 @@ const Scores = (() => {
       const pct = Math.max(3, Math.abs(r.ratio) / maxRatio * 100);
       const color = POS_COLORS[r.position] || "var(--accent)";
       html += '<div class="value-row">' +
-        '<span class="value-name">' + r.name + "</span>" +
+        '<span class="value-name">' + escapeHtml(r.name) + "</span>" +
         '<span class="value-ratio">' + r.ratio.toFixed(1) + " " + t("dash.pts_per_m") + "</span>" +
         '<div class="value-bar-wrap"><div class="value-bar" style="width:' + pct + "%;background:" + color + '"></div></div>' +
         "</div>";
@@ -506,13 +506,13 @@ const Scores = (() => {
         html += '<div class="xfer-card">';
         html += '<div class="xfer-card__row xfer-card__row--out">';
         html += '<span class="xfer-arrow xfer-arrow--out"><svg viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4v8H4" stroke="currentColor" stroke-width="1.5"/></svg></span>';
-        html += '<span class="xfer-name">' + (xf.player_out_name || t("dash.unknown")) + "</span>";
+        html += '<span class="xfer-name">' + escapeHtml(xf.player_out_name || t("dash.unknown")) + "</span>";
         if (outPrice) html += '<span class="xfer-price">' + outPrice + "</span>";
         html += '<span class="xfer-badge xfer-badge--out">' + t("dash.out") + '</span>';
         html += "</div>";
         html += '<div class="xfer-card__row">';
         html += '<span class="xfer-arrow xfer-arrow--in"><svg viewBox="0 0 16 16" fill="none"><path d="M12 12L4 4M4 12v-8h8" stroke="currentColor" stroke-width="1.5"/></svg></span>';
-        html += '<span class="xfer-name">' + (xf.player_in_name || t("dash.unknown")) + "</span>";
+        html += '<span class="xfer-name">' + escapeHtml(xf.player_in_name || t("dash.unknown")) + "</span>";
         if (inPrice) html += '<span class="xfer-price">' + inPrice + "</span>";
         html += '<span class="xfer-badge xfer-badge--in">' + t("dash.in") + '</span>';
         html += "</div>";

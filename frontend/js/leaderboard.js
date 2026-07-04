@@ -108,7 +108,7 @@ const Leaderboard = (() => {
 
   function displayName(entry) {
     if (!entry) return t("lb.unranked");
-    return entry.display_name || entry.username || t("lb.manager_n", entry.rank);
+    return entry.display_name || t("lb.manager_n", entry.rank);
   }
 
   function leaderEntry(entries) {
@@ -178,7 +178,7 @@ const Leaderboard = (() => {
       const adminCls = isAdmin ? " lb-row--admin" : "";
       const youTag = isMe ? '<span class="lb-row__you">' + t("lb.you") + '</span>' : "";
       const adminTag = isAdmin ? '<span class="lb-row__admin-tag">' + t("lb.admin") + '</span>' : "";
-      const seed = entry.username || entry.display_name || entry.user_id || entry.rank;
+      const seed = entry.display_name || entry.user_id || entry.rank;
 
       html += '<div class="lb-row' + rankCls + meCls + adminCls + '" role="row">';
       html += '<span class="lb-row__rank" role="cell">' + entry.rank + '</span>';
@@ -345,14 +345,19 @@ const Leaderboard = (() => {
     Progress.done();
 
     _myUserId = data.my_user_id || _myUserId;
-    const entries = data.entries || [];
+    const allEntries = data.entries || [];
+    for (const entry of allEntries) {
+      if (entry.is_admin) entry.rank = 99;
+    }
+    const entries = allEntries;
+    const nonAdminEntries = allEntries.filter(function (e) { return !e.is_admin; });
     const showDelta = _mode === "matchday";
     const scoredSet = new Set(availableMatchdays);
     const myEntry = currentUserEntry(entries);
 
-    updateAdminBadge(entries);
+    updateAdminBadge(allEntries);
 
-    if (summary) summary.innerHTML = renderSummary(entries, myEntry);
+    if (summary) summary.innerHTML = renderSummary(nonAdminEntries, myEntry);
 
     if (isPopular) {
       const popularPlayers = data.popular_players || [];

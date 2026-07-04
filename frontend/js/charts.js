@@ -169,7 +169,7 @@ const Charts = (() => {
 
       dot.addEventListener("mouseenter", function (e) {
         const rect = container.getBoundingClientRect();
-        const html = '<div class="dash-tooltip__title">' + points[i].label + "</div>" +
+        const html = '<div class="dash-tooltip__title">' + escapeHtml(points[i].label) + "</div>" +
           '<div class="dash-tooltip__row">This matchday <b>' + fmtSigned(points[i].mdValue) + "</b></div>" +
           '<div class="dash-tooltip__row">Cumulative <b>' + points[i].y + "</b></div>";
         showTooltip(tip, rect.left + px(i), rect.top + py(points[i].y), html);
@@ -278,7 +278,7 @@ const Charts = (() => {
       const handler = function (e) {
         const rect = container.getBoundingClientRect();
         const uplift = d.captainScore - d.squadAvg;
-        const html = '<div class="dash-tooltip__title">' + d.label + "</div>" +
+        const html = '<div class="dash-tooltip__title">' + escapeHtml(d.label) + "</div>" +
           '<div class="dash-tooltip__row"><span class="dash-tooltip__swatch" style="background:var(--pos-FWD)"></span>Captain (x2) <b>' + d.captainScore + "</b></div>" +
           '<div class="dash-tooltip__row"><span class="dash-tooltip__swatch" style="background:var(--pos-MID)"></span>Squad avg <b>' + d.squadAvg.toFixed(1) + "</b></div>" +
           '<div class="dash-tooltip__row">Uplift <b style="color:' + (uplift >= 0 ? "var(--pos-FWD)" : "var(--danger)") + '">' + fmtSigned(uplift.toFixed(1)) + "</b></div>";
@@ -391,8 +391,8 @@ const Charts = (() => {
 
         rect.addEventListener("mouseenter", function (e) {
           const rect2 = container.getBoundingClientRect();
-          const html = '<div class="dash-tooltip__title">' + d.label + "</div>" +
-            '<div class="dash-tooltip__row"><span class="dash-tooltip__swatch" style="background:' + seg.color + '"></span>' + seg.label + " <b>" + fmtSigned(val) + "</b></div>" +
+          const html = '<div class="dash-tooltip__title">' + escapeHtml(d.label) + "</div>" +
+            '<div class="dash-tooltip__row"><span class="dash-tooltip__swatch" style="background:' + seg.color + '"></span>' + escapeHtml(seg.label) + " <b>" + fmtSigned(val) + "</b></div>" +
             '<div class="dash-tooltip__row">Total <b>' + d.total + "</b></div>";
           showTooltip(tip, rect2.left + xOffset + segW / 2, rect2.top + cy - barH / 2, html);
         });
@@ -485,7 +485,7 @@ const Charts = (() => {
 
       dot.addEventListener("mouseenter", function (e) {
         const rect = container.getBoundingClientRect();
-        const html = '<div class="dash-tooltip__title">' + (data[i].label || "MD" + data[i].matchday) + "</div>" +
+        const html = '<div class="dash-tooltip__title">' + escapeHtml(data[i].label || "MD" + data[i].matchday) + "</div>" +
           '<div class="dash-tooltip__row">Rank <b>#' + data[i].rank + "</b></div>" +
           '<div class="dash-tooltip__row">Score <b>' + data[i].squad_score + "</b></div>" +
           '<div class="dash-tooltip__row">Managers <b>' + data[i].total_managers + "</b></div>";
@@ -610,7 +610,7 @@ const Charts = (() => {
       dot.addEventListener("mouseenter", function (e) {
         const rect = container.getBoundingClientRect();
         const ratio = d.price > 0 ? (d.points / d.price).toFixed(1) : "N/A";
-        const html = '<div class="dash-tooltip__title">' + d.name + "</div>" +
+        const html = '<div class="dash-tooltip__title">' + escapeHtml(d.name) + "</div>" +
           '<div class="dash-tooltip__row"><span class="dash-tooltip__swatch" style="background:' + color + '"></span>' + d.position + " <b>$" + d.price.toFixed(1) + "m</b></div>" +
           '<div class="dash-tooltip__row">Points <b>' + d.points + "</b></div>" +
           '<div class="dash-tooltip__row">Pts/$m <b>' + ratio + "</b></div>";
@@ -661,7 +661,7 @@ const Charts = (() => {
       const pct = Math.max(3, Math.abs(data[i].value) / max * 100);
       html += '<div class="bar"><div class="bar__fill" style="height:' + pct + '%"></div>' +
         '<span class="bar__val">' + data[i].value + "</span>" +
-        '<span class="bar__label">' + data[i].label + "</span></div>";
+        '<span class="bar__label">' + escapeHtml(data[i].label) + "</span></div>";
     }
     container.innerHTML = html;
   }
@@ -718,7 +718,7 @@ const Charts = (() => {
       let html = "";
       for (let i = 0; i < data.length; i++) {
         html += '<li><span class="legend__swatch" style="background:' + data[i].color + '"></span>' +
-          data[i].label + " <b>" + data[i].value + "</b></li>";
+          escapeHtml(data[i].label) + " <b>" + escapeHtml(data[i].value) + "</b></li>";
       }
       legendEl.innerHTML = html;
     }

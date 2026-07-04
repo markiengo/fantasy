@@ -4,10 +4,13 @@ const Toast = (() => {
     const el = document.createElement("div");
     el.className = `toast toast--${type} is-hidden`;
     el.setAttribute("role", type === "error" ? "alert" : "status");
-    el.innerHTML = `<span>${message}</span>
-      <button class="toast__close" aria-label="Dismiss">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
-      </button>`;
+    const messageEl = document.createElement("span");
+    messageEl.textContent = message == null ? "" : String(message);
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "toast__close";
+    closeBtn.setAttribute("aria-label", t("squad.dismiss_tip"));
+    closeBtn.innerHTML = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>';
+    el.replaceChildren(messageEl, closeBtn);
 
     let closed = false;
     const close = () => {
@@ -17,7 +20,7 @@ const Toast = (() => {
       setTimeout(() => el.remove(), 220);
     };
 
-    el.querySelector(".toast__close").addEventListener("click", close);
+    closeBtn.addEventListener("click", close);
     region.appendChild(el);
     requestAnimationFrame(() => requestAnimationFrame(() => el.classList.remove("is-hidden")));
     if (ms) setTimeout(close, ms);
@@ -74,8 +77,8 @@ const RuleAlert = (() => {
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 8v5m0 3h.01M10.3 3.9l-8 13.9A1.5 1.5 0 0 0 3.6 20h16.8a1.5 1.5 0 0 0 1.3-2.2l-8-13.9a1.5 1.5 0 0 0-2.6 0Z" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
       <span class="rule-alert__body">
-        <span class="rule-alert__title">${resolveTitle(reason)}</span>
-        <span class="rule-alert__detail">${resolveDetail(reason)}</span>
+        <span class="rule-alert__title">${escapeHtml(resolveTitle(reason))}</span>
+        <span class="rule-alert__detail">${escapeHtml(resolveDetail(reason))}</span>
       </span>
       <button class="rule-alert__close" aria-label="${t("squad.dismiss_tip")}">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
@@ -136,7 +139,9 @@ function applyTheme(theme) {
   root.classList.add("theme-transitioning");
   root.setAttribute("data-theme", nextTheme);
   updateThemeToggle(nextTheme);
-  setTimeout(function () { root.classList.remove("theme-transitioning"); }, 300);
+  requestAnimationFrame(function () {
+    setTimeout(function () { root.classList.remove("theme-transitioning"); }, 280);
+  });
 }
 
 function persistTheme(theme) {
@@ -234,7 +239,6 @@ function isDirtyUnsaved() {
   if (_skipUnloadWarning) return false;
   if (_usernameGateLocked) return false;
   if (State.mode === "transfer" && State.isDirty()) return true;
-  if (State.mode === "build" && State.currentSquad.players.length > 0) return true;
   if (hasTypedInput()) return true;
   return false;
 }
@@ -311,11 +315,12 @@ function showTransferWarning(onLeave) {
   const modal = document.getElementById("transferWarning");
   if (!modal) { onLeave(); return; }
   modal.hidden = false;
+  modal.classList.add("is-open");
   var bodyEl = modal.querySelector(".transfer-warning__body");
   if (bodyEl) {
     if (State.mode === "transfer" && State.isDirty()) {
       bodyEl.textContent = t("warning.body_transfers");
-    } else if (hasTypedInput() && !(State.mode === "build" && State.currentSquad.players.length > 0)) {
+    } else if (hasTypedInput()) {
       bodyEl.textContent = t("warning.body_input");
     } else {
       bodyEl.textContent = t("warning.body_squad");
@@ -325,6 +330,7 @@ function showTransferWarning(onLeave) {
   const leaveBtn = document.getElementById("transferWarningLeave");
   function cleanup() {
     modal.hidden = true;
+    modal.classList.remove("is-open");
     stayBtn.removeEventListener("click", onStay);
     leaveBtn.removeEventListener("click", onLeaveClick);
   }
@@ -845,7 +851,9 @@ function hideAuthOverlay() {
 }
 
 function resetAppStateForSession() {
-  State.currentSquad = { matchday: 1, formation: "4-3-3", players: [], captainId: null };
+  if (_freshLogin) {
+    State.currentSquad = { matchday: 1, formation: "4-3-3", players: [], captainId: null };
+  }
   State.squadSaved = false;
   State.transfersUsed = 0;
 }
@@ -876,7 +884,7 @@ function enforceUsernameGate(profile) {
 function usernameProfileErrorMessage(err) {
   const detail = err && err.message ? err.message : "";
   if (err && err.status === 400) return t("username.invalid");
-  if (detail.indexOf("ASCII letters") !== -1 || detail.indexOf("Username must") !== -1) return t("username.invalid");
+  if (detail.indexOf("Display name") !== -1) return t("username.invalid");
   if (detail === "Username already taken") return t("username.taken");
   if (detail === "Profile already completed") return t("username.profile_completed");
   return t("username.could_not_set");
@@ -925,34 +933,12 @@ function showUsernameModal(profile) {
   if (input) input.focus();
 
   if (input && input.dataset.usernameCheckBound !== "1") {
-    let checkTimer = null;
     input.dataset.usernameCheckBound = "1";
     input.addEventListener("input", () => {
-      const val = input.value.trim();
       if (feedback) {
         feedback.textContent = "";
         feedback.className = "username-modal__feedback";
       }
-      clearTimeout(checkTimer);
-      if (val.length < 3) return;
-      checkTimer = setTimeout(async () => {
-        const base = (location.hostname === "127.0.0.1" || location.hostname === "localhost")
-          ? "http://127.0.0.1:8000/api"
-          : "/api";
-        try {
-          const res = await fetch(`${base}/check-username?username=${encodeURIComponent(val)}`);
-          const data = await res.json();
-          if (feedback && input.value.trim() === val) {
-            if (data.available) {
-              feedback.textContent = t("username.available");
-              feedback.className = "username-modal__feedback is-ok";
-            } else if (data.reason === "taken") {
-              feedback.textContent = t("username.taken");
-              feedback.className = "username-modal__feedback is-error";
-            }
-          }
-        } catch (e) {}
-      }, 350);
     });
   }
 
@@ -960,8 +946,8 @@ function showUsernameModal(profile) {
     form.dataset.usernameSubmitBound = "1";
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const username = input ? input.value.trim() : "";
-      if (!username || !/^[a-zA-Z0-9_ ]{3,20}$/.test(username)) {
+      const displayName = input ? input.value.trim() : "";
+      if (!displayName || displayName.length < 2 || displayName.length > 30) {
         if (feedback) {
           feedback.textContent = t("username.invalid");
           feedback.className = "username-modal__feedback is-error";
@@ -970,7 +956,7 @@ function showUsernameModal(profile) {
       }
       if (submitBtn) { submitBtn.classList.add("btn--loading"); submitBtn.disabled = true; }
       try {
-        await Api.completeProfile(username);
+        await Api.completeProfile(displayName);
         hideUsernameModal({ completed: true });
         await enterAuthenticatedApp();
       } catch (err) {
@@ -1005,16 +991,6 @@ function showAppScreen() {
   const app = document.getElementById("appScreen");
   if (login) login.style.display = "none";
   if (app) app.style.display = "";
-}
-
-function showGuestBanner() {
-  const banner = document.getElementById("guestBanner");
-  if (banner) banner.hidden = false;
-}
-
-function hideGuestBanner() {
-  const banner = document.getElementById("guestBanner");
-  if (banner) banner.hidden = true;
 }
 
 async function boot() {
@@ -1060,28 +1036,16 @@ async function boot() {
 
   const googleSignInBtn = document.getElementById("googleSignInBtn");
   const emailLoginForm = document.getElementById("emailLoginForm");
-  const guestBtn = document.getElementById("guestBtn");
   const forgotPasswordBtn = document.getElementById("forgotPasswordBtn");
   const authToggleBtn = document.getElementById("authToggleBtn");
-  const guestBannerClose = document.getElementById("guestBannerClose");
-  const guestBannerSignIn = document.getElementById("guestBannerSignIn");
   let authMode = "login";
 
   function swapToLogin() {
     showLoginScreen();
-    hideGuestBanner();
   }
 
   async function swapToApp() {
     await enterAuthenticatedApp();
-  }
-
-  async function enterDemoMode() {
-    Api.setDemoToken();
-    showAppScreen();
-    Toast.show(t("toast.demo_user"), "success");
-    _booted = false;
-    await continueBoot();
   }
 
   window.addEventListener("auth-unauthorized", () => {
@@ -1116,10 +1080,6 @@ async function boot() {
       passwordToggle.setAttribute("aria-pressed", String(!isText));
       passwordToggle.setAttribute("aria-label", isText ? t("login.show_password") : t("login.hide_password"));
     });
-  }
-
-  if (guestBtn) {
-    guestBtn.addEventListener("click", enterDemoMode);
   }
 
   if (googleSignInBtn) {
@@ -1174,21 +1134,8 @@ async function boot() {
           await window.signIn(emailOrUser, password, remember);
           await swapToApp();
         } else if (authMode === "signup") {
-          if (!username || !/^[a-zA-Z0-9_ ]{3,20}$/.test(username)) {
-            Toast.show(t("toast.username_invalid"), "error");
-            setAuthLoading(false);
-            return;
-          }
-          const base = (location.hostname === "127.0.0.1" || location.hostname === "localhost")
-            ? "http://127.0.0.1:8000/api"
-            : "/api";
-          const checkRes = await fetch(`${base}/check-username?username=${encodeURIComponent(username)}`);
-          const checkData = await checkRes.json();
-          if (!checkData.available) {
-            const msg = checkData.reason === "invalid"
-              ? t("toast.username_invalid")
-              : t("toast.username_taken");
-            Toast.show(msg, "error");
+          if (!username || username.length < 2 || username.length > 30) {
+            Toast.show(t("username.invalid"), "error");
             setAuthLoading(false);
             return;
           }
@@ -1222,22 +1169,9 @@ async function boot() {
     });
   }
 
-  if (guestBannerClose) {
-    guestBannerClose.addEventListener("click", hideGuestBanner);
-  }
-
-  if (guestBannerSignIn) {
-    guestBannerSignIn.addEventListener("click", () => {
-      if (window.supabaseAuth) {
-        window.supabaseAuth.auth.signOut().catch(() => {});
-      }
-      window.location.reload();
-    });
-  }
-
   const session = await window.getCurrentSession();
 
-  if (!session && !Api.isDemo()) {
+  if (!session) {
     showLoginScreen();
     return;
   }
@@ -1247,21 +1181,12 @@ async function boot() {
     signOutBtn.addEventListener("click", async () => {
       try {
         localStorage.removeItem("wcf2026");
-        if (Api.isDemo()) {
-          Api.clearDemoToken();
-        } else {
-          await window.signOut();
-        }
+        await window.signOut();
         window.location.reload();
       } catch (error) {
         Toast.show(error.message || t("toast.signout_failed"), "error");
       }
     });
-  }
-
-  if (Api.isDemo()) {
-    await swapToApp();
-    return;
   }
 
   await swapToApp();
@@ -1330,7 +1255,7 @@ async function continueBoot() {
 
   const managerAvatar = document.getElementById("managerAvatar");
   if (managerAvatar) {
-    const seed = me.username || me.display_name || me.user_id || "Gaffer";
+    const seed = me.display_name || me.user_id || "Gaffer";
     managerAvatar.style.backgroundImage = "url('https://api.dicebear.com/9.x/personas/svg?seed=" + encodeURIComponent(seed) + "&backgroundColor=ffd5dc,e6d4f0,c4f0e8,ffe8c4,d4e8ff&radius=50')";
   }
 
@@ -1407,7 +1332,11 @@ async function continueBoot() {
   if (rawSquad && rawSquad.players && rawSquad.players.length) {
     applySquadForMatchday(rawSquad, md, transfersUsed);
   } else {
-    State.currentSquad.players = [];
+    if (_freshLogin || !State.currentSquad.players || !State.currentSquad.players.length) {
+      State.currentSquad = { matchday: md, formation: "4-3-3", players: [], captainId: null };
+    } else {
+      State.currentSquad.matchday = md;
+    }
     State.setBaseline();
     State.squadSaved = false;
     State.transfersUsed = 0;
