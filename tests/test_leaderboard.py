@@ -16,6 +16,7 @@ class FakeCursor:
     def __init__(self, rows):
         self._rows = rows
         self.executed = []
+        self._fetch_idx = 0
 
     def execute(self, sql, params=None):
         self.executed.append((sql, params))
@@ -23,17 +24,36 @@ class FakeCursor:
     def fetchall(self):
         return self._rows
 
+    def fetchone(self):
+        if self._fetch_idx < len(self._rows):
+            row = self._rows[self._fetch_idx]
+            self._fetch_idx += 1
+            return row
+        return None
+
     def close(self):
         pass
 
 
 class FakeConn:
-    def __init__(self, rows):
+    def __init__(self, rows, cursor_rows=None):
         self._rows = rows
-        self._cursor = FakeCursor(rows)
+        self._cursor_rows = cursor_rows or []
+        self._call_idx = 0
+        self._cursors = []
 
     def cursor(self):
-        return self._cursor
+        idx = self._call_idx
+        self._call_idx += 1
+        if idx < len(self._cursor_rows):
+            c = FakeCursor(self._cursor_rows[idx])
+        else:
+            c = FakeCursor(self._rows)
+        self._cursors.append(c)
+        return c
+
+    def last_cursor(self):
+        return self._cursors[-1] if self._cursors else None
 
 
 # ---------------------------------------------------------------------------
@@ -67,10 +87,10 @@ def test_matchday_filter_passes_param():
     result = get_leaderboard(conn, matchday=3)
 
     assert len(result) == 1
-    cursor = conn.cursor()
-    # params are (prev_md, matchday) = (2, 3)
+    cursor = conn.last_cursor()
+    # params are (prev_md, matchday, matchday, matchday) = (2, 3, 3, 3)
     sql, params = cursor.executed[-1]
-    assert params == (2, 3)
+    assert params == (2, 3, 3, 3)
 
 
 def test_cumulative_no_params():
@@ -80,7 +100,7 @@ def test_cumulative_no_params():
     from app.queries.leaderboard import get_leaderboard
     get_leaderboard(conn)
 
-    cursor = conn.cursor()
+    cursor = conn.last_cursor()
     sql, params = cursor.executed[-1]
     assert params is None
 
@@ -100,7 +120,7 @@ def test_sql_contains_captain_doubling():
     from app.queries.leaderboard import get_leaderboard
     get_leaderboard(conn)
 
-    cursor = conn.cursor()
+    cursor = conn.last_cursor()
     sql, _ = cursor.executed[-1]
     assert "is_captain" in sql
     assert "* 2" in sql
@@ -112,7 +132,7 @@ def test_sql_contains_active_user_filter():
     from app.queries.leaderboard import get_leaderboard
     get_leaderboard(conn)
 
-    cursor = conn.cursor()
+    cursor = conn.last_cursor()
     sql, _ = cursor.executed[-1]
     assert "is_active = true" in sql
 
@@ -123,7 +143,7 @@ def test_sql_contains_matchday_join():
     from app.queries.leaderboard import get_leaderboard
     get_leaderboard(conn)
 
-    cursor = conn.cursor()
+    cursor = conn.last_cursor()
     sql, _ = cursor.executed[-1]
     assert "m.matchday = s.matchday" in sql
 
@@ -134,7 +154,7 @@ def test_sql_contains_tie_breaker():
     from app.queries.leaderboard import get_leaderboard
     get_leaderboard(conn)
 
-    cursor = conn.cursor()
+    cursor = conn.last_cursor()
     sql, _ = cursor.executed[-1]
     assert "u.user_id ASC" in sql
 
@@ -145,9 +165,59 @@ def test_matchday_sql_contains_tie_breaker():
     from app.queries.leaderboard import get_leaderboard
     get_leaderboard(conn, matchday=1)
 
-    cursor = conn.cursor()
+    cursor = conn.last_cursor()
     sql, _ = cursor.executed[-1]
     assert "u.user_id ASC" in sql
+
+
+def test_sql_contains_transfer_count_tiebreak():
+    conn = FakeConn([])
+
+    from app.queries.leaderboard import get_leaderboard
+    get_leaderboard(conn)
+
+    cursor = conn.last_cursor()
+    sql, _ = cursor.executed[-1]
+    assert "transfer_count" in sql
+    assert "tc.transfer_count ASC" in sql
+
+
+def test_matchday_sql_contains_transfer_count_tiebreak():
+    conn = FakeConn([])
+
+    from app.queries.leaderboard import get_leaderboard
+    get_leaderboard(conn, matchday=2)
+
+    cursor = conn.last_cursor()
+    sql, _ = cursor.executed[-1]
+    assert "transfer_count" in sql
+    assert "tc.transfer_count ASC" in sql
+
+
+def test_format_entries_includes_transfer_count():
+    rows = [
+        {"user_id": 1, "username": "alice", "display_name": "Alice", "squad_score": 50, "transfer_count": 3},
+        {"user_id": 2, "username": "bob", "display_name": "Bob", "squad_score": 40, "transfer_count": 0},
+    ]
+    conn = FakeConn(rows)
+
+    from app.queries.leaderboard import get_leaderboard
+    result = get_leaderboard(conn)
+
+    assert result[0]["transfer_count"] == 3
+    assert result[1]["transfer_count"] == 0
+
+
+def test_format_entries_transfer_count_defaults_to_zero():
+    rows = [
+        {"user_id": 1, "username": "alice", "display_name": "Alice", "squad_score": 50},
+    ]
+    conn = FakeConn(rows)
+
+    from app.queries.leaderboard import get_leaderboard
+    result = get_leaderboard(conn)
+
+    assert result[0]["transfer_count"] == 0
 
 
 # ---------------------------------------------------------------------------
@@ -165,12 +235,15 @@ def fake_db_factory(rows):
     return _get_db
 
 
-def setup_client(rows, auth_user=None):
+def setup_client(rows, auth_user=None, cursor_rows=None):
     """Create a TestClient with mocked db and auth."""
     if auth_user is None:
         auth_user = fake_user()
 
-    app.dependency_overrides[get_db] = fake_db_factory(rows)
+    conn = FakeConn(rows, cursor_rows)
+    def _get_db():
+        yield conn
+    app.dependency_overrides[get_db] = _get_db
     app.dependency_overrides[get_current_user] = lambda: auth_user
     client = TestClient(app)
     return client
@@ -202,7 +275,9 @@ def test_route_200_cumulative():
         {"user_id": 1, "username": "alice", "display_name": "Alice", "squad_score": 50},
         {"user_id": 17, "username": "markiengo", "display_name": "Mark", "squad_score": 40},
     ]
-    client = setup_client(rows)
+    # cursor_rows: [leaderboard, matchdays, latest_md fetchone, popular_players]
+    cursor_rows = [rows, [], [{"md": 1}], []]
+    client = setup_client(rows, cursor_rows=cursor_rows)
 
     response = client.get("/api/leaderboard")
     assert response.status_code == 200
@@ -224,7 +299,9 @@ def test_route_200_filtered():
     rows = [
         {"user_id": 17, "username": "markiengo", "display_name": "Mark", "squad_score": 31},
     ]
-    client = setup_client(rows)
+    # cursor_rows: [leaderboard, matchdays, popular_players] (no _latest_matchday when matchday is provided)
+    cursor_rows = [rows, [], []]
+    client = setup_client(rows, cursor_rows=cursor_rows)
 
     response = client.get("/api/leaderboard?matchday=3")
     assert response.status_code == 200
@@ -241,7 +318,8 @@ def test_route_200_filtered():
 
 
 def test_route_200_empty():
-    client = setup_client([])
+    cursor_rows = [[], [], [{"md": 1}], []]
+    client = setup_client([], cursor_rows=cursor_rows)
 
     response = client.get("/api/leaderboard")
     assert response.status_code == 200
@@ -254,7 +332,9 @@ def test_route_200_empty():
 
 
 def test_route_200_empty_with_matchday():
-    client = setup_client([])
+    # cursor_rows: [leaderboard, matchdays, popular_players] (no _latest_matchday when matchday is provided)
+    cursor_rows = [[], [], []]
+    client = setup_client([], cursor_rows=cursor_rows)
 
     response = client.get("/api/leaderboard?matchday=5")
     assert response.status_code == 200
@@ -273,7 +353,8 @@ def test_route_ranks_sequential():
         {"user_id": 1, "username": "alice", "display_name": "Alice", "squad_score": 50},
         {"user_id": 2, "username": "bob", "display_name": "Bob", "squad_score": 40},
     ]
-    client = setup_client(rows)
+    cursor_rows = [rows, [], [{"md": 1}], []]
+    client = setup_client(rows, cursor_rows=cursor_rows)
 
     response = client.get("/api/leaderboard")
     data = response.json()
@@ -290,7 +371,8 @@ def test_route_my_user_id_correct():
         {"user_id": 99, "username": "other", "display_name": "Other", "squad_score": 10},
     ]
     auth_user = {"user_id": 42, "username": "testuser", "display_name": "Test", "is_active": True, "role": "user"}
-    client = setup_client(rows, auth_user=auth_user)
+    cursor_rows = [rows, [], [{"md": 1}], []]
+    client = setup_client(rows, auth_user=auth_user, cursor_rows=cursor_rows)
 
     response = client.get("/api/leaderboard")
     data = response.json()

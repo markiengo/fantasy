@@ -4,7 +4,7 @@ const Leaderboard = (() => {
   let _myUserId = null;
 
   function avatarUrl(seed) {
-    return "https://api.dicebear.com/9.x/identicon/svg?seed=" + encodeURIComponent(seed) + "&backgroundColor=08090a,c6f24a,a6d92e,7aa2ff,ffb06c&radius=50";
+    return "https://api.dicebear.com/9.x/personas/svg?seed=" + encodeURIComponent(seed) + "&backgroundColor=ffd5dc,e6d4f0,c4f0e8,ffe8c4,d4e8ff&radius=50";
   }
 
   function escapeHtml(value) {
@@ -13,11 +13,21 @@ const Leaderboard = (() => {
     return div.innerHTML;
   }
 
+  function formatTimeLeft(hours) {
+    var h = Number(hours) || 0;
+    if (h <= 0) return '0h';
+    var days = Math.floor(h / 24);
+    var remHours = Math.round(h % 24);
+    if (days > 0) return days + 'd ' + remHours + 'h';
+    return Math.round(h) + 'h';
+  }
+
   function skeletonRows(n, showDelta) {
     let html = '<div class="lb-table__head lb-table__head--skeleton">';
     html += '<span class="skeleton" style="width:32px"></span>';
     html += '<span class="skeleton" style="width:120px"></span>';
     if (showDelta) html += '<span class="skeleton" style="width:32px"></span>';
+    html += '<span class="skeleton" style="width:44px"></span>';
     html += '<span class="skeleton" style="width:44px"></span>';
     html += '</div>';
     for (let i = 0; i < n; i++) {
@@ -28,6 +38,7 @@ const Leaderboard = (() => {
       html += '<div class="skeleton" style="width:55%;max-width:180px"></div>';
       html += '</div>';
       if (showDelta) html += '<div class="skeleton" style="width:32px"></div>';
+      html += '<div class="skeleton" style="width:44px"></div>';
       html += '<div class="skeleton" style="width:42px"></div>';
       html += '</div>';
     }
@@ -61,12 +72,26 @@ const Leaderboard = (() => {
     return String(entry.user_id) === String(_myUserId);
   }
 
-  function rankZone(entry, totalEntries) {
-    if (entry.rank <= 4) return "top";
-    if (entry.rank === 5) return "europa";
-    if (entry.rank === 6) return "conference";
-    if (totalEntries > 6 && entry.rank > totalEntries - 3) return "drop";
-    return "pack";
+  function updateAdminBadge(entries) {
+    const badge = document.getElementById("lbAdminBadge");
+    const ptsEl = document.getElementById("lbAdminPts");
+    if (!badge || !ptsEl) return;
+    if (!window._isAdmin) {
+      badge.hidden = true;
+      return;
+    }
+    const myEntry = currentUserEntry(entries);
+    const pts = myEntry ? pointsValue(myEntry) : 0;
+    ptsEl.textContent = pts;
+    badge.hidden = false;
+    badge.title = "Admin — just here for vibes";
+  }
+
+  function rankClass(entry) {
+    if (entry.rank === 1) return " lb-row--rank-1";
+    if (entry.rank === 2) return " lb-row--rank-2";
+    if (entry.rank === 3) return " lb-row--rank-3";
+    return "";
   }
 
   function pointsValue(entry) {
@@ -82,8 +107,8 @@ const Leaderboard = (() => {
   }
 
   function displayName(entry) {
-    if (!entry) return "Unranked";
-    return entry.display_name || entry.username || ("Manager " + entry.rank);
+    if (!entry) return t("lb.unranked");
+    return entry.display_name || entry.username || t("lb.manager_n", entry.rank);
   }
 
   function leaderEntry(entries) {
@@ -103,26 +128,27 @@ const Leaderboard = (() => {
 
   function renderSummary(entries, myEntry) {
     const leader = leaderEntry(entries);
-    const leaderText = leader ? escapeHtml(displayName(leader)) + " &middot; " + formatPoints(leader) + " pts" : "None";
-    const youText = myEntry ? "#" + myEntry.rank + " &middot; " + formatPoints(myEntry) + " pts" : "Unranked";
+    const leaderText = leader ? escapeHtml(displayName(leader)) + " &middot; " + formatPoints(leader) + " pts" : t("lb.none");
+    const youText = myEntry ? "#" + myEntry.rank + " &middot; " + formatPoints(myEntry) + " pts" : t("lb.unranked");
 
     const trophyIcon = '<svg class="lb-summary__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4ZM5 5H3v3a4 4 0 0 0 4 4M19 5h2v3a4 4 0 0 1-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     const userIcon = '<svg class="lb-summary__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 20a8 8 0 0 1 16 0" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     const usersIcon = '<svg class="lb-summary__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM2 20a7 7 0 0 1 14 0M17 11a3.5 3.5 0 1 0 0-7M22 20a6 6 0 0 0-5-6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
     let html = "";
-    html += '<div class="lb-summary__item lb-summary__item--leader"><div class="lb-summary__label-row">' + trophyIcon + '<span>Leader</span></div><strong>' + leaderText + '</strong></div>';
-    html += '<div class="lb-summary__item lb-summary__item--you"><div class="lb-summary__label-row">' + userIcon + '<span>You</span></div><strong>' + youText + '</strong></div>';
-    html += '<div class="lb-summary__item lb-summary__item--managers"><div class="lb-summary__label-row">' + usersIcon + '<span>Managers</span></div><strong>' + entries.length + '</strong></div>';
+    html += '<div class="lb-summary__item lb-summary__item--leader"><div class="lb-summary__label-row">' + trophyIcon + '<span>' + t("lb.leader") + '</span></div><strong>' + leaderText + '</strong></div>';
+    html += '<div class="lb-summary__item lb-summary__item--you"><div class="lb-summary__label-row">' + userIcon + '<span>' + t("lb.you") + '</span></div><strong>' + youText + '</strong></div>';
+    html += '<div class="lb-summary__item lb-summary__item--managers"><div class="lb-summary__label-row">' + usersIcon + '<span>' + t("lb.managers") + '</span></div><strong>' + entries.length + '</strong></div>';
     return html;
   }
 
   function renderTableHeader(showDelta) {
     let html = '<div class="lb-table__head" role="row">';
-    html += '<span class="lb-table__rank" role="columnheader">Rank</span>';
-    html += '<span class="lb-table__manager" role="columnheader">Manager</span>';
+    html += '<span class="lb-table__rank" role="columnheader">' + t("lb.rank") + '</span>';
+    html += '<span class="lb-table__manager" role="columnheader">' + t("lb.manager") + '</span>';
     if (showDelta) html += '<span class="lb-table__delta" role="columnheader">&Delta;</span>';
-    html += '<span class="lb-table__score" role="columnheader">Pts</span>';
+    html += '<span class="lb-table__timeleft" role="columnheader">\u23F1 ' + t("lb.before_ko") + '</span>';
+    html += '<span class="lb-table__score" role="columnheader">' + t("lb.pts") + '</span>';
     html += '</div>';
     return html;
   }
@@ -146,19 +172,22 @@ const Leaderboard = (() => {
     const totalEntries = entries.length;
     for (const entry of entries) {
       const isMe = sameUser(entry);
-      const zone = rankZone(entry, totalEntries);
-      const zoneCls = " lb-row--zone-" + zone;
+      const isAdmin = entry.is_admin === true;
+      const rankCls = rankClass(entry);
       const meCls = isMe ? " lb-row--me" : "";
-      const youTag = isMe ? '<span class="lb-row__you">You</span>' : "";
+      const adminCls = isAdmin ? " lb-row--admin" : "";
+      const youTag = isMe ? '<span class="lb-row__you">' + t("lb.you") + '</span>' : "";
+      const adminTag = isAdmin ? '<span class="lb-row__admin-tag">' + t("lb.admin") + '</span>' : "";
       const seed = entry.username || entry.display_name || entry.user_id || entry.rank;
 
-      html += '<div class="lb-row' + zoneCls + meCls + '" data-zone="' + zone + '" role="row">';
+      html += '<div class="lb-row' + rankCls + meCls + adminCls + '" role="row">';
       html += '<span class="lb-row__rank" role="cell">' + entry.rank + '</span>';
       html += '<span class="lb-row__manager" role="cell">';
       html += '<span class="lb-row__avatar" style="background-image:url(\'' + avatarUrl(seed) + '\')"></span>';
-      html += '<span class="lb-row__name"><span class="lb-row__name-text">' + escapeHtml(displayName(entry)) + '</span>' + youTag + '</span>';
+      html += '<span class="lb-row__name"><span class="lb-row__name-text">' + escapeHtml(displayName(entry)) + '</span>' + youTag + adminTag + '</span>';
       html += '</span>';
       if (showDelta) html += '<span class="lb-row__delta-cell" role="cell">' + renderDelta(entry) + '</span>';
+      html += '<span class="lb-row__timeleft" role="cell">' + formatTimeLeft(entry.time_left) + '</span>';
       html += '<span class="lb-row__score" role="cell">' + formatPoints(entry) + '</span>';
       html += '</div>';
     }
@@ -172,7 +201,7 @@ const Leaderboard = (() => {
   function renderSticky(myEntry) {
     if (!myEntry) return "";
     return '<div class="lb-sticky">'
-      + '<span class="lb-sticky__label">You</span>'
+      + '<span class="lb-sticky__label">' + t("lb.you") + '</span>'
       + '<span class="lb-sticky__rank">#' + myEntry.rank + '</span>'
       + '<span class="lb-sticky__name">' + escapeHtml(displayName(myEntry)) + '</span>'
       + '<span class="lb-sticky__score">' + formatPoints(myEntry) + '</span>'
@@ -181,15 +210,13 @@ const Leaderboard = (() => {
 
   function roundDisplayLabel(md, meta) {
     if (meta && meta.label) return meta.label;
-    if (md === 1) return "Round 1";
-    if (md === 2) return "Round 2";
-    if (md === 3) return "Round 3";
-    if (md === 4) return "Round of 32";
-    if (md === 5) return "Round of 16";
-    if (md === 6) return "Quarterfinals";
-    if (md === 7) return "Semifinals";
-    if (md === 8) return "Final";
-    return "Round " + md;
+    if (md >= 1 && md <= 3) return t("stage.group_stage", md);
+    if (md === 4) return t("stage.round_of_32");
+    if (md === 5) return t("stage.round_of_16");
+    if (md === 6) return t("stage.quarter_final");
+    if (md === 7) return t("stage.semi_final");
+    if (md === 8) return t("stage.final");
+    return t("stage.group_stage", md);
   }
 
   function buildMatchdayStrip(scoredSet) {
@@ -229,7 +256,7 @@ const Leaderboard = (() => {
 
   function renderPopularCards(players) {
     if (!players || !players.length) {
-      return '<div class="lb-pop-empty">No popular picks data for this matchday yet.</div>';
+      return '<div class="lb-pop-empty">' + t("lb.no_popular") + '</div>';
     }
 
     const maxRate = players[0].pick_rate || 1;
@@ -247,7 +274,7 @@ const Leaderboard = (() => {
       html += '<div class="lb-pop-card__name-row">';
       html += '<span class="lb-pop-card__rank">' + rank + '</span>';
       html += '<span class="lb-pop-card__name">' + escapeHtml(p.name) + '</span>';
-      if (isCaptain) html += '<span class="lb-pop-card__captain-badge" title="Captain picks: ' + p.captain_count + '">C</span>';
+      if (isCaptain) html += '<span class="lb-pop-card__captain-badge" title="' + t("lb.captain_picks_title", p.captain_count) + '">C</span>';
       html += '</div>';
       html += '<div class="lb-pop-card__name-row">';
       html += '<span class="lb-pop-card__pos-pill" data-pos="' + escapeHtml(p.position) + '">' + escapeHtml(p.position) + '</span>';
@@ -256,14 +283,14 @@ const Leaderboard = (() => {
       html += '</div>';
       html += '<div class="lb-pop-card__pick-rate">';
       html += '<span class="lb-pop-card__pick-pct">' + p.pick_rate + '%</span>';
-      html += '<span class="lb-pop-card__pick-label">Pick Rate</span>';
+      html += '<span class="lb-pop-card__pick-label">' + t("lb.pick_rate") + '</span>';
       html += '</div>';
       html += '</div>';
       html += '<div class="lb-pop-card__bar"><div class="lb-pop-card__bar-fill" style="width:' + barWidth + '%"></div></div>';
       html += '<div class="lb-pop-card__footer">';
-      html += '<span class="lb-pop-card__picks">' + p.pick_count + ' picks</span>';
+      html += '<span class="lb-pop-card__picks">' + p.pick_count + ' ' + t("lb.picks") + '</span>';
       if (isCaptain) {
-        html += '<span class="lb-pop-card__captains">' + p.captain_count + ' captain' + (p.captain_count > 1 ? 's' : '') + '</span>';
+        html += '<span class="lb-pop-card__captains">' + p.captain_count + ' ' + (p.captain_count > 1 ? t("lb.captain_p") : t("lb.captain_s")) + '</span>';
       }
       html += '</div>';
       html += '</div>';
@@ -280,6 +307,8 @@ const Leaderboard = (() => {
 
     const isPopular = _mode === "popular";
     const loadingMatchday = _mode === "matchday";
+
+    Progress.start();
 
     if (isPopular) {
       list.hidden = true;
@@ -313,11 +342,15 @@ const Leaderboard = (() => {
       data = { entries: [], my_user_id: _myUserId, available_matchdays: availableMatchdays, popular_players: [] };
     }
 
+    Progress.done();
+
     _myUserId = data.my_user_id || _myUserId;
     const entries = data.entries || [];
     const showDelta = _mode === "matchday";
     const scoredSet = new Set(availableMatchdays);
     const myEntry = currentUserEntry(entries);
+
+    updateAdminBadge(entries);
 
     if (summary) summary.innerHTML = renderSummary(entries, myEntry);
 
@@ -332,7 +365,7 @@ const Leaderboard = (() => {
     list.classList.toggle("lb-list--overall", !showDelta);
 
     if (!entries.length) {
-      const emptyCopy = _mode === "matchday" ? "No leaderboard data for this matchday yet." : "No leaderboard data yet.";
+      const emptyCopy = _mode === "matchday" ? t("lb.no_data_md") : t("lb.no_data");
       list.innerHTML = '<div class="lb-empty">' + emptyCopy + '</div>';
       buildMatchdayStrip(scoredSet);
       return;
