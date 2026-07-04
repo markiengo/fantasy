@@ -1,7 +1,7 @@
 # API And Game Logic Contract
 
-**Version:** 3.0
-**Last updated:** 2026-07-03
+**Version:** 3.2
+**Last updated:** 2026-07-04
 **Runtime source of truth:** `app/main.py`, `app/routers/*`, `app/queries/*`, `app/core/*`, `app/services/stat_loader.py`
 
 This file is the canonical API contract and business-logic reference. Business rules that used to live in a separate logic note are now merged here.
@@ -20,23 +20,21 @@ Successful responses are JSON objects or arrays. Errors use:
 { "detail": "message" }
 ```
 
-The global exception handler currently returns `detail` and `traceback` on unhandled `500` errors. That is useful during development but should be hardened before production.
+The global exception handler logs server-side tracebacks and returns a generic `500` response body to clients.
 
 ## Auth Model
 
 Identity is Supabase Auth. Authorization is enforced in FastAPI.
 
-1. Frontend signs in through Supabase JS.
+1. Frontend signs in through Supabase JS, or through `POST /auth/login` for username/password login.
 2. Frontend sends `Authorization: Bearer <access_token>` on protected API calls.
 3. `app/auth.py` verifies the JWT using Supabase JWKS, issuer, audience, expiry, and `sub`.
 4. `sub` maps to `users.auth_user_id`.
-5. If the local user row does not exist, the backend creates it from token metadata/email.
-6. Routers use `current_user["user_id"]`; they do not trust a client-supplied `user_id`.
+5. If the local user row does not exist and token metadata contains a valid username, the backend creates it. Valid usernames are trimmed and must match `^[a-zA-Z0-9_ ]{3,20}$`. Spaces are allowed; Vietnamese accents/diacritics and other punctuation are invalid.
+6. If the local user row does not exist and no valid username is available, `GET /me` returns `{ needs_username: true }`; the frontend locks the app behind the username modal and calls `POST /complete-profile` before loading user features.
+7. Routers use `current_user["user_id"]`; they do not trust a client-supplied `user_id`.
 
-Current demo shortcut:
-
-- `Authorization: Bearer demo-token` maps to auth user id `00000000-0000-0000-0000-000000000000`.
-- This is useful for local/demo UX, but it is a production hardening risk.
+There is no bearer `demo-token` auth bypass. Demo data is seeded and tested through backend tooling, not through a production auth shortcut.
 
 Auth failures:
 
@@ -55,11 +53,12 @@ Public routes:
 - `GET /playerstats`
 - `GET /playerstats/top`
 - `GET /check-username`
-- `GET /lookup-username`
+- `POST /auth/login`
 
 Protected user routes:
 
 - `GET /me`
+- `POST /complete-profile`
 - `GET /squad`
 - `POST /squad`
 - `GET /transfers`
@@ -80,7 +79,7 @@ Admin route:
 | `GR-01` | Budget cap is `50.0` million. | `app/core/validation.py::budget_cap` |
 | `GR-02` | Squad must contain exactly 11 players. | `validate_squad_size()` |
 | `GR-03` | Valid formations are 4-3-3 and 4-4-2. | `validate_formation()` |
-| `GR-04` | Max 3 players from one national team. | `validate_nation_limit()` |
+| `GR-04` | National team limit scales by stage: 3 (GS + R32), 4 (R16), 5 (QF), 6 (SF), 8 (Final). | `validate_nation_limit()` |
 | `GR-05` | Max 5 transfers per matchday. | `max_transfers`, `count_transfers()` |
 | `GR-06` | Player prices are fixed in v1. | `player.base_price` |
 | `GR-07` | Transfer window locks 1 hour before the first kickoff of that matchday. | `validate_transfer_window()` |
@@ -182,23 +181,34 @@ If no date is supplied to the API route, the loader asks the database for match 
 **Purpose:** Validate username shape and availability during signup.
 **Query:** `username`
 **Response:** `{ available, reason }` where `reason` is `invalid`, `taken`, or `ok`.
-**Validation:** Regex `^[a-zA-Z0-9_]{3,20}$`.
+**Validation:** Trims edge whitespace, then applies ASCII-only regex `^[a-zA-Z0-9_ ]{3,20}$`; spaces are allowed inside the username, Vietnamese accented letters/diacritics and other punctuation are invalid.
 
-### `GET /lookup-username`
+
+### `POST /auth/login`
 
 **Auth:** Public
-**Purpose:** Convert username login input into an email for Supabase password sign-in.
-**Query:** `username`
-**Response:** `{ email }`
-**Failure modes:** `404` if username is unknown.
-**Security boundary:** This exposes email lookup for known usernames. Rate limiting is a hardening item.
+**Purpose:** Authenticate by username (non-email input) and password. Resolves username to email via `get_email_by_username()`, then proxies to Supabase `auth/v1/token?grant_type=password`.
+**Body:** `{ username, password }`
+**Response:** `{ access_token, refresh_token }`
+**Failure modes:** `401` invalid username or password; `503` auth service unavailable.
+**Security boundary:** Frontend uses this only when the input does not contain `@` (username login). Email-based login goes directly through Supabase JS SDK.
 
 ### `GET /me`
 
 **Auth:** Required
-**Purpose:** Return the authenticated local user profile.
-**Response:** `{ user_id, username, display_name, role }`
+**Purpose:** Return the authenticated local user profile, or indicate that a Google/OAuth user must choose an app username before the app can continue.
+**Response:** `{ user_id, username, display_name, role }`, or `{ needs_username: true, email, name, avatar_url }` when no local row exists and no valid metadata username is available.
 **Failure modes:** `401`, `403`.
+
+### `POST /complete-profile`
+
+**Auth:** Required
+**Purpose:** Complete onboarding for an authenticated Supabase user who has no local `users` row, especially Google OAuth users.
+**Body:** `{ username }`
+**Validation:** Trims edge whitespace, then applies `^[a-zA-Z0-9_ ]{3,20}$`. Spaces are allowed; Vietnamese accents/diacritics and punctuation are invalid.
+**Response:** `{ user_id, username, display_name, role }`
+**Failure modes:** `400` invalid username, `409` profile already completed or username already taken, `401` invalid token.
+**Frontend contract:** The app shell remains locked behind the username modal until this route succeeds. Backend English errors are mapped to localized EN/VI frontend messages.
 
 ### `GET /squad`
 
@@ -378,11 +388,10 @@ If `matchday` is supplied, the response also includes `"matchday": N`, and `delt
 
 ## Known Hardening Items
 
-- Remove or environment-gate `demo-token` before production.
-- Tighten CORS in `app/main.py`; it currently allows all origins.
-- Remove tracebacks from production `500` responses.
-- Rate limit username lookup and auth-related endpoints.
-- Consider Supabase RLS or stored procedures if direct database access expands beyond this backend.
+- Configure `CORS_ALLOW_ORIGINS` if the frontend is deployed on a different origin from the API. Same-origin deployments should leave it empty.
+- Keep edge/WAF rate limits in front of the app. The backend includes an in-process limiter for username checks, username login, and profile completion, but Render multi-instance or restart behavior should not be treated as a durable abuse boundary.
+- Supabase RLS is enabled in the hosted database, but no public-table policies are part of the app boundary. Keep direct table access denied unless a deliberate policy set is added.
+- Revoke broad `anon`/`authenticated` table privileges before adding any permissive RLS policies.
 - Add admin audit logging for `/load-stats`.
 - Add idempotency/run records for stats loading.
 - Add tests for auth/JWKS failure modes and admin authorization.

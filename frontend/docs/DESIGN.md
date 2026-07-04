@@ -1,8 +1,8 @@
 # Frontend Design Specification
 
-**Product:** Gaffer - WC26 Fantasy  
-**Status:** Canonical frontend design doc  
-**Last updated:** 2026-07-03  
+**Product:** Gaffer - WC26 Fantasy
+**Status:** Canonical frontend design doc
+**Last updated:** 2026-07-03
 **Runtime sources:** `frontend/index.html`, `frontend/css/tokens.css`, `frontend/css/*.css`, `frontend/js/*.js`
 
 This is the only active document in `frontend/docs`. It replaces the previous split planning notes. Runtime code wins if this document ever drifts.
@@ -10,6 +10,8 @@ This is the only active document in `frontend/docs`. It replaces the previous sp
 **2026-07-03 change:** `--bg`, `--bg-env`, `--panel`, `--panel-flush`, `--panel-strong`, `--toast` moved from green-tinted dark to neutral charcoal with a faint cool/blue undertone. Values and rationale are in Section 4 (Base, Surfaces). No other tokens changed in this pass.
 
 **2026-07-03 change:** the frontend now supports both `dark` and `light` themes. Theme is stored in `localStorage` under `gaffer_theme`, applied on `<html data-theme>`, and switched from the sidebar profile controls.
+
+**2026-07-03 change:** the frontend is now bilingual (English / Vietnamese). Language is stored in `localStorage` under `gaffer_lang`, applied via `i18n.js`. Static text uses `data-i18n` attributes; dynamic text uses `t()` calls. Dates render via `toLocaleDateString()` with the `date.locale` key. Language toggle uses text labels (EN / Tiếng Việt) instead of flag emojis for cross-platform rendering.
 
 ## 1. Product Direction
 
@@ -55,7 +57,9 @@ frontend/
 |   |-- leaderboard.js      # Leaderboard screen
 |   |-- charts.js           # Chart helpers
 |   |-- howtoscore.js       # Scoring explanation overlay
+|   |-- i18n.js              # Bilingual EN/VI translation dictionary and t() function
 |   |-- onboarding.js       # Welcome overlay
+|   |-- progress.js          # Loading overlay with localized quips
 |   |-- tour.js             # Guided tour
 |   `-- ui.js               # Reusable dropdown primitive
 `-- docs/
@@ -74,14 +78,16 @@ Structure:
 - Centered `.login-screen__card.panel`.
 - Brand mark, title/subtitle, email-or-username login form.
 - Signup mode reveals username field.
-- Google sign-in button exists but is disabled/coming soon.
-- Demo button activates `Api.setDemoToken()` and uses backend `demo-token` path.
+- Google sign-in starts Supabase OAuth. If the OAuth user has no local profile, the app shows a blocking username modal before any authenticated feature data loads.
+- Demo/guest mode is hidden for production; `Api.setDemoToken()` is a no-op and there is no backend bearer `demo-token` shortcut.
 - `#authOverlay` handles confirmation/reset messaging.
+- `#usernameModal` is a blocking onboarding modal for OAuth users without a local username.
+- Username rules: 3-20 chars after trimming; ASCII letters, numbers, spaces, and underscores only. Vietnamese accents/diacritics and punctuation are invalid. Errors use `t("username.*")` so Vietnamese settings render Vietnamese copy.
 
 Behavior:
 
-- Username login calls `/api/lookup-username` before Supabase password sign-in.
-- Auth state changes drive app/login shell switching.
+- Username login posts to `/api/auth/login`, which resolves the local username to a Supabase email and returns a Supabase session.
+- Auth state changes drive app/login shell switching. `INITIAL_SESSION` after OAuth can enter the app shell, but `/api/me` must pass before user feature data loads.
 - Real auth failures should show auth UI, not mock app state.
 - The submit button is the only lime element on this screen. Everything else (links, secondary buttons, focus rings) uses blue/neutral tokens.
 
@@ -116,6 +122,23 @@ Mobile/responsive expectations:
 - Horizontal strips may scroll.
 - Dense tables/lists must avoid text overlap.
 - Panels should stack before content becomes cramped.
+
+### Localization (i18n)
+
+Source: `frontend/js/i18n.js`
+
+The frontend supports English (`en`) and Vietnamese (`vi`).
+
+- **Storage:** `localStorage` key `gaffer_lang`, defaults to `en`.
+- **Static text:** `data-i18n="key"` attributes on HTML elements, applied by `applyI18n()` on load.
+- **Dynamic text:** `t("key", ...args)` calls in JS for strings generated at runtime (toasts, chart labels, tour steps, etc.).
+- **Aria-labels:** `data-i18n-aria-label="key"` and `data-i18n-title="key"` attributes for accessibility labels.
+- **Pluralization/params:** `t()` supports `{0}`, `{1}`, … substitution.
+- **Function-based values:** Some translation values are functions returning `t()` calls (e.g. tour step titles, dropdown labels) for live re-translation on language switch.
+- **Dates:** `fmtShortDate()` in `app.js` uses `toLocaleDateString()` with the `date.locale` key (`en-US` / `vi-VN`).
+- **Language toggle:** `.lang-toggle` button in topbar. Uses text labels ("EN" / "Tiếng Việt") instead of flag emojis for cross-platform rendering (Windows does not render country flag emojis).
+- **Rule alerts:** `state.js` returns internal English reason strings ("Already in squad", "Over budget", etc.) as keys. `app.js` `resolveTitle`/`resolveDetail` and `squad.js` `BADGE_MAP` translate these at display time.
+- **Loading quips:** `progress.js` uses function-based `t()` calls for 12 loading messages.
 
 ## 4. Palette
 
@@ -372,7 +395,7 @@ Rules:
 
 - Auth form should be calm and direct.
 - Demo mode must remain visibly non-production.
-- Google sign-in is disabled until implemented.
+- Google sign-in is implemented through Supabase OAuth and must keep the username-completion gate visible until `/api/complete-profile` succeeds.
 - Only the submit button is lime; links and secondary actions use blue/neutral tokens.
 
 ### Squad Builder
@@ -401,7 +424,7 @@ Rules:
 - Formation is only 4-3-3 or 4-4-2.
 - Budget cap is 50M.
 - Squad target is 11 players.
-- Max 3 from one team.
+- National team limit scales by tournament stage: 3 (GS + R32), 4 (R16), 5 (QF), 6 (SF), 8 (Final). Mirrored in `state.js::nationLimitForMatchday()` and `validation.py::nation_limit_for_matchday()`.
 - The UI may mirror rules, but backend validation remains authoritative.
 - Filled player tokens are colored by `--pos-*` (already four distinct colors), not by accent. Selected/hover states on pool rows use `--blue-12`. Accent appears only on the Save button and, where used, the captain badge.
 
@@ -495,6 +518,7 @@ Components:
 - Ranking table.
 - Sticky current-user row.
 - Zone color coding.
+- Admin crown badge (`.lb-admin-badge`) — top-right of card header, admin-only.
 
 Zone colors currently use:
 
@@ -522,7 +546,7 @@ Components:
 - Toast stack: fixed bottom center.
 - Rule alert: explains why a player/action is blocked.
 - Welcome overlay: first-run onboarding.
-- Score overlay: scoring explanation.
+- Score overlay: scoring explanation with game rules, prize pool, and nation-limit scaling table (3 → 4 → 5 → 6 → 8 by stage).
 - Guided tour: target highlight and instruction card.
 
 Rules:
@@ -548,6 +572,7 @@ Public/catalog calls:
 Authenticated user calls:
 
 - `GET /api/me`
+- `POST /api/complete-profile`
 - `GET /api/squad?matchday=N`
 - `POST /api/squad`
 - `GET /api/transfers?matchday=N`
@@ -563,7 +588,8 @@ Admin operation:
 
 Fallback rule:
 
-- API mock fallback is allowed only for network/connectivity failure.
+- API mock fallback is allowed only for public catalog/stat reads when the backend is unreachable.
+- Authenticated user, leaderboard, squad, transfer, analytics, and admin calls must not fall back to mock data.
 - HTTP errors from the backend must propagate, especially 401 and 403.
 
 ## 10. Accessibility Rules
@@ -633,6 +659,4 @@ Implementation checklist:
 7. Verify text fits at mobile and desktop widths.
 8. Run the relevant API route against mock and live/error states.
 9. **Before shipping any new color, check: is this lime? If yes — is it the primary commit action, the live pill, or the current-user marker? If not, use blue or a neutral instead.**
-
-
 

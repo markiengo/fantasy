@@ -69,6 +69,7 @@ CREATE TABLE public.squad (
   user_id integer NOT NULL,
   matchday integer NOT NULL,
   budget_used numeric NOT NULL DEFAULT 0,
+  time_left numeric DEFAULT 0,
   created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT squad_pkey PRIMARY KEY (squad_id),
   CONSTRAINT fk_squad_user FOREIGN KEY (user_id) REFERENCES public.users(user_id),

@@ -2,7 +2,7 @@
 
 Build an 11-player World Cup fantasy squad, assign a captain, make matchday transfers, and score points from real match data.
 
-**Stack:** FastAPI + raw SQL (`psycopg2`/`RealDictCursor`) + Supabase PostgreSQL/Auth, vanilla HTML/CSS/JS, ESPN API data tooling.
+**Stack:** FastAPI + raw SQL (`psycopg2`/`RealDictCursor`) + Supabase PostgreSQL/Auth, vanilla HTML/CSS/JS with bilingual EN/VI i18n, ESPN API data tooling.
 
 ## Quickstart
 
@@ -20,6 +20,8 @@ Frontend and API run from the same FastAPI process on port 8000:
 - OpenAPI docs: `http://127.0.0.1:8000/docs`
 
 Most user routes require Supabase bearer auth. Public catalog routes include players, teams, matches, player stats, and username helpers. The frontend can fall back to mock data only when the backend is unreachable; real `401`/`403` auth failures are not treated as mock mode.
+
+Onboarding uses Supabase Auth plus a local `public.users` profile row. Email signup passes a validated username in Supabase metadata; Google OAuth users who do not have a local row must complete the username modal before the app loads squad, transfer, analytics, or leaderboard features. Usernames are trimmed and must be 3-20 ASCII letters, numbers, underscores, or spaces. Vietnamese accents/diacritics and other punctuation are invalid, and username errors render through the EN/VI i18n dictionary.
 
 ## Tests
 
@@ -47,6 +49,10 @@ fantasy-wc/
 |       `-- validation.py   # Squad and transfer rules
 |
 |-- frontend/               # HTML/CSS/JS app
+|   |-- js/
+|   |   |-- i18n.js         # Bilingual EN/VI translation
+|   |   |-- progress.js     # Loading overlay
+|   `-- ...                 # App, auth, state, screens, charts (bilingual EN/VI via i18n.js)
 |-- tools/
 |   |-- espn_client.py      # ESPN API wrapper
 |   |-- demo_seed.py        # Demo manager seeding engine
