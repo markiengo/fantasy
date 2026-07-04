@@ -1,5 +1,5 @@
 const Squad = (() => {
-  const filter = { name: "", position: "", teams: new Set(), max_price: null, sort: "default" };
+  const filter = { name: "", position: "", teams: new Set(), min_price: null, max_price: null, sort: "default" };
   const ROW_ORDER = ["FWD", "MID", "DEF", "GK"];
 
   let introDone = false;
@@ -40,9 +40,9 @@ const Squad = (() => {
   }
 
   function faceHtml(player, small) {
-    const seed = encodeURIComponent(player.name);
+    const seed = encodeURIComponent(player.name).replace(/'/g, "%27");
     const src = `https://api.dicebear.com/9.x/micah/svg?seed=${seed}&backgroundColor=c6f24a,a6d92e,7aa2ff,ffb06c&radius=50`;
-    const size = small ? 34 : 50;
+    const size = small ? 34 : 56;
     return `<span class="avatar avatar--${size}" data-pos="${player.position}" style="background-image:url('${src}')"></span>`;
   }
 
@@ -52,25 +52,37 @@ const Squad = (() => {
 
   function primaryActionNote() {
     if (State.mode === "view") {
-      if (!isTransferAllowed(State.currentMatchday)) return "Transfers are only allowed for the current and next matchday.";
-      if (!isWindowOpen(State.currentMatchday)) return "Transfers are locked once this matchday opens.";
-      if (State.transfersRemaining() <= 0) return "No transfers remain for this matchday.";
-      return "Saved squad is read-only until you enter transfer mode.";
+      if (!isTransferAllowed(State.currentMatchday)) return t("squad.transfers_current_next");
+      if (!isWindowOpen(State.currentMatchday)) return t("squad.transfers_locked_md");
+      if (State.transfersRemaining() <= 0) return t("squad.no_transfers_remain");
+      return t("squad.read_only");
     }
 
     if (State.mode === "transfer") {
       const pending = State.pendingTransfers();
-      if (!pending.length) return "Stage at least one swap before confirming.";
-      if (pending.length > State.transfersRemaining()) return `Only ${State.transfersRemaining()} transfer${State.transfersRemaining() === 1 ? "" : "s"} remain this matchday.`;
-      if (!State.isComplete()) return "Keep the squad complete before confirming transfers.";
-      if (State.budgetRemaining() < 0) return "Budget must be back under the limit before confirmation.";
-      return "Transfers confirm one by one against the backend.";
+      if (!pending.length) return t("squad.stage_swap");
+      if (pending.length > State.transfersRemaining()) return t("squad.only_n_remain", State.transfersRemaining());
+      if (!State.isComplete()) return t("squad.keep_complete");
+      if (State.budgetRemaining() < 0) return t("squad.budget_under_limit");
+      return t("squad.confirm_one_by_one");
     }
 
-    if (!State.isComplete()) return "Fill the remaining slots before saving.";
-    if (!State.currentSquad.captainId) return "Select a captain before saving.";
-    if (State.budgetRemaining() < 0) return "Budget must be under $50.0m before saving.";
-    return "Backend validation still runs when you save.";
+    if (!State.isComplete()) return t("squad.fill_slots");
+    if (!State.currentSquad.captainId) return t("squad.select_captain");
+    if (State.budgetRemaining() < 0) return t("squad.budget_under_50");
+    return t("squad.backend_validation");
+  }
+
+  const ROW_TOPS = { FWD: 40, MID: 200, DEF: 365, GK: 535 };
+  const X_POSITIONS = {
+    1: [50],
+    2: [35, 65],
+    3: [22, 50, 78],
+    4: [13, 37, 63, 87],
+  };
+
+  function slotStyle(top, leftPct) {
+    return `top:${top}px;left:${leftPct}%;transform:translateX(-50%)`;
   }
 
   function renderPitch() {
@@ -91,20 +103,20 @@ const Squad = (() => {
 
     const showEmptyPulse = State.mode === "build" && State.currentSquad.players.length === 0;
 
-    let rows = "";
+    let html = PITCH_MARKINGS;
     for (const pos of ROW_ORDER) {
       const slots = Math.max(need[pos], byPos[pos].length);
-      let row = `<div class="pitch-line">`;
+      const top = ROW_TOPS[pos];
+      const xs = X_POSITIONS[slots] || X_POSITIONS[4];
       for (let i = 0; i < slots; i++) {
         const player = byPos[pos][i];
-        if (player) row += filledSlot(player, captain && player.player_id === captain.player_id);
-        else row += emptySlot(pos, canTarget && preview.position === pos, showEmptyPulse);
+        const style = slotStyle(top, xs[i]);
+        if (player) html += filledSlot(player, captain && player.player_id === captain.player_id, style);
+        else html += emptySlot(pos, canTarget && preview.position === pos, showEmptyPulse, style);
       }
-      row += `</div>`;
-      rows += row;
     }
 
-    pitch.innerHTML = PITCH_MARKINGS + rows;
+    pitch.innerHTML = html;
 
     let tokenIdx = 0;
     pitch.querySelectorAll(".player-token").forEach((token) => {
@@ -122,7 +134,7 @@ const Squad = (() => {
         const removedPlayer = State.currentSquad.players.find((p) => p.player_id === pid);
         State.removePlayer(pid);
         if (State.mode === "transfer" && removedPlayer) {
-          Toast.show(`Removed ${removedPlayer.name}.`, "info", 5000);
+          Toast.show(t("toast.removed_player", removedPlayer.name), "info", 5000);
           const toasts = document.querySelectorAll("#toastRegion .toast");
           const toast = toasts[toasts.length - 1];
           if (toast) {
@@ -130,7 +142,7 @@ const Squad = (() => {
             if (msgSpan) {
               const undoBtn = document.createElement("button");
               undoBtn.className = "btn btn--ghost btn--sm";
-              undoBtn.textContent = "Undo";
+              undoBtn.textContent = t("squad.undo");
               undoBtn.style.marginLeft = "8px";
               undoBtn.addEventListener("click", () => {
                 if (State.canAdd(removedPlayer)) {
@@ -174,28 +186,36 @@ const Squad = (() => {
     const isCap = State.currentSquad.captainId === pid;
     const popover = document.createElement("div");
     popover.className = "captain-popover";
-    const rect = token.getBoundingClientRect();
     popover.style.position = "fixed";
-    popover.style.top = rect.top + "px";
-    popover.style.left = (rect.right + 8) + "px";
+    popover.style.zIndex = "99999";
     popover.innerHTML = `
       <div class="captain-popover__header">${player.name}</div>
-      <button class="captain-popover__btn" type="button">${isCap ? "Remove Captain" : "Make Captain"}</button>
+      <button class="captain-popover__btn" type="button">${isCap ? t("squad.remove_captain") : t("squad.make_captain")}</button>
     `;
     document.body.appendChild(popover);
-    _activePopover = popover;
 
-    if (rect.right + 8 + popover.offsetWidth > window.innerWidth) {
-      popover.style.left = (rect.left - popover.offsetWidth - 8) + "px";
-    }
+    const rect = token.getBoundingClientRect();
+    const popW = popover.offsetWidth;
+    const popH = popover.offsetHeight;
+    let left = rect.right + 6;
+    let top = rect.top;
+
+    if (left + popW > window.innerWidth - 8) left = rect.left - popW - 6;
+    if (top + popH > window.innerHeight - 8) top = window.innerHeight - popH - 8;
+    if (top < 8) top = 8;
+    if (left < 8) left = 8;
+
+    popover.style.top = top + "px";
+    popover.style.left = left + "px";
+    _activePopover = popover;
 
     popover.querySelector(".captain-popover__btn").addEventListener("click", () => {
       if (isCap) {
         State.setCaptain(null);
-        Toast.show(`${player.name} removed as captain.`, "info");
+        Toast.show(t("toast.captain_removed", player.name), "info");
       } else {
         State.setCaptain(pid);
-        Toast.show(`${player.name} is now captain (x2 points).`, "success");
+        Toast.show(t("toast.captain_set", player.name), "success");
       }
       closeCaptainPopover();
       renderPitch();
@@ -220,30 +240,28 @@ const Squad = (() => {
     document.querySelectorAll("#posChips .chip").forEach((chip) => {
       chip.classList.toggle("is-active", chip.dataset.pos === pos);
     });
-    const playersTab = document.querySelector('#poolToggle [data-pane="players"]');
-    if (playersTab && !playersTab.classList.contains("is-active")) playersTab.click();
     if (window.innerWidth <= 760) setTeamPane("players");
     renderPool();
     renderPitch();
   }
 
-  function emptySlot(pos, target, pulse) {
-    return `<button class="player-token player-token--empty${target ? " player-token--target" : ""}${pulse ? " is-pulse" : ""}" type="button" data-pos="${pos}" aria-label="Add a ${pos}">
+  function emptySlot(pos, target, pulse, style) {
+    return `<button class="player-token player-token--empty${target ? " player-token--target" : ""}${pulse ? " is-pulse" : ""}" type="button" data-pos="${pos}" style="${style}" aria-label="${t("pitch.add_a", pos)}">
       <span class="player-token__plus">+</span>
-      <span class="player-token__pos">Add ${pos}</span>
+      <span class="player-token__pos">${t("squad.add_position", pos)}</span>
     </button>`;
   }
 
-  function filledSlot(player, isCaptain) {
+  function filledSlot(player, isCaptain, style) {
     const editable = State.mode === "build" || State.mode === "transfer";
     const removeBtn = editable
-      ? `<button class="player-token__remove" type="button" aria-label="Remove ${player.name}">
+      ? `<button class="player-token__remove" type="button" aria-label="${t("pitch.remove", player.name)}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="10" height="10"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>`
       : "";
     const isNew = player.player_id === State.lastAddedId ? " is-new" : "";
     const capBadge = isCaptain ? `<span class="player-token__cap">C</span>` : "";
-    return `<div class="player-token${isNew}" data-pos="${player.position}" data-pid="${player.player_id}" role="button" tabindex="0">
+    return `<div class="player-token${isNew}" data-pos="${player.position}" data-pid="${player.player_id}" role="button" tabindex="0" style="${style}">
       ${removeBtn}
       <span class="player-token__photo">
         ${faceHtml(player)}
@@ -275,19 +293,19 @@ const Squad = (() => {
     const pitchLabel = document.getElementById("pitchLabel");
     if (pitchLabel) {
       const meta = currentRoundMeta(State.currentMatchday);
-      const roundLabel = meta ? meta.label : `Round ${State.currentMatchday}`;
+      const roundLabel = meta ? meta.label : t("stage.group_stage", State.currentMatchday);
       if (State.mode === "build" && State.currentSquad.players.length === 0) {
-        pitchLabel.textContent = `YOUR XI \u2014 Tap a position to start`;
+        pitchLabel.textContent = t("pitch.tap_to_start");
       } else {
-        pitchLabel.textContent = `YOUR XI \u2014 ${roundLabel} (${State.currentSquad.formation})`;
+        pitchLabel.textContent = t("pitch.your_xi_round", roundLabel, State.currentSquad.formation);
       }
     }
     const captainLabel = document.getElementById("captainLabel");
-    if (captainLabel) captainLabel.textContent = captain ? captain.name : "Not selected";
+    if (captainLabel) captainLabel.textContent = captain ? captain.name : t("captain.not_selected");
     const captainAvatar = document.getElementById("captainAvatar");
     if (captainAvatar) {
       if (captain) {
-        const seed = encodeURIComponent(captain.name);
+        const seed = encodeURIComponent(captain.name).replace(/'/g, "%27");
         captainAvatar.style.backgroundImage = `url('https://api.dicebear.com/9.x/micah/svg?seed=${seed}&backgroundColor=c6f24a,a6d92e,7aa2ff,ffb06c&radius=50')`;
       } else {
         captainAvatar.style.backgroundImage = "";
@@ -298,7 +316,7 @@ const Squad = (() => {
     const windowOpen = isWindowOpen(State.currentMatchday);
     const badge = document.getElementById("modeBadge");
     if (badge) {
-      badge.textContent = windowOpen ? "Window open" : "Window locked";
+      badge.textContent = windowOpen ? t("window.open") : t("window.locked");
       badge.className = windowOpen ? "status-chip status-chip--open" : "status-chip status-chip--locked";
     }
 
@@ -311,10 +329,12 @@ const Squad = (() => {
     if (noteEl) noteEl.textContent = primaryActionNote();
 
     const formationButtons = document.querySelectorAll("#formationSwitch .formation-switch__btn");
+    const formationLocked = State.mode === "view";
     formationButtons.forEach((btn) => {
       const active = btn.dataset.formation === State.currentSquad.formation;
       btn.classList.toggle("is-active", active);
       btn.setAttribute("aria-checked", String(active));
+      btn.disabled = formationLocked;
     });
 
     const saveBtn = document.getElementById("saveSquadBtn");
@@ -327,17 +347,17 @@ const Squad = (() => {
       cancelBtn.hidden = !State.isDirty();
       transferBtn.hidden = true;
       confirmBtn.hidden = true;
-      saveBtn.disabled = !State.isComplete() || used > RULES.budgetCap || !State.currentSquad.captainId;
-      cancelBtn.textContent = "Cancel";
+      saveBtn.disabled = !State.isComplete() || used > RULES.budgetCap;
+      cancelBtn.textContent = t("action.cancel");
       cancelBtn.disabled = !State.isDirty();
     } else if (State.mode === "transfer") {
       confirmBtn.hidden = false;
       cancelBtn.hidden = false;
       saveBtn.hidden = true;
       transferBtn.hidden = true;
-      confirmBtn.textContent = pending.length ? `Confirm (${pending.length})` : "Confirm";
+      confirmBtn.textContent = pending.length ? t("action.confirm_n", pending.length) : t("action.confirm");
       confirmBtn.disabled = pending.length === 0 || pending.length > State.transfersRemaining() || used > RULES.budgetCap || !State.isComplete();
-      cancelBtn.textContent = "Cancel";
+      cancelBtn.textContent = t("action.cancel");
       cancelBtn.disabled = false;
     } else {
       transferBtn.hidden = false;
@@ -349,17 +369,17 @@ const Squad = (() => {
   }
 
   const BADGE_MAP = {
-    "Already in squad": { cls: "pool-badge--in", text: "\u2713 In squad" },
-    "Over budget": { cls: "pool-badge--over", text: "Over $50m" },
-    "Squad full (11)": { cls: "pool-badge--full", text: "Squad full" },
-    "Max 3 from one team": { cls: "pool-badge--max", text: "Max 3" },
+    "Already in squad": { cls: "pool-badge--in", text: () => t("badge.in_squad") },
+    "Over budget": { cls: "pool-badge--over", text: () => t("badge.over_budget") },
+    "Squad full (11)": { cls: "pool-badge--full", text: () => t("badge.squad_full") },
+    "Max 3 from one team": { cls: "pool-badge--max", text: () => t("badge.max_3") },
   };
 
   function badgeForReason(reason) {
     if (!reason) return null;
     if (BADGE_MAP[reason]) return BADGE_MAP[reason];
-    if (reason.startsWith("No ") && reason.endsWith(" slot left")) return { cls: "pool-badge--slot", text: "Slot full" };
-    return { cls: "pool-badge--block", text: reason };
+    if (reason.startsWith("No ") && reason.endsWith(" slot left")) return { cls: "pool-badge--slot", text: () => t("badge.slot_full") };
+    return { cls: "pool-badge--block", text: () => reason };
   }
 
   let _visibleCount = 120;
@@ -371,6 +391,7 @@ const Squad = (() => {
     for (const player of State.players) {
       if (filter.position && player.position !== filter.position) continue;
       if (filter.teams.size && !filter.teams.has(player.team_id)) continue;
+      if (filter.min_price != null && player.base_price < filter.min_price) continue;
       if (filter.max_price != null && player.base_price > filter.max_price) continue;
       if (filter.name && !player.name.toLowerCase().includes(filter.name.toLowerCase())) continue;
       output.push(player);
@@ -380,10 +401,11 @@ const Squad = (() => {
     else if (filter.sort === "price-asc") output.sort((a, b) => a.base_price - b.base_price);
     else if (filter.sort === "name") output.sort((a, b) => a.name.localeCompare(b.name));
 
-    document.getElementById("poolCount").textContent = `${output.length} player${output.length === 1 ? "" : "s"}`;
+    var poolCount = output.length;
+    document.getElementById("poolCount").textContent = poolCount === 1 ? t("pool.player_count", poolCount) : t("pool.player_count_plural", poolCount);
 
     if (!output.length) {
-      list.innerHTML = `<p class="empty-note">No players match these filters.</p>`;
+      list.innerHTML = `<p class="empty-note">${t("pool.no_match")}</p>`;
       const moreEl = document.getElementById("poolMore");
       if (moreEl) moreEl.hidden = true;
       return;
@@ -397,19 +419,19 @@ const Squad = (() => {
       const reason = State.addBlockReason(player);
       const preview = previewPlayerId === player.player_id;
       const badge = poolLocked
-        ? { cls: "pool-badge--locked", text: "Locked" }
+        ? { cls: "pool-badge--locked", text: () => t("badge.locked") }
         : selected
           ? BADGE_MAP["Already in squad"]
           : badgeForReason(reason);
       const showAdd = !poolLocked && !selected && !reason;
       const rowCls = `${selected ? "is-selected" : ""} ${preview ? "is-preview" : ""}`;
       const ariaLabel = poolLocked
-        ? `${player.name} — locked, tap Make Transfers to edit`
+        ? t("squad.aria_locked", player.name)
         : selected
-          ? `${player.name} — already in squad`
+          ? t("squad.aria_in_squad", player.name)
           : reason
-            ? `${player.name} — ${reason}`
-            : `${player.name} — add to squad`;
+            ? t("squad.aria_blocked", player.name, reason)
+            : t("squad.aria_add", player.name);
 
       html += `<div class="pool-row ${rowCls}" data-pos="${player.position}" data-pid="${player.player_id}" role="button" tabindex="0" aria-label="${ariaLabel}">
         <span class="pool-row__photo">
@@ -424,9 +446,9 @@ const Squad = (() => {
           <b>$${Number(player.base_price).toFixed(1)}m</b>
         </span>
         ${showAdd
-          ? `<button class="add-btn" type="button" aria-label="Add ${player.name}" data-action="add"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg></button>`
+          ? `<button class="add-btn" type="button" aria-label="${t("squad.aria_add_btn", player.name)}" data-action="add"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg></button>`
           : badge
-            ? `<span class="pool-badge ${badge.cls}">${badge.text}</span>`
+            ? `<span class="pool-badge ${badge.cls}">${badge.text()}</span>`
             : ""
         }
       </div>`;
@@ -443,7 +465,7 @@ const Squad = (() => {
     if (moreEl && moreText) {
       if (output.length > _visibleCount) {
         moreEl.hidden = false;
-        moreText.textContent = `Showing ${visible.length} of ${output.length}`;
+        moreText.textContent = t("pool.showing", visible.length, output.length);
       } else {
         moreEl.hidden = true;
       }
@@ -456,7 +478,7 @@ const Squad = (() => {
         if (!player) return;
 
         if (State.mode === "view") {
-          Toast.show('Tap "Make Transfers" to edit this squad.', "info");
+          Toast.show(t("squad.tap_make_transfers"), "info");
           return;
         }
 
@@ -500,7 +522,7 @@ const Squad = (() => {
           <span class="team-opt__check">&#10003;</span>
         </div>`;
       }
-      listEl.innerHTML = html || `<p class="empty-note">No teams match.</p>`;
+      listEl.innerHTML = html || `<p class="empty-note">${t("pool.no_teams")}</p>`;
       listEl.querySelectorAll(".team-opt").forEach((opt) => {
         opt.addEventListener("click", () => toggle(opt.dataset.team));
         opt.addEventListener("keydown", (e) => {
@@ -552,6 +574,11 @@ const Squad = (() => {
         root.classList.remove("is-open");
         searchEl.blur();
       }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const first = listEl.querySelector(".team-opt");
+        if (first) toggle(first.dataset.team);
+      }
     });
 
     renderList();
@@ -559,8 +586,13 @@ const Squad = (() => {
   }
 
   async function saveSquad() {
+    if (!State.currentSquad.captainId) {
+      Toast.show(t("squad.select_captain"), "info");
+      return;
+    }
     const btn = document.getElementById("saveSquadBtn");
     btn.disabled = true;
+    Progress.start();
     try {
       const ids = State.currentSquad.players.map((player) => player.player_id);
       const squad = await Api.createSquad(State.currentMatchday, ids, State.currentSquad.captainId);
@@ -568,10 +600,11 @@ const Squad = (() => {
       State.transfersUsed = 0;
       State.setBaseline();
       State.setMode("view");
-      Toast.show(`Squad saved for Round ${squad.matchday}.`, "success");
+      Toast.show(t("toast.squad_saved", squad.matchday), "success");
     } catch (e) {
-      Toast.show(e.message || "Could not save squad.", "error");
+      Toast.show(e.message || t("toast.could_not_save"), "error");
     } finally {
+      Progress.done();
       renderSummary();
     }
   }
@@ -596,26 +629,84 @@ const Squad = (() => {
         _visibleCount = 120;
         renderPool();
       });
-    }
-
-    const range = document.getElementById("priceRange");
-    const priceVal = document.getElementById("priceVal");
-    if (range) {
-      range.addEventListener("input", (e) => {
-        const value = +e.target.value;
-        const max = +e.target.max;
-        filter.max_price = value >= max ? null : value;
-        if (priceVal) priceVal.textContent = value >= max ? "Any" : `$${value.toFixed(1)}m`;
-        _visibleCount = 120;
-        renderPool();
+      playerSearch.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const first = document.querySelector("#poolList .pool-row");
+          if (first) {
+            const pid = +first.dataset.pid;
+            const player = State.players.find((item) => item.player_id === pid);
+            if (!player) return;
+            if (State.mode === "view") {
+              Toast.show(t("squad.tap_make_transfers"), "info");
+              return;
+            }
+            const reason = State.addBlockReason(player);
+            if (reason) {
+              RuleAlert.show(reason);
+              previewPlayerId = pid;
+              renderPool();
+              renderPitch();
+              return;
+            }
+            State.addPlayer(player);
+            previewPlayerId = null;
+          }
+        }
       });
     }
 
+    const rangeMin = document.getElementById("priceRangeMin");
+    const rangeMax = document.getElementById("priceRangeMax");
+    const priceValMin = document.getElementById("priceValMin");
+    const priceValMax = document.getElementById("priceValMax");
+    const priceFill = document.getElementById("priceFill");
+
+    function updatePriceFill() {
+      if (!rangeMin || !rangeMax || !priceFill) return;
+      var min = +rangeMin.value;
+      var max = +rangeMax.value;
+      var lo = +rangeMin.min;
+      var hi = +rangeMin.max;
+      var span = hi - lo;
+      if (span <= 0) return;
+      var leftPct = ((min - lo) / span) * 100;
+      var rightPct = ((max - lo) / span) * 100;
+      priceFill.style.left = leftPct + "%";
+      priceFill.style.width = (rightPct - leftPct) + "%";
+    }
+
+    function onPriceChange() {
+      var minVal = +rangeMin.value;
+      var maxVal = +rangeMax.value;
+      if (minVal > maxVal) {
+        if (document.activeElement === rangeMin) {
+          rangeMax.value = minVal;
+          maxVal = minVal;
+        } else {
+          rangeMin.value = maxVal;
+          minVal = maxVal;
+        }
+      }
+      var max = +rangeMin.max;
+      filter.min_price = minVal <= 0 ? null : minVal;
+      filter.max_price = maxVal >= max ? null : maxVal;
+      if (priceValMin) priceValMin.textContent = minVal <= 0 ? t("pool.any") : "$" + minVal.toFixed(1) + "m";
+      if (priceValMax) priceValMax.textContent = maxVal >= max ? t("pool.any") : "$" + maxVal.toFixed(1) + "m";
+      updatePriceFill();
+      _visibleCount = 120;
+      renderPool();
+    }
+
+    if (rangeMin) rangeMin.addEventListener("input", onPriceChange);
+    if (rangeMax) rangeMax.addEventListener("input", onPriceChange);
+    updatePriceFill();
+
     const sortItems = [
-      { value: "default", label: "Default" },
-      { value: "price-desc", label: "Price - high to low" },
-      { value: "price-asc", label: "Price - low to high" },
-      { value: "name", label: "Name - A to Z" },
+      { value: "default", label: () => t("sort.default") },
+      { value: "price-desc", label: () => t("sort.price_desc") },
+      { value: "price-asc", label: () => t("sort.price_asc") },
+      { value: "name", label: () => t("sort.name") },
     ];
     const sortDropdownEl = document.getElementById("sortDropdown");
     if (sortDropdownEl) {
@@ -637,10 +728,10 @@ const Squad = (() => {
       previewPlayerId = null;
       if (State.mode === "transfer") {
         Transfers.cancel();
-        Toast.show("Transfer changes discarded.", "info");
+        Toast.show(t("toast.transfers_discarded"), "info");
       } else {
         State.restoreBaseline();
-        Toast.show("Changes reverted.", "info");
+        Toast.show(t("toast.changes_reverted"), "info");
       }
     });
     document.getElementById("makeTransfersBtn").addEventListener("click", () => {
@@ -670,26 +761,28 @@ const Squad = (() => {
   function showSkeleton() {
     const pitch = document.getElementById("pitch");
     const counts = { FWD: 3, MID: 3, DEF: 4, GK: 1 };
-    let rows = PITCH_MARKINGS;
+    let html = PITCH_MARKINGS;
     for (const pos of ROW_ORDER) {
-      rows += `<div class="pitch-line">`;
-      for (let i = 0; i < counts[pos]; i++) {
-        rows += `<button class="player-token" style="pointer-events:none">
-          <span class="player-token__photo"><div class="skeleton" style="width:50px;height:50px;border-radius:50%"></div></span>
+      const slots = counts[pos];
+      const top = ROW_TOPS[pos];
+      const xs = X_POSITIONS[slots] || X_POSITIONS[4];
+      for (let i = 0; i < slots; i++) {
+        const style = slotStyle(top, xs[i]);
+        html += `<button class="player-token" style="${style};pointer-events:none">
+          <span class="player-token__photo"><div class="skeleton" style="width:56px;height:56px;border-radius:50%"></div></span>
           <span class="player-token__name"><div class="skeleton" style="width:64%;height:12px;border-radius:4px"></div></span>
           <span class="player-token__pts"><div class="skeleton" style="width:42%;height:10px;border-radius:4px"></div></span>
         </button>`;
       }
-      rows += `</div>`;
     }
-    pitch.innerHTML = rows;
+    pitch.innerHTML = html;
 
     const list = document.getElementById("poolList");
-    let html = "";
+    let listHtml = "";
     for (let i = 0; i < 7; i++) {
-      html += `<div class="skeleton" style="height:56px;margin-bottom:8px"></div>`;
+      listHtml += `<div class="skeleton" style="height:56px;margin-bottom:8px"></div>`;
     }
-    list.innerHTML = html;
+    list.innerHTML = listHtml;
   }
 
   function renderProgressChecklist() {
@@ -725,7 +818,7 @@ const Squad = (() => {
     }
 
     const budgetCls = budgetPct > 1 ? " is-over" : budgetPct >= 0.8 ? " is-warning" : " is-done";
-    const budgetLabel = budgetPct > 1 ? "Over budget" : `$${used.toFixed(1)}m / $${RULES.budgetCap}m`;
+    const budgetLabel = budgetPct > 1 ? t("badge.over_budget") : `$${used.toFixed(1)}m / $${RULES.budgetCap}m`;
     html += `<span class="build-progress__item${budgetCls}">
       <span class="build-progress__check">\u2713</span>
       ${budgetLabel}
@@ -737,7 +830,7 @@ const Squad = (() => {
       const transfersLeft = Math.max(0, remaining - pending);
       html += `<span class="build-progress__item">
         <span class="build-progress__check">\u2713</span>
-        ${transfersLeft}/5 transfers left
+        ${t("squad.transfers_left", transfersLeft)}
       </span>`;
     }
 
@@ -762,24 +855,24 @@ const Squad = (() => {
 
     if (mode === "build") {
       if (count === 0) {
-        msg = "Welcome! Tap an empty position on the pitch to filter the player pool and start building.";
+        msg = t("squad.tap_empty");
       } else if (count < 11) {
-        msg = `Good progress \u2014 ${count}/11 players selected. Keep going!`;
+        msg = t("squad.good_progress", count);
       } else if (used > RULES.budgetCap) {
-        msg = "You're over budget. Remove a player or swap for a cheaper one.";
+        msg = t("squad.over_budget_tip");
       } else if (!State.squadSaved) {
-        msg = "Your squad is ready! Hit Save to lock it in.";
+        msg = t("squad.ready_to_save");
       } else {
         el.hidden = true;
         return;
       }
     } else if (mode === "transfer") {
       if (used > RULES.budgetCap) {
-        msg = "Budget must be under $50m before confirming.";
+        msg = t("squad.budget_under_50_confirm");
       } else if (pending.length === 0) {
-        msg = "Remove a player from the pitch, then add a replacement from the pool.";
+        msg = t("squad.remove_then_add");
       } else {
-        msg = `${pending.length} swap${pending.length === 1 ? "" : "s"} staged. Hit Confirm when ready.`;
+        msg = t("squad.swaps_staged", pending.length);
       }
     } else {
       el.hidden = true;
@@ -788,7 +881,7 @@ const Squad = (() => {
 
     el.hidden = false;
     el.innerHTML = `<span class="tip-banner__text">${msg}</span>
-      <button class="tip-banner__close" type="button" aria-label="Dismiss tip">\u00d7</button>`;
+      <button class="tip-banner__close" type="button" aria-label="${t("squad.dismiss_tip")}">\u00d7</button>`;
 
     const closeBtn = el.querySelector(".tip-banner__close");
     if (closeBtn) {

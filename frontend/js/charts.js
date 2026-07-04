@@ -89,7 +89,7 @@ const Charts = (() => {
     container.innerHTML = "";
 
     if (!data.length) {
-      container.innerHTML = '<p class="empty-note">No matches played yet.</p>';
+      container.innerHTML = '<p class="empty-note">' + t("chart.no_matches") + '</p>';
       return;
     }
 
@@ -205,7 +205,7 @@ const Charts = (() => {
     container.innerHTML = "";
 
     if (!data.length) {
-      container.innerHTML = '<p class="empty-note">No captain data yet.</p>';
+      container.innerHTML = '<p class="empty-note">' + t("chart.no_captain") + '</p>';
       return;
     }
 
@@ -318,16 +318,16 @@ const Charts = (() => {
     container.innerHTML = "";
 
     if (!data.length) {
-      container.innerHTML = '<p class="empty-note">No composition data yet.</p>';
+      container.innerHTML = '<p class="empty-note">' + t("chart.no_composition") + '</p>';
       return;
     }
 
     const segments = [
-      { key: "goals_pts", label: "Goals", color: "var(--pos-FWD)" },
-      { key: "assist_pts", label: "Assists", color: "var(--pos-MID)" },
-      { key: "cs_pts", label: "Clean sheets", color: "var(--pos-DEF)" },
-      { key: "minute_pts", label: "Minutes", color: "var(--warm)" },
-      { key: "card_pts", label: "Cards", color: "var(--danger)" }
+      { key: "goals_pts", label: t("chart.goals"), color: "var(--pos-FWD)" },
+      { key: "assist_pts", label: t("chart.assists"), color: "var(--pos-MID)" },
+      { key: "cs_pts", label: t("chart.clean_sheets"), color: "var(--pos-DEF)" },
+      { key: "minute_pts", label: t("chart.minutes"), color: "var(--warm)" },
+      { key: "card_pts", label: t("chart.cards"), color: "var(--danger)" }
     ];
 
     const W = container.clientWidth || 400;
@@ -428,7 +428,7 @@ const Charts = (() => {
     container.innerHTML = "";
 
     if (!data.length) {
-      container.innerHTML = '<p class="empty-note">No rank data yet.</p>';
+      container.innerHTML = '<p class="empty-note">' + t("chart.no_rank") + '</p>';
       return;
     }
 
@@ -528,7 +528,7 @@ const Charts = (() => {
     container.innerHTML = "";
 
     if (!data.length) {
-      container.innerHTML = '<p class="empty-note">No data for this matchday.</p>';
+      container.innerHTML = '<p class="empty-note">' + t("chart.no_data_md") + '</p>';
       return;
     }
 
@@ -649,7 +649,7 @@ const Charts = (() => {
     if (!container) return;
     container.innerHTML = "";
     if (!data.length) {
-      container.innerHTML = '<p class="empty-note">No data yet.</p>';
+      container.innerHTML = '<p class="empty-note">' + t("chart.no_data") + '</p>';
       return;
     }
     let max = 1;
@@ -675,7 +675,7 @@ const Charts = (() => {
 
     if (!data.length) {
       if (centerEl) centerEl.textContent = "0";
-      if (legendEl) legendEl.innerHTML = '<span class="empty-note">No data</span>';
+      if (legendEl) legendEl.innerHTML = '<span class="empty-note">' + t("chart.no_data") + '</span>';
       return;
     }
 

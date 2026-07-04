@@ -5,7 +5,15 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error("Missing Supabase configuration in window.__ENV__");
 }
 
-const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+var _noPersist = sessionStorage.getItem("gaffer_no_persist") === "1";
+
+const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    storage: _noPersist ? sessionStorage : localStorage,
+  },
+});
 
 async function getAccessToken() {
   const { data } = await supabaseClient.auth.getSession();
@@ -19,23 +27,33 @@ async function signIn(emailOrUsername, password, remember = true) {
     sessionStorage.removeItem("gaffer_no_persist");
   }
 
-  let email = emailOrUsername;
-  if (!emailOrUsername.includes("@")) {
-    const base = (location.hostname === "127.0.0.1" || location.hostname === "localhost")
-      ? "http://127.0.0.1:8000/api"
-      : "/api";
-    const res = await fetch(`${base}/lookup-username?username=${encodeURIComponent(emailOrUsername)}`);
-    if (!res.ok) {
-      throw new Error("Username not found");
+  if (emailOrUsername.includes("@")) {
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email: emailOrUsername,
+      password,
+    });
+    if (error) {
+      throw error;
     }
-    const data = await res.json();
-    email = data.email;
-    if (!email) throw new Error("Username not found");
+    return data;
   }
 
-  const { data, error } = await supabaseClient.auth.signInWithPassword({
-    email,
-    password,
+  const base = (location.hostname === "127.0.0.1" || location.hostname === "localhost")
+    ? "http://127.0.0.1:8000/api"
+    : "/api";
+  const res = await fetch(`${base}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: emailOrUsername, password }),
+  });
+  if (!res.ok) {
+    const detail = (await res.json().catch(() => ({})).then((d) => d.detail)) || t("toast.auth_failed");
+    throw new Error(detail);
+  }
+  const tokens = await res.json();
+  const { data, error } = await supabaseClient.auth.setSession({
+    access_token: tokens.access_token,
+    refresh_token: tokens.refresh_token,
   });
   if (error) {
     throw error;
@@ -81,6 +99,7 @@ async function signUp(email, password, username) {
     password,
     options: {
       data: { username },
+      emailRedirectTo: window.location.origin,
     },
   });
   if (error) {

@@ -5,7 +5,12 @@ const FORMATIONS = {
 const POSITIONS = ["GK", "DEF", "MID", "FWD"];
 
 // Rule constants (GR-01..GR-04) — mirror validation.py
-const RULES = { budgetCap: 50, squadSize: 11, sameCountryMax: 3, maxTransfers: 5 };
+const RULES = { budgetCap: 50, squadSize: 11, maxTransfers: 5 };
+
+// National team limit scales by tournament stage (GR-04)
+// MD 1-4: Group Stage + R32 → 3, MD 5: R16 → 4, MD 6: QF → 5, MD 7: SF → 6, MD 8: Final → 8
+const NATION_LIMIT_BY_MD = { 1: 3, 2: 3, 3: 3, 4: 3, 5: 4, 6: 5, 7: 6, 8: 8 };
+function nationLimitForMatchday(md) { return NATION_LIMIT_BY_MD[md] || 3; }
 
 const STORAGE_KEY = "wcf2026";
 
@@ -25,12 +30,17 @@ const State = {
   transfersUsed: 0,       // transfers already made this matchday (fetched from backend)
   lastAddedId: null,      // pid just added → its pitch card pops once (cleared after render)
 
+  _activeScreen: "team",
+  _teamPane: "pitch",
+
   /* --- persistence (UI-contract §6: draft squad + selected matchday) --- */
   save() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         currentMatchday: this.currentMatchday,
         currentSquad: this.currentSquad,
+        activeScreen: State._activeScreen || "team",
+        teamPane: State._teamPane || "pitch",
       }));
     } catch (e) { /* storage unavailable — non-fatal */ }
   },
@@ -41,6 +51,8 @@ const State = {
       const data = JSON.parse(raw);
       if (data.currentMatchday) this.currentMatchday = data.currentMatchday;
       if (data.currentSquad) this.currentSquad = data.currentSquad;
+      if (data.activeScreen) State._activeScreen = data.activeScreen;
+      if (data.teamPane) State._teamPane = data.teamPane;
     } catch (e) { /* ignore corrupt state */ }
   },
 
@@ -93,7 +105,8 @@ const State = {
     const need = FORMATIONS[this.currentSquad.formation];
     if (this.posCounts()[player.position] >= need[player.position]) return `No ${player.position} slot left`;
     const tc = this.teamCounts();
-    if ((tc[player.team_id] || 0) >= RULES.sameCountryMax) return `Max ${RULES.sameCountryMax} from one team`;
+    const limit = nationLimitForMatchday(this.currentMatchday);
+    if ((tc[player.team_id] || 0) >= limit) return `Max ${limit} from one team`;
     if (this.budgetUsed() + player.base_price > RULES.budgetCap) return "Over budget";
     return null;
   },
@@ -117,6 +130,21 @@ const State = {
   setFormation(formation) {
     if (!FORMATIONS[formation]) return;
     this.currentSquad.formation = formation;
+    var need = FORMATIONS[formation];
+    var counts = this.posCounts();
+    for (var i = 0; i < POSITIONS.length; i++) {
+      var pos = POSITIONS[i];
+      while (counts[pos] > need[pos]) {
+        var last = null;
+        for (var j = this.currentSquad.players.length - 1; j >= 0; j--) {
+          if (this.currentSquad.players[j].position === pos) { last = this.currentSquad.players[j]; break; }
+        }
+        if (!last) break;
+        this.currentSquad.players = this.currentSquad.players.filter(function (p) { return p.player_id !== last.player_id; });
+        if (this.currentSquad.captainId === last.player_id) this.currentSquad.captainId = null;
+        counts[pos]--;
+      }
+    }
     this.emit();
   },
   setMatchday(md) { this.currentMatchday = md; this.currentSquad.matchday = md; this.emit(); },

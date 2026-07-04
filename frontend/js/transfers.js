@@ -8,12 +8,13 @@ const Transfers = (() => {
 
   function enter() {
     if (State.transfersRemaining() <= 0) {
-      Toast.show("No transfers left this round.", "info");
+      Toast.show(t("toast.no_transfers_left"), "info");
       return;
     }
     if (window.innerWidth <= 760) setTeamPane("pitch");
     State.setMode("transfer");
-    if (!localStorage.getItem("gaffer_transfer_tour_done") && window.Tour) {
+    var transferTourKey = "gaffer_transfer_tour_done_" + (window._userId || "anon");
+    if (!localStorage.getItem(transferTourKey) && window.Tour) {
       Tour.start(Tour.TRANSFER_STEPS);
     }
   }
@@ -31,12 +32,14 @@ const Transfers = (() => {
 
     const remaining = State.transfersRemaining();
     if (pending.length > remaining) {
-      Toast.show(`Only ${remaining} transfer${remaining === 1 ? "" : "s"} left this round.`, "error");
+      Toast.show(t("toast.only_n_transfers", remaining), "error");
       return;
     }
 
     const btn = document.getElementById("confirmBtn");
     if (btn) btn.disabled = true;
+
+    Progress.start();
 
     // Each change is one POST /transfer — the single documented entry point for
     // squad edits (API.md §5). It updates squadplayer + budget on the existing
@@ -48,7 +51,7 @@ const Transfers = (() => {
         await Api.createTransfer(swap.in.player_id, swap.out.player_id, State.currentMatchday);
         done++;
       } catch (e) {
-        failures.push(`${swap.out.name} → ${swap.in.name}: ${e.message || "rejected"}`);
+        failures.push(`${swap.out.name} → ${swap.in.name}: ${e.message || t("toast.rejected")}`);
       }
     }
 
@@ -56,12 +59,14 @@ const Transfers = (() => {
     await loadSquadForMatchday(State.currentMatchday);
     if (window.innerWidth <= 760) setTeamPane("summary");
 
+    Progress.done();
+
     if (failures.length && done) {
-      Toast.show(`${done} transfer${done === 1 ? "" : "s"} confirmed; ${failures.length} rejected (${failures[0]}).`, "info");
+      Toast.show(t("toast.transfers_confirmed_mixed", done, failures.length, failures[0]), "info");
     } else if (failures.length) {
-      Toast.show(`Transfer rejected — ${failures[0]}`, "error");
+      Toast.show(t("toast.transfer_rejected", failures[0]), "error");
     } else {
-      Toast.show(`${done} transfer${done === 1 ? "" : "s"} confirmed.`, "success");
+      Toast.show(t("toast.transfers_confirmed", done), "success");
     }
   }
 

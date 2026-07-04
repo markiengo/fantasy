@@ -29,11 +29,34 @@ window.Toast = Toast;
 
 const RuleAlert = (() => {
   const DETAIL = {
-    "Over budget": "You do not have enough remaining budget to afford this player.",
-    "Squad full (11)": "Remove a player from the pitch before adding someone new.",
-    "Already in squad": "This player is already in your squad.",
-    "Max 3 from one team": "You can only keep three players from the same national team.",
+    "Over budget": () => t("rule.over_budget_detail"),
+    "Squad full (11)": () => t("rule.squad_full_detail"),
+    "Already in squad": () => t("rule.already_in_detail"),
   };
+
+  const TITLE = {
+    "Over budget": () => t("rule.over_budget"),
+    "Squad full (11)": () => t("rule.squad_full"),
+    "Already in squad": () => t("rule.already_in"),
+  };
+
+  function resolveTitle(reason) {
+    if (TITLE[reason]) return TITLE[reason]();
+    var slotMatch = reason.match(/^No (\w+) slot left$/);
+    if (slotMatch) return t("rule.no_slot", slotMatch[1]);
+    var maxMatch = reason.match(/^Max (\d+) from one team$/);
+    if (maxMatch) return t("rule.max_team", maxMatch[1]);
+    return reason;
+  }
+
+  function resolveDetail(reason) {
+    if (DETAIL[reason]) return DETAIL[reason]();
+    var slotMatch = reason.match(/^No (\w+) slot left$/);
+    if (slotMatch) return t("rule.no_slot", slotMatch[1]);
+    var maxMatch = reason.match(/^Max (\d+) from one team$/);
+    if (maxMatch) return t("rule.max_team_detail", maxMatch[1]);
+    return reason;
+  }
 
   function show(reason) {
     let region = document.getElementById("ruleAlertRegion");
@@ -51,10 +74,10 @@ const RuleAlert = (() => {
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 8v5m0 3h.01M10.3 3.9l-8 13.9A1.5 1.5 0 0 0 3.6 20h16.8a1.5 1.5 0 0 0 1.3-2.2l-8-13.9a1.5 1.5 0 0 0-2.6 0Z" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
       <span class="rule-alert__body">
-        <span class="rule-alert__title">${reason}</span>
-        <span class="rule-alert__detail">${DETAIL[reason] || reason}</span>
+        <span class="rule-alert__title">${resolveTitle(reason)}</span>
+        <span class="rule-alert__detail">${resolveDetail(reason)}</span>
       </span>
-      <button class="rule-alert__close" aria-label="Dismiss">
+      <button class="rule-alert__close" aria-label="${t("squad.dismiss_tip")}">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
       </button>`;
 
@@ -77,12 +100,12 @@ const RuleAlert = (() => {
 window.RuleAlert = RuleAlert;
 
 const STAGE_LABEL = {
-  group_stage: (md) => `Round ${md}`,
-  round_of_32: () => "Round of 32",
-  round_of_16: () => "Round of 16",
-  quarter_final: () => "Quarterfinals",
-  semi_final: () => "Semifinals",
-  final: () => "Final",
+  group_stage: (md) => t("stage.group_stage", md),
+  round_of_32: () => t("stage.round_of_32"),
+  round_of_16: () => t("stage.round_of_16"),
+  quarter_final: () => t("stage.quarter_final"),
+  semi_final: () => t("stage.semi_final"),
+  final: () => t("stage.final"),
 };
 
 let _roundMeta = [];
@@ -90,11 +113,11 @@ let _scoreByMd = {};
 let _teamPane = "pitch";
 
 const SCREEN_COPY = {
-  team: { eyebrow: "TEAM MANAGEMENT", title: "Build your matchday squad" },
-  fixtures: { eyebrow: "TOURNAMENT", title: "Fixtures & standings" },
-  scores: { eyebrow: "PERFORMANCE", title: "Season dashboard" },
-  stats: { eyebrow: "TOURNAMENT", title: "Top player stats" },
-  leaderboard: { eyebrow: "COMPETITION", title: "Global leaderboard" },
+  team: { eyebrow: () => t("topbar.team_eyebrow"), title: () => t("topbar.team_title") },
+  fixtures: { eyebrow: () => t("topbar.fixtures_eyebrow"), title: () => t("topbar.fixtures_title") },
+  scores: { eyebrow: () => t("topbar.scores_eyebrow"), title: () => t("topbar.scores_title") },
+  stats: { eyebrow: () => t("topbar.stats_eyebrow"), title: () => t("topbar.stats_title") },
+  leaderboard: { eyebrow: () => t("topbar.leaderboard_eyebrow"), title: () => t("topbar.leaderboard_title") },
 };
 
 const THEME_KEY = "gaffer_theme";
@@ -109,8 +132,11 @@ function readStoredTheme() {
 
 function applyTheme(theme) {
   const nextTheme = theme === "light" ? "light" : "dark";
-  document.documentElement.setAttribute("data-theme", nextTheme);
+  const root = document.documentElement;
+  root.classList.add("theme-transitioning");
+  root.setAttribute("data-theme", nextTheme);
   updateThemeToggle(nextTheme);
+  setTimeout(function () { root.classList.remove("theme-transitioning"); }, 300);
 }
 
 function persistTheme(theme) {
@@ -125,7 +151,7 @@ function updateThemeToggle(theme) {
   const btn = document.getElementById("themeToggle");
   if (!btn) return;
   const isLight = theme === "light";
-  const nextLabel = isLight ? "Switch to dark mode" : "Switch to light mode";
+  const nextLabel = isLight ? t("topbar.switch_dark") : t("topbar.switch_light");
   btn.classList.toggle("is-active", isLight);
   btn.setAttribute("aria-pressed", String(isLight));
   btn.setAttribute("aria-label", nextLabel);
@@ -175,12 +201,15 @@ function currentTransferMatchday() {
   if (!_roundMeta.length) return State.currentMatchday || 1;
 
   const now = new Date();
+  let lastKnown = _roundMeta[0].matchday;
   for (const round of _roundMeta) {
     const lock = roundLockTime(round);
-    if (!lock || now < lock) return round.matchday;
+    if (!lock) continue;
+    if (now < lock) return round.matchday;
+    lastKnown = round.matchday;
   }
 
-  return _roundMeta[_roundMeta.length - 1].matchday;
+  return lastKnown;
 }
 
 function isWindowOpen(md) {
@@ -197,7 +226,43 @@ function isTransferAllowed(md) {
 }
 window.isTransferAllowed = isTransferAllowed;
 
+var _skipUnloadWarning = false;
+var _usernameGateLocked = false;
+var _usernameGateProfile = null;
+
+function isDirtyUnsaved() {
+  if (_skipUnloadWarning) return false;
+  if (_usernameGateLocked) return false;
+  if (State.mode === "transfer" && State.isDirty()) return true;
+  if (State.mode === "build" && State.currentSquad.players.length > 0) return true;
+  if (hasTypedInput()) return true;
+  return false;
+}
+
+function hasTypedInput() {
+  var ids = ["playerSearch", "teamSearch", "authEmail", "authPassword", "authUsername", "usernameInput"];
+  for (var i = 0; i < ids.length; i++) {
+    var el = document.getElementById(ids[i]);
+    if (el && el.offsetParent !== null && el.value && el.value.trim().length > 0) return true;
+  }
+  return false;
+}
+
 function switchScreen(name) {
+  if (_usernameGateLocked) {
+    enforceUsernameGate();
+    return;
+  }
+  if (isDirtyUnsaved()) {
+    showTransferWarning(function () { _doSwitchScreen(name); });
+    return;
+  }
+  _doSwitchScreen(name);
+}
+
+function _doSwitchScreen(name) {
+  State._activeScreen = name;
+  State.save();
   const inner = document.querySelector(".main__inner");
   let bar = document.getElementById("screenLoader");
   if (!bar && inner) {
@@ -209,7 +274,13 @@ function switchScreen(name) {
   if (bar) {
     bar.style.width = "0";
     bar.style.opacity = "1";
-    requestAnimationFrame(() => { bar.style.width = "70%"; });
+    requestAnimationFrame(() => {
+      bar.style.width = "70%";
+      setTimeout(() => {
+        bar.style.width = "100%";
+        setTimeout(() => { bar.style.opacity = "0"; }, 120);
+      }, 200);
+    });
   }
 
   document.querySelectorAll(".screen").forEach((screen) => {
@@ -236,12 +307,39 @@ function switchScreen(name) {
   }
 }
 
+function showTransferWarning(onLeave) {
+  const modal = document.getElementById("transferWarning");
+  if (!modal) { onLeave(); return; }
+  modal.hidden = false;
+  var bodyEl = modal.querySelector(".transfer-warning__body");
+  if (bodyEl) {
+    if (State.mode === "transfer" && State.isDirty()) {
+      bodyEl.textContent = t("warning.body_transfers");
+    } else if (hasTypedInput() && !(State.mode === "build" && State.currentSquad.players.length > 0)) {
+      bodyEl.textContent = t("warning.body_input");
+    } else {
+      bodyEl.textContent = t("warning.body_squad");
+    }
+  }
+  const stayBtn = document.getElementById("transferWarningStay");
+  const leaveBtn = document.getElementById("transferWarningLeave");
+  function cleanup() {
+    modal.hidden = true;
+    stayBtn.removeEventListener("click", onStay);
+    leaveBtn.removeEventListener("click", onLeaveClick);
+  }
+  function onStay() { cleanup(); }
+  function onLeaveClick() { cleanup(); onLeave(); }
+  stayBtn.addEventListener("click", onStay);
+  leaveBtn.addEventListener("click", onLeaveClick);
+}
+
 function updateTopbarCopy(name) {
   const copy = SCREEN_COPY[name] || SCREEN_COPY.team;
   const eyebrow = document.getElementById("topbarEyebrow");
   const title = document.getElementById("topbarTitle");
-  if (eyebrow) eyebrow.textContent = copy.eyebrow;
-  if (title) title.textContent = copy.title;
+  if (eyebrow) eyebrow.textContent = copy.eyebrow();
+  if (title) title.textContent = copy.title();
 }
 
 function buildRoundMeta() {
@@ -283,27 +381,22 @@ function buildRoundMeta() {
   }
 }
 
-function fmtShortDate(iso) {
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const [y, m, d] = iso.split("-").map(Number);
-  return `${d} ${months[m - 1]}`;
-}
-
-function updateBackendState() {
-  const isMock = Api.isMock();
-  const badge = document.getElementById("backendStateBadge");
-  const label = isMock ? "Demo data" : "Live backend";
-
-  if (badge) {
-    badge.textContent = label;
-    badge.classList.toggle("shell-pill--live", !isMock);
-    badge.classList.toggle("shell-pill--demo", isMock);
+function fmtShortDate(iso, kickoffIso) {
+  var locale = t("date.locale") || "en-US";
+  if (kickoffIso) {
+    var d = new Date(kickoffIso);
+    if (!Number.isNaN(d.getTime())) {
+      return d.toLocaleDateString(locale, { day: "numeric", month: "short" });
+    }
   }
+  var parts = iso.split("-").map(Number);
+  var d2 = new Date(parts[0], parts[1] - 1, parts[2]);
+  return d2.toLocaleDateString(locale, { day: "numeric", month: "short" });
 }
 
 function updateShellSummary() {
   const meta = currentRoundMeta();
-  const mdLabel = meta ? meta.label : `Round ${State.currentMatchday}`;
+  const mdLabel = meta ? meta.label : t("stage.group_stage", State.currentMatchday);
   const headerMd = document.getElementById("headerMatchdayValue");
   const summary = document.getElementById("matchdaySummary");
   const transferWindow = document.getElementById("transferWindowStatus");
@@ -315,15 +408,15 @@ function updateShellSummary() {
   if (modeLabel) modeLabel.textContent = mdLabel;
   if (summary) {
     if (meta) {
-      const lockCopy = isWindowOpen(meta.matchday) ? "Transfers open" : "Transfers locked";
-      const datePart = meta.date ? ` - ${fmtShortDate(meta.date)}` : "";
+      const lockCopy = isWindowOpen(meta.matchday) ? t("window.open") : t("window.locked");
+      const datePart = meta.date ? ` - ${fmtShortDate(meta.date, meta.firstKickoff)}` : "";
       summary.textContent = `${mdLabel}${datePart} - ${lockCopy}`;
     } else {
       summary.textContent = mdLabel;
     }
   }
   if (transferWindow) {
-    transferWindow.textContent = isWindowOpen(State.currentMatchday) ? "Transfers open" : "Transfers locked";
+    transferWindow.textContent = isWindowOpen(State.currentMatchday) ? t("window.open") : t("window.locked");
   }
 }
 
@@ -334,16 +427,16 @@ function renderMatchdayStrip() {
   for (const round of _roundMeta) {
     const active = round.matchday === State.currentMatchday;
     const complete = round.matchday < State.currentMatchday;
-    let sub = round.date ? `<span class="round__date">${fmtShortDate(round.date)}</span>` : "";
+    let sub = round.date ? `<span class="round__date">${fmtShortDate(round.date, round.firstKickoff)}</span>` : "";
 
     if (active) {
       const allowed = isTransferAllowed(round.matchday);
       const open = isWindowOpen(round.matchday);
       sub = (allowed && open)
-        ? `<span class="round__sub round__sub--open">Transfers open</span>`
-        : `<span class="round__sub round__sub--locked">Transfers locked</span>`;
+        ? `<span class="round__sub round__sub--open">${t("window.open")}</span>`
+        : `<span class="round__sub round__sub--locked">${t("window.locked")}</span>`;
     } else if (complete && Object.prototype.hasOwnProperty.call(_scoreByMd, round.matchday)) {
-      sub = `<span class="pill pill--pts">${_scoreByMd[round.matchday]} pts</span>`;
+      sub = `<span class="pill pill--pts">${t("points.pts", _scoreByMd[round.matchday])}</span>`;
     }
 
     html += `<button class="round ${active ? "is-active" : ""}" role="tab" aria-selected="${active}" data-md="${round.matchday}">
@@ -363,7 +456,7 @@ function updatePointsChip(md) {
   const el = document.getElementById("statPoints");
   if (!el) return;
   const pts = Object.prototype.hasOwnProperty.call(_scoreByMd, md) ? _scoreByMd[md] : null;
-  el.textContent = pts != null ? `${pts} pts` : "-";
+  el.textContent = pts != null ? t("points.pts", pts) : "-";
   const topbar = document.getElementById("topbarPoints");
   if (topbar) {
     let total = 0;
@@ -447,8 +540,20 @@ async function selectMatchday(md) {
   if (active === "screen-scores") Scores.render();
 }
 
+function selectMatchdayLight(md) {
+  State.currentMatchday = md;
+  State.currentSquad.matchday = md;
+  State.save();
+  renderMatchdayStrip();
+  updatePointsChip(md);
+  Fixtures.setRound(md);
+  Fixtures.render();
+}
+
 function setTeamPane(name) {
   _teamPane = name;
+  State._teamPane = name;
+  State.save();
   document.querySelectorAll(".team-pane").forEach((pane) => {
     pane.classList.toggle("is-active", pane.dataset.pane === name);
   });
@@ -459,13 +564,19 @@ function setTeamPane(name) {
   });
 }
 
+let _mobileTabsBound = false;
 function initTeamMobileTabs() {
+  if (_mobileTabsBound) return;
+  _mobileTabsBound = true;
   document.querySelectorAll(".team-mobile-tabs__tab").forEach((tab) => {
     tab.addEventListener("click", () => setTeamPane(tab.dataset.pane));
   });
 }
 
+let _navBound = false;
 function bindNav() {
+  if (_navBound) return;
+  _navBound = true;
   document.querySelectorAll("[data-screen]").forEach((link) => {
     link.addEventListener("click", (e) => {
       e.preventDefault();
@@ -476,23 +587,35 @@ function bindNav() {
   document.querySelectorAll("[data-pane-jump]").forEach((link) => {
     link.addEventListener("click", (e) => {
       e.preventDefault();
-      switchScreen("team");
-      setTeamPane(link.dataset.paneJump);
+      const pane = link.dataset.paneJump;
+      function go() { switchScreen("team"); setTeamPane(pane); }
+      if (isDirtyUnsaved()) {
+        showTransferWarning(go);
+        return;
+      }
+      go();
     });
   });
 
   document.querySelectorAll("[data-command='transfers']").forEach((link) => {
     link.addEventListener("click", (e) => {
       e.preventDefault();
-      switchScreen("team");
-      if (State.mode === "view") {
-        Transfers.enter();
+      function go() {
+        switchScreen("team");
+        if (State.mode === "view") {
+          Transfers.enter();
+          return;
+        }
+        setTeamPane("summary");
+        if (State.mode === "build") {
+          Toast.show(t("toast.save_before_transfers"), "info");
+        }
+      }
+      if (isDirtyUnsaved()) {
+        showTransferWarning(go);
         return;
       }
-      setTeamPane("summary");
-      if (State.mode === "build") {
-        Toast.show("Save a squad before making transfers.", "info");
-      }
+      go();
     });
   });
 
@@ -507,9 +630,15 @@ function bindNav() {
 
 async function refreshLiveData() {
   const md = State.currentMatchday;
-  const matches = await Api.getMatches();
+  const [matches, players, teams] = await Promise.all([
+    Api.getMatches(),
+    Api.getPlayers(),
+    Api.getTeams(),
+  ]);
   const cumulative = await Api.getSquadScore().catch(() => ({}));
   State.fixtures = matches;
+  State.players = players;
+  State.teams = teams;
   _scoreByMd = {};
   for (const row of (cumulative.by_matchday || [])) {
     _scoreByMd[row.matchday] = Number(row.squad_score ?? 0);
@@ -518,26 +647,31 @@ async function refreshLiveData() {
   renderMatchdayStrip();
   updatePointsChip(md);
   await loadSquadForMatchday(md);
-  const active = document.querySelector(".screen.is-active").id;
-  if (active === "screen-fixtures") {
+  const active = document.querySelector(".screen.is-active");
+  if (!active) return;
+  const name = active.id;
+  if (name === "screen-fixtures") {
     Fixtures.setRound(md);
     Fixtures.render();
   }
-  if (active === "screen-scores") Scores.render();
+  if (name === "screen-scores") Scores.render();
+  if (name === "screen-stats") Stats.render();
+  if (name === "screen-leaderboard") Leaderboard.render();
 }
 
 function bindUpdateData() {
   const btn = document.getElementById("updateDataBtn");
   const subtitle = document.getElementById("updateDataSubtitle");
   const label = btn ? btn.querySelector(".btn-update__title") : null;
-  if (!btn || !subtitle) return;
+  if (!btn || !subtitle || btn.dataset.bound === "1") return;
+  btn.dataset.bound = "1";
 
   btn.addEventListener("click", async () => {
     btn.disabled = true;
     btn.setAttribute("aria-disabled", "true");
     btn.classList.add("is-loading");
-    if (label) label.textContent = "Updating";
-    const subtitles = ["Fetching latest scores...", "Updating player stats...", "Refreshing squad analytics..."];
+    if (label) label.textContent = t("update.updating");
+    const subtitles = [t("update.fetching"), t("update.player_stats"), t("update.squad_analytics")];
     let index = 0;
     subtitle.textContent = subtitles[index];
     const timer = setInterval(() => {
@@ -548,17 +682,17 @@ function bindUpdateData() {
     try {
       const result = await Api.updateData();
       await refreshLiveData();
-      subtitle.textContent = "Data update complete";
-      Toast.show(`Data updated: ${result.inserted || 0} stats added, ${result.matches_updated || 0} matches refreshed.`, "success");
+      subtitle.textContent = t("update.complete");
+      Toast.show(t("toast.data_updated", result.inserted || 0, result.matches_updated || 0), "success");
     } catch (e) {
-      subtitle.textContent = "Update failed";
-      Toast.show(e.message || "Could not update data.", "error");
+      subtitle.textContent = t("update.failed");
+      Toast.show(e.message || t("toast.could_not_update"), "error");
     } finally {
       clearInterval(timer);
       btn.disabled = false;
       btn.setAttribute("aria-disabled", "false");
       btn.classList.remove("is-loading");
-      if (label) label.textContent = "Update Data";
+      if (label) label.textContent = t("update.data");
     }
   });
 }
@@ -573,6 +707,14 @@ function bindMatchdayNav() {
     if (State.currentMatchday < maxMd) selectMatchday(State.currentMatchday + 1);
   };
 
+  const ids = ["mdPrev", "mdNext", "mdPrevDesk", "mdNextDesk"];
+  for (const id of ids) {
+    const btn = document.getElementById(id);
+    if (!btn) continue;
+    const clone = btn.cloneNode(true);
+    btn.parentNode.replaceChild(clone, btn);
+  }
+
   document.getElementById("mdPrev").addEventListener("click", goPrev);
   document.getElementById("mdNext").addEventListener("click", goNext);
   const deskPrev = document.getElementById("mdPrevDesk");
@@ -583,14 +725,16 @@ function bindMatchdayNav() {
 
 function bindHelpButtons() {
   const onboarding = document.getElementById("openOnboardingBtn");
-  if (onboarding) {
+  if (onboarding && onboarding.dataset.bound !== "1") {
+    onboarding.dataset.bound = "1";
     onboarding.addEventListener("click", () => {
       if (window.Onboarding) Onboarding.open();
     });
   }
 
   const replayTour = document.getElementById("replayTourBtn");
-  if (replayTour) {
+  if (replayTour && replayTour.dataset.bound !== "1") {
+    replayTour.dataset.bound = "1";
     replayTour.addEventListener("click", () => {
       if (window.Tour) Tour.start();
     });
@@ -613,47 +757,47 @@ function updateAuthMode(mode) {
   const emailInput = document.getElementById("authEmail");
 
   if (mode === "login") {
-    title.textContent = "Welcome back";
+    title.textContent = t("login.welcome_back");
     subtitle.style.display = "none";
     if (usernameField) usernameField.hidden = true;
     passwordField.hidden = false;
     options.hidden = false;
-    submitBtn.textContent = "Log In";
+    submitBtn.textContent = t("login.log_in");
     separator.hidden = false;
     googleBtn.hidden = false;
-    googleText.textContent = "Sign In with Google";
-    if (emailLabel) emailLabel.textContent = "Email or Username";
-    if (emailInput) emailInput.placeholder = "Enter email or username";
-    if (modeText) modeText.textContent = "Don't have an account?";
-    if (toggleBtn) toggleBtn.textContent = "Sign Up";
+    googleText.textContent = t("login.sign_in_google");
+    if (emailLabel) emailLabel.textContent = t("login.email_or_username");
+    if (emailInput) emailInput.placeholder = t("login.enter_email_or_username");
+    if (modeText) modeText.textContent = t("login.dont_have_account");
+    if (toggleBtn) toggleBtn.textContent = t("login.sign_up");
   } else if (mode === "signup") {
-    title.textContent = "Create account";
+    title.textContent = t("login.create_account");
     subtitle.style.display = "none";
     if (usernameField) usernameField.hidden = false;
     passwordField.hidden = false;
     options.hidden = true;
-    submitBtn.textContent = "Sign Up";
+    submitBtn.textContent = t("login.sign_up");
     separator.hidden = false;
     googleBtn.hidden = false;
-    googleText.textContent = "Sign Up with Google";
-    if (emailLabel) emailLabel.textContent = "Email";
-    if (emailInput) emailInput.placeholder = "Enter your email";
-    if (modeText) modeText.textContent = "Already have an account?";
-    if (toggleBtn) toggleBtn.textContent = "Log In";
+    googleText.textContent = t("login.sign_up_google");
+    if (emailLabel) emailLabel.textContent = t("login.email");
+    if (emailInput) emailInput.placeholder = t("login.enter_email");
+    if (modeText) modeText.textContent = t("login.already_have_account");
+    if (toggleBtn) toggleBtn.textContent = t("login.log_in");
   } else if (mode === "reset") {
-    title.textContent = "Reset password";
-    subtitle.textContent = "Enter your email and we'll send you a reset link";
+    title.textContent = t("login.reset_password");
+    subtitle.textContent = t("login.reset_subtitle");
     subtitle.style.display = "";
     if (usernameField) usernameField.hidden = true;
     passwordField.hidden = true;
     options.hidden = true;
-    submitBtn.textContent = "Send reset link";
+    submitBtn.textContent = t("login.send_reset_link");
     separator.hidden = true;
     googleBtn.hidden = true;
-    if (emailLabel) emailLabel.textContent = "Email";
-    if (emailInput) emailInput.placeholder = "Enter your email";
-    if (modeText) modeText.textContent = "Remember your password?";
-    if (toggleBtn) toggleBtn.textContent = "Log In";
+    if (emailLabel) emailLabel.textContent = t("login.email");
+    if (emailInput) emailInput.placeholder = t("login.enter_email");
+    if (modeText) modeText.textContent = t("login.remember_password");
+    if (toggleBtn) toggleBtn.textContent = t("login.log_in");
   }
 }
 
@@ -665,6 +809,17 @@ function showLoginScreen() {
   hideAuthOverlay();
 }
 
+function setAuthOverlayBody(body, beforeKey, email, afterKey) {
+  if (!body) return;
+  const strong = document.createElement("strong");
+  strong.textContent = email || "";
+  body.replaceChildren(
+    document.createTextNode(t(beforeKey) + " "),
+    strong,
+    document.createTextNode(". " + t(afterKey))
+  );
+}
+
 function showAuthOverlay(type, email) {
   const overlay = document.getElementById("authOverlay");
   const card = document.querySelector(".login-screen__card");
@@ -673,11 +828,11 @@ function showAuthOverlay(type, email) {
   if (!overlay) return;
   if (card) card.style.display = "none";
   if (type === "signup") {
-    if (title) title.textContent = "Check your email";
-    if (body) body.innerHTML = "We sent a confirmation link to <strong>" + email + "</strong>. Click the link to activate your account.";
+    if (title) title.textContent = t("auth.check_email");
+    setAuthOverlayBody(body, "auth.confirmation_sent", email, "auth.click_to_activate");
   } else if (type === "reset") {
-    if (title) title.textContent = "Reset link sent";
-    if (body) body.innerHTML = "We sent a password reset link to <strong>" + email + "</strong>. Check your inbox and follow the link to reset your password.";
+    if (title) title.textContent = t("auth.reset_sent");
+    setAuthOverlayBody(body, "auth.reset_link_sent", email, "auth.check_inbox");
   }
   overlay.style.display = "";
 }
@@ -687,6 +842,162 @@ function hideAuthOverlay() {
   const card = document.querySelector(".login-screen__card");
   if (overlay) overlay.style.display = "none";
   if (card) card.style.display = "";
+}
+
+function resetAppStateForSession() {
+  State.currentSquad = { matchday: 1, formation: "4-3-3", players: [], captainId: null };
+  State.squadSaved = false;
+  State.transfersUsed = 0;
+}
+
+async function enterAuthenticatedApp() {
+  resetAppStateForSession();
+  showAppScreen();
+  await continueBoot();
+}
+
+function setAppGateInert(locked) {
+  const app = document.getElementById("appScreen");
+  if (!app) return;
+  if (locked) {
+    app.inert = true;
+    app.setAttribute("aria-hidden", "true");
+  } else {
+    app.inert = false;
+    app.removeAttribute("aria-hidden");
+  }
+}
+
+function enforceUsernameGate(profile) {
+  if (profile) _usernameGateProfile = profile;
+  if (_usernameGateProfile) showUsernameModal(_usernameGateProfile);
+}
+
+function usernameProfileErrorMessage(err) {
+  const detail = err && err.message ? err.message : "";
+  if (err && err.status === 400) return t("username.invalid");
+  if (detail.indexOf("ASCII letters") !== -1 || detail.indexOf("Username must") !== -1) return t("username.invalid");
+  if (detail === "Username already taken") return t("username.taken");
+  if (detail === "Profile already completed") return t("username.profile_completed");
+  return t("username.could_not_set");
+}
+
+function showUsernameModal(profile) {
+  const modal = document.getElementById("usernameModal");
+  if (!modal) return;
+
+  _usernameGateLocked = true;
+  _usernameGateProfile = profile || _usernameGateProfile || {};
+  setAppGateInert(true);
+
+  if (modal.parentElement !== document.body) {
+    document.body.appendChild(modal);
+  }
+
+  const login = document.getElementById("loginScreen");
+  if (login) login.style.display = "none";
+
+  const avatar = document.getElementById("usernameModalAvatar");
+  const nameEl = document.getElementById("usernameModalName");
+  const emailEl = document.getElementById("usernameModalEmail");
+
+  profile = _usernameGateProfile || {};
+
+  if (avatar && profile.avatar_url) {
+    avatar.src = profile.avatar_url;
+    avatar.style.display = "";
+  } else if (avatar) {
+    avatar.style.display = "none";
+  }
+  if (nameEl) nameEl.textContent = profile.name || "";
+  if (emailEl) emailEl.textContent = profile.email || "";
+
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.setAttribute("aria-hidden", "false");
+  modal.style.display = "flex";
+
+  const form = document.getElementById("usernameForm");
+  const input = document.getElementById("usernameInput");
+  const feedback = document.getElementById("usernameFeedback");
+  const submitBtn = document.getElementById("usernameSubmitBtn");
+
+  if (input) input.focus();
+
+  if (input && input.dataset.usernameCheckBound !== "1") {
+    let checkTimer = null;
+    input.dataset.usernameCheckBound = "1";
+    input.addEventListener("input", () => {
+      const val = input.value.trim();
+      if (feedback) {
+        feedback.textContent = "";
+        feedback.className = "username-modal__feedback";
+      }
+      clearTimeout(checkTimer);
+      if (val.length < 3) return;
+      checkTimer = setTimeout(async () => {
+        const base = (location.hostname === "127.0.0.1" || location.hostname === "localhost")
+          ? "http://127.0.0.1:8000/api"
+          : "/api";
+        try {
+          const res = await fetch(`${base}/check-username?username=${encodeURIComponent(val)}`);
+          const data = await res.json();
+          if (feedback && input.value.trim() === val) {
+            if (data.available) {
+              feedback.textContent = t("username.available");
+              feedback.className = "username-modal__feedback is-ok";
+            } else if (data.reason === "taken") {
+              feedback.textContent = t("username.taken");
+              feedback.className = "username-modal__feedback is-error";
+            }
+          }
+        } catch (e) {}
+      }, 350);
+    });
+  }
+
+  if (form && form.dataset.usernameSubmitBound !== "1") {
+    form.dataset.usernameSubmitBound = "1";
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const username = input ? input.value.trim() : "";
+      if (!username || !/^[a-zA-Z0-9_ ]{3,20}$/.test(username)) {
+        if (feedback) {
+          feedback.textContent = t("username.invalid");
+          feedback.className = "username-modal__feedback is-error";
+        }
+        return;
+      }
+      if (submitBtn) { submitBtn.classList.add("btn--loading"); submitBtn.disabled = true; }
+      try {
+        await Api.completeProfile(username);
+        hideUsernameModal({ completed: true });
+        await enterAuthenticatedApp();
+      } catch (err) {
+        if (feedback) {
+          feedback.textContent = usernameProfileErrorMessage(err);
+          feedback.className = "username-modal__feedback is-error";
+        }
+      } finally {
+        if (submitBtn) { submitBtn.classList.remove("btn--loading"); submitBtn.disabled = false; }
+      }
+    });
+  }
+}
+
+function hideUsernameModal(options) {
+  if (_usernameGateLocked && (!options || options.completed !== true)) {
+    enforceUsernameGate();
+    return;
+  }
+  _usernameGateLocked = false;
+  _usernameGateProfile = null;
+  setAppGateInert(false);
+  const modal = document.getElementById("usernameModal");
+  if (modal) {
+    modal.style.display = "none";
+    modal.setAttribute("aria-hidden", "true");
+  }
 }
 
 function showAppScreen() {
@@ -708,15 +1019,44 @@ function hideGuestBanner() {
 
 async function boot() {
   State.load();
+  _teamPane = State._teamPane || "pitch";
   applyTheme(readStoredTheme());
 
-  window.addEventListener("beforeunload", () => {
-    if (sessionStorage.getItem("gaffer_no_persist") === "1") {
-      if (window.supabaseAuth) {
-        window.supabaseAuth.auth.signOut().catch(() => {});
+  window.addEventListener("beforeunload", (e) => {
+    if (isDirtyUnsaved()) {
+      e.preventDefault();
+      e.returnValue = "";
+    }
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if ((e.key === "F5") || (e.ctrlKey && e.key === "r") || (e.metaKey && e.key === "r")) {
+      if (isDirtyUnsaved()) {
+        e.preventDefault();
+        showTransferWarning(function () {
+          window.location.reload();
+        });
       }
     }
   });
+
+  if (window.onAuthStateChange) {
+    await window.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        _freshLogin = true;
+        const loginScreen = document.getElementById("loginScreen");
+        if (loginScreen && loginScreen.style.display !== "none") {
+          await swapToApp();
+        }
+      } else if (event === "INITIAL_SESSION" && session) {
+        _freshLogin = false;
+        const loginScreen = document.getElementById("loginScreen");
+        if (loginScreen && loginScreen.style.display !== "none") {
+          await swapToApp();
+        }
+      }
+    });
+  }
 
   const googleSignInBtn = document.getElementById("googleSignInBtn");
   const emailLoginForm = document.getElementById("emailLoginForm");
@@ -733,21 +1073,20 @@ async function boot() {
   }
 
   async function swapToApp() {
-    showAppScreen();
-    _booted = false;
-    await continueBoot();
+    await enterAuthenticatedApp();
   }
 
   async function enterDemoMode() {
     Api.setDemoToken();
     showAppScreen();
-    Toast.show("Logged in as demo user.", "success");
+    Toast.show(t("toast.demo_user"), "success");
     _booted = false;
     await continueBoot();
   }
 
   window.addEventListener("auth-unauthorized", () => {
-    Toast.show("Session expired. Please sign in again.", "error");
+    Progress.done();
+    Toast.show(t("toast.session_expired"), "error");
     if (window.supabaseAuth) {
       window.supabaseAuth.auth.signOut().catch(() => {});
     }
@@ -755,7 +1094,8 @@ async function boot() {
   });
 
   window.addEventListener("auth-forbidden", (e) => {
-    const detail = e && e.detail && e.detail.detail ? e.detail.detail : "You do not have permission to do that.";
+    const detail = e && e.detail && e.detail.detail ? e.detail.detail : t("toast.no_permission");
+    if (detail === "Username required") return;
     if (window.Toast) Toast.show(detail, "error");
   });
 
@@ -774,7 +1114,7 @@ async function boot() {
       const isText = input.type === "text";
       input.type = isText ? "password" : "text";
       passwordToggle.setAttribute("aria-pressed", String(!isText));
-      passwordToggle.setAttribute("aria-label", isText ? "Show password" : "Hide password");
+      passwordToggle.setAttribute("aria-label", isText ? t("login.show_password") : t("login.hide_password"));
     });
   }
 
@@ -784,10 +1124,14 @@ async function boot() {
 
   if (googleSignInBtn) {
     googleSignInBtn.addEventListener("click", async () => {
+      _skipUnloadWarning = true;
+      setAuthLoading(true);
       try {
         await window.signInWithGoogle();
       } catch (error) {
-        Toast.show(error.message || "Google sign-in failed", "error");
+        _skipUnloadWarning = false;
+        setAuthLoading(false);
+        Toast.show(error.message || t("toast.google_failed"), "error");
       }
     });
   }
@@ -818,17 +1162,20 @@ async function boot() {
       e.preventDefault();
       const emailOrUser = document.getElementById("authEmail").value.trim();
       const password = document.getElementById("authPassword").value;
-      const remember = document.getElementById("authRemember")?.checked ?? true;
       const usernameInput = document.getElementById("authUsername");
       const username = usernameInput ? usernameInput.value.trim() : "";
+      var rememberInput = document.getElementById("authRemember");
+      var remember = rememberInput ? rememberInput.checked : true;
+      var formFeedback = document.getElementById("authFormFeedback");
+      if (formFeedback) { formFeedback.textContent = ""; formFeedback.className = "auth-form__feedback"; }
       setAuthLoading(true);
       try {
         if (authMode === "login") {
           await window.signIn(emailOrUser, password, remember);
           await swapToApp();
         } else if (authMode === "signup") {
-          if (!username || !/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
-            Toast.show("Username must be 3-20 chars: letters, numbers, underscores only.", "error");
+          if (!username || !/^[a-zA-Z0-9_ ]{3,20}$/.test(username)) {
+            Toast.show(t("toast.username_invalid"), "error");
             setAuthLoading(false);
             return;
           }
@@ -839,8 +1186,8 @@ async function boot() {
           const checkData = await checkRes.json();
           if (!checkData.available) {
             const msg = checkData.reason === "invalid"
-              ? "Username must be 3-20 chars: letters, numbers, underscores only."
-              : "Username already taken.";
+              ? t("toast.username_invalid")
+              : t("toast.username_taken");
             Toast.show(msg, "error");
             setAuthLoading(false);
             return;
@@ -854,7 +1201,14 @@ async function boot() {
           authMode = "login";
         }
       } catch (error) {
-        Toast.show(error.message || "Authentication failed", "error");
+        var msg = error.message || t("toast.auth_failed");
+        if (msg === "Invalid login credentials") msg = t("toast.wrong_credentials");
+        Toast.show(msg, "error");
+        var formFeedback = document.getElementById("authFormFeedback");
+        if (formFeedback) {
+          formFeedback.textContent = msg;
+          formFeedback.className = "auth-form__feedback is-error";
+        }
       } finally {
         setAuthLoading(false);
       }
@@ -892,6 +1246,7 @@ async function boot() {
   if (signOutBtn) {
     signOutBtn.addEventListener("click", async () => {
       try {
+        localStorage.removeItem("wcf2026");
         if (Api.isDemo()) {
           Api.clearDemoToken();
         } else {
@@ -899,7 +1254,7 @@ async function boot() {
         }
         window.location.reload();
       } catch (error) {
-        Toast.show(error.message || "Sign out failed", "error");
+        Toast.show(error.message || t("toast.signout_failed"), "error");
       }
     });
   }
@@ -909,42 +1264,19 @@ async function boot() {
     return;
   }
 
-  try {
-    const me = await Api.getMe();
-    const profileName = document.querySelector(".profile__name");
-    if (profileName && me.display_name) profileName.textContent = me.display_name;
-    if (me.role !== "admin") {
-      const updateBtn = document.getElementById("updateDataBtn");
-      if (updateBtn) updateBtn.style.display = "none";
-    }
-  } catch (e) {
-    if (e.status === 401) {
-      Toast.show("Session expired. Please sign in again.", "error");
-      if (window.supabaseAuth) {
-        await window.supabaseAuth.auth.signOut().catch(() => {});
-      }
-    } else {
-      Toast.show("Could not verify your session. Please sign in again.", "error");
-    }
-    showLoginScreen();
-    return;
-  }
-
   await swapToApp();
 }
 
 let _booted = false;
+let _freshLogin = false;
 
 async function continueBoot() {
   if (_booted) return;
   _booted = true;
 
-  Onboarding.maybeShow();
-  updateTopbarCopy("team");
+  Squad.showSkeleton();
+  Progress.start();
 
-  Squad.init();
-  Fixtures.init();
-  Leaderboard.init();
   bindNav();
   bindMatchdayNav();
   bindUpdateData();
@@ -953,12 +1285,74 @@ async function continueBoot() {
   initTeamMobileTabs();
   setTeamPane(_teamPane);
 
+  let me = null;
+  try {
+    me = await Api.getMe();
+  } catch (e) {
+    if (e.status === 403 && e.message === "Username required") {
+      Progress.done();
+      const session = await window.getCurrentSession();
+      if (session) {
+        const user = session.user;
+        const userMetadata = user.user_metadata || {};
+        showUsernameModal({
+          email: user.email,
+          name: userMetadata.full_name || userMetadata.name,
+          avatar_url: userMetadata.avatar_url,
+        });
+      }
+      _booted = false;
+      return;
+    }
+    Progress.done();
+    Toast.show(t("toast.verify_failed"), "error");
+    if (window.supabaseAuth) {
+      window.supabaseAuth.auth.signOut().catch(() => {});
+    }
+    swapToLogin();
+    _booted = false;
+    return;
+  }
+
+  if (me.needs_username) {
+    Progress.done();
+    enforceUsernameGate(me);
+    _booted = false;
+    return;
+  }
+
+  _usernameGateLocked = false;
+  _usernameGateProfile = null;
+  setAppGateInert(false);
+
+  const profileName = document.querySelector(".profile__name");
+  if (profileName && me.display_name) profileName.textContent = me.display_name;
+
+  const managerAvatar = document.getElementById("managerAvatar");
+  if (managerAvatar) {
+    const seed = me.username || me.display_name || me.user_id || "Gaffer";
+    managerAvatar.style.backgroundImage = "url('https://api.dicebear.com/9.x/personas/svg?seed=" + encodeURIComponent(seed) + "&backgroundColor=ffd5dc,e6d4f0,c4f0e8,ffe8c4,d4e8ff&radius=50')";
+  }
+
+  if (me.role === "admin") {
+    window._isAdmin = true;
+    const updateBtn = document.getElementById("updateDataBtn");
+    if (updateBtn) updateBtn.hidden = false;
+  }
+
+  if (me.user_id) window._userId = me.user_id;
+
+  Onboarding.maybeShow();
+  updateTopbarCopy("team");
+
+  Squad.init();
+  Fixtures.init();
+  Leaderboard.init();
+
   State.subscribe(() => {
     updateShellSummary();
   });
-  window.addEventListener("backend-mode-changed", updateBackendState);
 
-  Squad.showSkeleton();
   let md = State.currentMatchday;
 
   let players = [];
@@ -976,8 +1370,10 @@ async function continueBoot() {
       Api.getSquadScore().catch(() => ({})),
     ]);
   } catch (e) {
-    Toast.show("Could not load data. Retry the request.", "error");
+    Toast.show(t("toast.load_failed"), "error");
   }
+
+  Progress.set(50);
 
   State.players = players;
   State.teams = teams;
@@ -989,7 +1385,7 @@ async function continueBoot() {
   }
 
   buildRoundMeta();
-  md = currentTransferMatchday();
+  md = _freshLogin ? currentTransferMatchday() : (State.currentMatchday || currentTransferMatchday());
   State.setMatchday(md);
 
   try {
@@ -1002,9 +1398,10 @@ async function continueBoot() {
     transfersUsed = 0;
   }
 
+  Progress.done();
+
   renderMatchdayStrip();
   updatePointsChip(md);
-  updateBackendState();
   Squad.buildTeamSearch();
 
   if (rawSquad && rawSquad.players && rawSquad.players.length) {
@@ -1023,7 +1420,34 @@ async function continueBoot() {
   Squad.renderPool();
   Squad.renderProgressChecklist();
   Squad.renderTipBanner();
+
+  var savedScreen = State._activeScreen || "team";
+  if (savedScreen !== "team") {
+    _doSwitchScreen(savedScreen);
+  }
 }
+
+window.addEventListener("lang-changed", function () {
+  var active = document.querySelector(".screen.is-active");
+  if (!active) return;
+  var name = active.id.replace("screen-", "");
+  updateTopbarCopy(name);
+  renderMatchdayStrip();
+  if (name === "team") {
+    Squad.renderPitch();
+    Squad.renderSummary();
+    Squad.renderPool();
+    Squad.renderProgressChecklist();
+    Squad.renderTipBanner();
+  }
+  if (name === "fixtures") {
+    Fixtures.setRound(State.currentMatchday);
+    Fixtures.render();
+  }
+  if (name === "scores") Scores.render();
+  if (name === "stats") Stats.render();
+  if (name === "leaderboard") Leaderboard.render();
+});
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", boot);

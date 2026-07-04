@@ -8,41 +8,48 @@ const Tour = (() => {
     {
       target: "#pitch",
       preferred: ".pitch-panel",
-      title: "Build your XI",
-      body: "This is your pitch. You need 11 players in a 4-3-3 or 4-4-2 shape. Tap any empty slot to filter the pool by position.",
+      title: () => t("tour.build_xi.title"),
+      body: () => t("tour.build_xi.body"),
       mobileTab: "pitch",
     },
     {
       target: ".pool",
       preferred: ".pool.team-shell__rail",
-      title: "Pick your players",
-      body: "Browse and filter players here. Click the + button on any row to add them to your squad.",
+      title: () => t("tour.pick_players.title"),
+      body: () => t("tour.pick_players.body"),
       mobileTab: "players",
+      pad: 10,
+    },
+    {
+      target: ".player-token:not(.player-token--empty)",
+      title: () => t("tour.choose_captain.title"),
+      body: () => t("tour.choose_captain.body"),
+      mobileTab: "pitch",
       pad: 10,
     },
     {
       target: "#statRemaining",
       preferred: ".stat-tile--accent",
-      title: "Watch the budget",
-      body: "You have $50m to spend. This meter tracks how much you've used and what's left.",
+      title: () => t("tour.watch_budget.title"),
+      body: () => t("tour.watch_budget.body"),
       mobileTab: "summary",
     },
     {
       target: "#formationSwitch",
-      title: "Choose your shape",
-      body: "Switch between 4-3-3 and 4-4-2. Your formation determines how many players you need at each position.",
+      title: () => t("tour.choose_shape.title"),
+      body: () => t("tour.choose_shape.body"),
       mobileTab: "summary",
     },
     {
       target: "#scoreHelpBtn",
-      title: "How points work",
-      body: "Tap this icon anytime to see how fantasy points are calculated for each position - goals, assists, clean sheets, cards.",
+      title: () => t("tour.how_points.title"),
+      body: () => t("tour.how_points.body"),
       mobileTab: null,
     },
     {
       target: "#saveSquadBtn",
-      title: "Save when ready",
-      body: "Once you've filled all 11 slots and stayed under budget, hit Save to lock in your squad.",
+      title: () => t("tour.save_ready.title"),
+      body: () => t("tour.save_ready.body"),
       mobileTab: "summary",
     },
   ];
@@ -50,14 +57,14 @@ const Tour = (() => {
   const TRANSFER_STEPS = [
     {
       target: "#makeTransfersBtn",
-      title: "Make transfers",
-      body: "Your saved squad is locked. Click here to enter transfer mode and swap players.",
+      title: () => t("tour.make_transfers.title"),
+      body: () => t("tour.make_transfers.body"),
       mobileTab: "summary",
     },
     {
       target: ".player-token:not(.player-token--empty)",
-      title: "Remove a player",
-      body: "Click the x on any player token to remove them from your squad. This frees up a slot and budget.",
+      title: () => t("tour.remove_player.title"),
+      body: () => t("tour.remove_player.body"),
       mobileTab: "pitch",
       multi: true,
       pad: 10,
@@ -65,15 +72,15 @@ const Tour = (() => {
     {
       target: ".pool",
       preferred: ".pool.team-shell__rail",
-      title: "Add a replacement",
-      body: "Pick a new player from the pool. They must fit the same position slot and stay within budget.",
+      title: () => t("tour.add_replacement.title"),
+      body: () => t("tour.add_replacement.body"),
       mobileTab: "players",
       pad: 10,
     },
     {
       target: "#confirmBtn",
-      title: "Confirm transfers",
-      body: "When your swaps are ready, click Confirm. Each transfer is sent to the backend individually. You get 5 per matchday.",
+      title: () => t("tour.confirm_transfers.title"),
+      body: () => t("tour.confirm_transfers.body"),
       mobileTab: "summary",
     },
   ];
@@ -359,13 +366,13 @@ const Tour = (() => {
     const isLast = _index === total - 1;
 
     _card.innerHTML = `
-      <div class="tour-card__title">${step.title}</div>
-      <div class="tour-card__body">${step.body}</div>
+      <div class="tour-card__title">${typeof step.title === "function" ? step.title() : step.title}</div>
+      <div class="tour-card__body">${typeof step.body === "function" ? step.body() : step.body}</div>
       <div class="tour-card__nav">
-        <button class="btn btn--ghost btn--sm tour-card__back" type="button"${isFirst ? " hidden" : ""}>Back</button>
+        <button class="btn btn--ghost btn--sm tour-card__back" type="button"${isFirst ? " hidden" : ""}>${t("tour.back")}</button>
         <span class="tour-card__dots">${dotsHtml}</span>
-        <button class="btn btn--text tour-card__skip" type="button">Skip tour</button>
-        <button class="btn btn--primary btn--sm tour-card__next" type="button">${isLast ? "Finish" : "Next"}</button>
+        <button class="btn btn--text tour-card__skip" type="button">${t("tour.skip")}</button>
+        <button class="btn btn--primary btn--sm tour-card__next" type="button">${isLast ? t("tour.finish") : t("tour.next")}</button>
       </div>
     `;
 
@@ -490,23 +497,20 @@ const Tour = (() => {
     }
   }
 
+  function tourKey() {
+    var base = _isTransfer ? "gaffer_transfer_tour_done_" : "gaffer_tour_done_";
+    return base + (window._userId || "anon");
+  }
+
   function skip() {
     if (!_active) return;
-    if (_isTransfer) {
-      localStorage.setItem("gaffer_transfer_tour_done", "1");
-    } else {
-      localStorage.setItem("gaffer_tour_done", "1");
-    }
+    localStorage.setItem(tourKey(), "1");
     cleanup();
   }
 
   function finish() {
     if (!_active) return;
-    if (_isTransfer) {
-      localStorage.setItem("gaffer_transfer_tour_done", "1");
-    } else {
-      localStorage.setItem("gaffer_tour_done", "1");
-    }
+    localStorage.setItem(tourKey(), "1");
     cleanup();
   }
 

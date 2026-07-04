@@ -4,38 +4,34 @@ const Fixtures = (() => {
   const maxRound = 8;
 
   const stageLabel = {
-    group_stage: (md) => `Round ${md}`,
-    round_of_32: () => "Round of 32",
-    round_of_16: () => "Round of 16",
-    quarter_final: () => "Quarterfinals",
-    semi_final: () => "Semifinals",
-    final: () => "Final",
+    group_stage: (md) => t("stage.group_stage", md),
+    round_of_32: () => t("stage.round_of_32"),
+    round_of_16: () => t("stage.round_of_16"),
+    quarter_final: () => t("stage.quarter_final"),
+    semi_final: () => t("stage.semi_final"),
+    final: () => t("stage.final"),
   };
 
   const bracketStages = ["round_of_32", "round_of_16", "quarter_final", "semi_final", "final"];
 
-  function fmtDate(iso) {
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const parts = iso.split("-").map(Number);
-    const dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
-    return `${days[dt.getUTCDay()]} ${parts[2]} ${months[parts[1] - 1]}`;
+  function fmtDate(iso, kickoffIso) {
+    var locale = t("date.locale");
+    if (kickoffIso) {
+      var d = new Date(kickoffIso);
+      if (!Number.isNaN(d.getTime())) {
+        return d.toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short" });
+      }
+    }
+    var parts = iso.split("-").map(Number);
+    var dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+    return dt.toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
   }
 
   function kickoff(match) {
     if (match.kickoff) {
-      const iso = match.kickoff;
-      const t = iso.split("T")[1];
-      if (t) {
-        const h = parseInt(t.slice(0, 2), 10);
-        const m = t.slice(3, 5);
-        const ampm = h >= 12 ? "PM" : "AM";
-        const h12 = h % 12 || 12;
-        return `${h12}:${m} ${ampm}`;
-      }
-      const date = new Date(iso);
-      if (!Number.isNaN(date.getTime())) {
-        return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" });
+      var d = new Date(match.kickoff);
+      if (!Number.isNaN(d.getTime())) {
+        return d.toLocaleTimeString(t("date.locale"), { hour: "numeric", minute: "2-digit" });
       }
     }
     const slots = ["18:00", "21:00", "00:00", "03:00"];
@@ -55,7 +51,7 @@ const Fixtures = (() => {
     const stageText = document.getElementById("tournamentStageLabel");
     if (roundLabel) roundLabel.textContent = labelForStage(stage, round);
     if (countLabel) countLabel.textContent = String(matches.length);
-    if (stageText) stageText.textContent = stage === "group_stage" ? "Group stage" : labelForStage(stage, round);
+    if (stageText) stageText.textContent = stage === "group_stage" ? t("stage.group_stage_plain") : labelForStage(stage, round);
   }
 
   function emptyStanding(team) {
@@ -174,7 +170,7 @@ const Fixtures = (() => {
     if (!grid) return;
 
     if (!State.teams.length) {
-      grid.innerHTML = `<p class="empty-note">No group data yet.</p>`;
+      grid.innerHTML = `<p class="empty-note">${t("fixtures.no_group_data")}</p>`;
       return;
     }
 
@@ -208,10 +204,10 @@ const Fixtures = (() => {
         rank = rank + 1;
       }
       html += `<section class="group">
-        <header class="group__head"><h3>Group ${key}</h3><span class="hr"></span></header>
+        <header class="group__head"><h3>${t("fixtures.group", key)}</h3><span class="hr"></span></header>
         <div class="group__cols">
-          <span>#</span><span>Team</span><span>PL</span><span>W</span><span>D</span>
-          <span>L</span><span>+/-</span><span>GD</span><span>PTS</span><span>Form</span><span>Next</span>
+          <span>#</span><span>${t("fixtures.col_team")}</span><span>${t("fixtures.col_pl")}</span><span>${t("fixtures.col_w")}</span><span>${t("fixtures.col_d")}</span>
+          <span>${t("fixtures.col_l")}</span><span>+/-</span><span>${t("fixtures.col_gd")}</span><span>${t("fixtures.col_pts")}</span><span>${t("fixtures.col_form")}</span><span>${t("fixtures.col_next")}</span>
         </div>
         ${body}
       </section>`;
@@ -240,7 +236,7 @@ const Fixtures = (() => {
     }
 
     if (!matches.length) {
-      list.innerHTML = `<p class="empty-note">No fixtures for this round yet.</p>`;
+      list.innerHTML = `<p class="empty-note">${t("fixtures.no_fixtures")}</p>`;
       return;
     }
 
@@ -265,11 +261,11 @@ const Fixtures = (() => {
           return a.match_id - b.match_id;
         });
 
-        const dateStr = groupMatches[0].date ? fmtDate(groupMatches[0].date) : "";
+        const dateStr = groupMatches[0].date ? fmtDate(groupMatches[0].date, groupMatches[0].kickoff) : "";
 
         html += `<div class="fixtures__group">`;
         html += `<header class="fixtures__group-head">`;
-        html += `<span class="fixtures__group-label">Group ${key}</span>`;
+        html += `<span class="fixtures__group-label">${t("fixtures.group", key)}</span>`;
         if (dateStr) html += `<span class="fixtures__group-date">${dateStr}</span>`;
         html += `</header>`;
         html += `<div class="fixtures__grid">`;
@@ -307,7 +303,7 @@ const Fixtures = (() => {
   }
 
   function shortName(name) {
-    if (!name) return "TBD";
+    if (!name) return t("fixtures.tbd");
     const shorts = {
       "South Africa": "S.Africa", "South Korea": "S.Korea",
       "Korea Republic": "Korea", "Netherlands": "Dutch",
@@ -376,13 +372,13 @@ const Fixtures = (() => {
 
   function fixtureCard(match) {
     const hasScore = match.team1_score != null && match.team2_score != null;
-    const t1Name = match.team1_name || "TBD";
-    const t2Name = match.team2_name || "TBD";
+    const t1Name = match.team1_name || t("fixtures.tbd");
+    const t2Name = match.team2_name || t("fixtures.tbd");
     const winner = matchWinner(match);
     const t1Class = winner === 1 ? " fixture-card__team--win" : winner === 2 ? " fixture-card__team--lose" : "";
     const t2Class = winner === 2 ? " fixture-card__team--win" : winner === 1 ? " fixture-card__team--lose" : "";
 
-    const dateStr = match.date ? fmtDate(match.date) : "";
+    const dateStr = match.date ? fmtDate(match.date, match.kickoff) : "";
     const timeStr = kickoff(match);
     const dateLine = hasScore
       ? (dateStr ? `<span class="fixture-card__date">${dateStr} · ${timeStr}</span>` : "")
@@ -410,11 +406,11 @@ const Fixtures = (() => {
     const COL_W = 190, GAP = 56, HEIGHT = 1400, TOP = 26;
     const EXPECTED_NODES = { round_of_32: 16, round_of_16: 8, quarter_final: 4, semi_final: 2, final: 1 };
     const ROUND_NAMES = {
-      round_of_32: "ROUND OF 32",
-      round_of_16: "ROUND OF 16",
-      quarter_final: "QUARTERFINALS",
-      semi_final: "SEMIFINALS",
-      final: "FINAL",
+      round_of_32: () => t("ko.round_of_32"),
+      round_of_16: () => t("ko.round_of_16"),
+      quarter_final: () => t("ko.quarterfinals"),
+      semi_final: () => t("ko.semifinals"),
+      final: () => t("ko.final"),
     };
 
     // Build round data
@@ -465,8 +461,8 @@ const Fixtures = (() => {
         let inner;
 
         if (match) {
-          const t1 = match.team1_name || (match.team1_id || "TBD");
-          const t2 = match.team2_name || (match.team2_id || "TBD");
+          const t1 = match.team1_name || (match.team1_id || t("fixtures.tbd"));
+          const t2 = match.team2_name || (match.team2_id || t("fixtures.tbd"));
           const hasScore = match.team1_score != null && match.team2_score != null;
           let t1Score = "", t2Score = "";
           let t1Win = "", t2Win = "";
@@ -485,15 +481,15 @@ const Fixtures = (() => {
           inner = `<div class="bracket-node__slot${t1Win}">${flagImg(match.team1_id)}<b>${t1}</b>${t1Score ? `<span class="bracket-node__score">${t1Score}</span>` : ""}</div>
             <div class="bracket-node__slot${t2Win}">${flagImg(match.team2_id)}<b>${t2}</b>${t2Score ? `<span class="bracket-node__score">${t2Score}</span>` : ""}</div>`;
         } else {
-          inner = `<div class="bracket-node__slot"><span class="shield"></span><b>TBD</b></div>
-            <div class="bracket-node__slot"><span class="shield"></span><b>TBD</b></div>`;
+          inner = `<div class="bracket-node__slot"><span class="shield"></span><b>${t("fixtures.tbd")}</b></div>
+            <div class="bracket-node__slot"><span class="shield"></span><b>${t("fixtures.tbd")}</b></div>`;
         }
 
         nodesHtml += `<div class="bracket-node${isFinalRound ? " bracket-node--final" : ""}" style="top:${y - TOP}px">${inner}</div>`;
       }
 
       roundsHtml += `<div class="bracket-round">
-        <p class="bracket-round__name">${ROUND_NAMES[stage] || stage.toUpperCase()}</p>
+        <p class="bracket-round__name">${(ROUND_NAMES[stage] || (() => stage.toUpperCase()))()}</p>
         <div class="bracket-round__nodes">${nodesHtml}</div>
       </div>`;
     }
@@ -503,7 +499,7 @@ const Fixtures = (() => {
         <svg class="bracket__connectors" viewBox="0 0 ${totalW} ${HEIGHT}" aria-hidden="true">${paths}</svg>
         ${roundsHtml}
         <div class="bracket__champion">
-          <span class="trophy">🏆</span><b>CHAMPION</b>
+          <span class="trophy">🏆</span><b>${t("fixtures.champion")}</b>
         </div>
       </div>
     </div>`;
@@ -532,18 +528,26 @@ const Fixtures = (() => {
   }
 
   function init() {
-    document.getElementById("fxPrev").addEventListener("click", () => {
-      if (round > 1) {
-        round = round - 1;
-        render();
-      }
-    });
-    document.getElementById("fxNext").addEventListener("click", () => {
-      if (round < maxRound) {
-        round = round + 1;
-        render();
-      }
-    });
+    const prev = document.getElementById("fxPrev");
+    const next = document.getElementById("fxNext");
+    if (prev) {
+      const p = prev.cloneNode(true);
+      prev.parentNode.replaceChild(p, prev);
+      p.addEventListener("click", () => {
+        if (round > 1) {
+          selectMatchdayLight(round - 1);
+        }
+      });
+    }
+    if (next) {
+      const n = next.cloneNode(true);
+      next.parentNode.replaceChild(n, next);
+      n.addEventListener("click", () => {
+        if (round < maxRound) {
+          selectMatchdayLight(round + 1);
+        }
+      });
+    }
     document.querySelectorAll(".fixture-tab").forEach((tab) => {
       tab.addEventListener("click", () => {
         setTab(tab.dataset.fixtureTab);

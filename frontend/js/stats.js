@@ -1,15 +1,15 @@
 const Stats = (() => {
   const CATEGORIES = [
-    { key: "top_fantasy_score", title: "Fantasy points", hint: "Total", isHero: true, suffix: "pts", bento: "hero" },
-    { key: "top_scorers", title: "Top scorers", hint: "Goals", bento: "normal" },
-    { key: "top_assists", title: "Assists", hint: "Assists", bento: "normal" },
-    { key: "top_goal_involvements", title: "Goal involvements", hint: "Goals + Assists", bento: "normal" },
-    { key: "top_clean_sheets", title: "Clean sheets", hint: "DEF / GK", bento: "normal" },
-    { key: "top_cards", title: "Most cards", hint: "Yellow + Red", isCards: true, bento: "wide" },
+    { key: "top_fantasy_score", title: () => t("stats.fantasy_points"), hint: () => t("stats.hint_total"), isHero: true, suffix: () => t("stats.pts"), bento: "hero" },
+    { key: "top_scorers", title: () => t("stats.top_scorers"), hint: () => t("stats.hint_goals"), bento: "normal" },
+    { key: "top_assists", title: () => t("stats.assists"), hint: () => t("stats.hint_assists"), bento: "normal" },
+    { key: "top_goal_involvements", title: () => t("stats.goal_involvements"), hint: () => t("stats.hint_ga"), bento: "normal" },
+    { key: "top_clean_sheets", title: () => t("stats.clean_sheets"), hint: () => t("stats.hint_def_gk"), bento: "normal" },
+    { key: "top_cards", title: () => t("stats.most_cards"), hint: () => t("stats.hint_yr"), isCards: true, bento: "wide" },
   ];
 
   function faceHtml(player, size) {
-    const seed = encodeURIComponent(player.name);
+    const seed = encodeURIComponent(player.name).replace(/'/g, "%27");
     const src = `https://api.dicebear.com/9.x/micah/svg?seed=${seed}&backgroundColor=c6f24a,a6d92e,7aa2ff,ffb06c&radius=50`;
     return `<span class="avatar avatar--${size}" data-pos="${player.position}" style="background-image:url('${src}')"></span>`;
   }
@@ -43,7 +43,7 @@ const Stats = (() => {
         <span class="stats-card-icon stats-card-icon--red${rc === 0 ? " stats-card-icon--zero" : ""}">${rc}</span>
       </span>`;
     } else if (category.suffix) {
-      valueHtml = `<span class="stats-row__value">${entry.value}<small class="stats-row__unit">${category.suffix}</small></span>`;
+      valueHtml = `<span class="stats-row__value">${entry.value}<small class="stats-row__unit">${typeof category.suffix === "function" ? category.suffix() : category.suffix}</small></span>`;
     } else {
       valueHtml = `<span class="stats-row__value">${entry.value}</span>`;
     }
@@ -69,7 +69,7 @@ const Stats = (() => {
 
     let bodyHtml;
     if (!entries.length) {
-      bodyHtml = `<p class="stats-empty">No data yet.</p>`;
+      bodyHtml = `<p class="stats-empty">${t("stats.no_data")}</p>`;
     } else {
       bodyHtml = `<ul class="stats-list">`;
       for (let i = 0; i < entries.length; i++) {
@@ -81,8 +81,8 @@ const Stats = (() => {
     return `<article class="${cardClass} chart-reveal chart-reveal--${revealIdx}">
       <header class="stats-card__head">
         <span class="stats-card__dot"></span>
-        <span class="stats-card__title">${category.title}</span>
-        <span class="stats-card__hint">${category.hint}</span>
+        <span class="stats-card__title">${typeof category.title === "function" ? category.title() : category.title}</span>
+        <span class="stats-card__hint">${typeof category.hint === "function" ? category.hint() : category.hint}</span>
       </header>
       ${bodyHtml}
     </article>`;
@@ -96,8 +96,8 @@ const Stats = (() => {
       html += `<article class="${cardClass}">
         <header class="stats-card__head">
           <span class="stats-card__dot"></span>
-          <span class="stats-card__title">${cat.title}</span>
-          <span class="stats-card__hint">${cat.hint}</span>
+          <span class="stats-card__title">${typeof cat.title === "function" ? cat.title() : cat.title}</span>
+          <span class="stats-card__hint">${typeof cat.hint === "function" ? cat.hint() : cat.hint}</span>
         </header>
         <ul class="stats-list">${skeletonRows(5)}</ul>
       </article>`;
@@ -112,6 +112,7 @@ const Stats = (() => {
     const shell = root.querySelector(".stats-shell");
     if (!shell) return;
 
+    Progress.start();
     shell.innerHTML = renderSkeleton();
 
     try {
@@ -123,8 +124,9 @@ const Stats = (() => {
       html += `</div>`;
       shell.innerHTML = html;
     } catch (err) {
-      shell.innerHTML = `<div class="stats-empty">Failed to load stats. ${err.message || ""}</div>`;
+      shell.innerHTML = `<div class="stats-empty">${t("stats.failed")} ${err.message || ""}</div>`;
     }
+    Progress.done();
   }
 
   return { render };

@@ -17,15 +17,19 @@ const Dropdown = (() => {
     const current = root.querySelector(".dropdown__current");
     let value = initialValue != null ? initialValue : (root.dataset.value || "");
 
+    function labelText(it) {
+      return typeof it.label === "function" ? it.label() : it.label;
+    }
+
     function paint() {
       let html = "";
       for (const it of items) {
         const sel = it.value === value ? " is-sel" : "";
-        html += `<div class="dropdown__opt${sel}" role="option" data-value="${it.value}" aria-selected="${it.value === value}">${it.label}</div>`;
+        html += `<div class="dropdown__opt${sel}" role="option" data-value="${it.value}" aria-selected="${it.value === value}">${labelText(it)}</div>`;
       }
       panel.innerHTML = html;
       const match = items.find((i) => i.value === value);
-      if (current && match) current.textContent = match.label;
+      if (current && match) current.textContent = labelText(match);
     }
     paint();
 

@@ -25,15 +25,13 @@ const Scores = (() => {
   };
 
   function mdLabel(md) {
-    if (md === 1) return "Round 1";
-    if (md === 2) return "Round 2";
-    if (md === 3) return "Round 3";
-    if (md === 4) return "Round of 32";
-    if (md === 5) return "Round of 16";
-    if (md === 6) return "Quarterfinals";
-    if (md === 7) return "Semifinals";
-    if (md === 8) return "Final";
-    return "Round " + md;
+    if (md >= 1 && md <= 3) return t("stage.group_stage", md);
+    if (md === 4) return t("stage.round_of_32");
+    if (md === 5) return t("stage.round_of_16");
+    if (md === 6) return t("stage.quarter_final");
+    if (md === 7) return t("stage.semi_final");
+    if (md === 8) return t("stage.final");
+    return t("stage.group_stage", md);
   }
 
   /* ── Data loading ──────────────────────────────────────────────────────── */
@@ -109,7 +107,7 @@ const Scores = (() => {
 
     nav.hidden = false;
 
-    let html = '<span class="dash-md-nav__header">Matchday</span>';
+    let html = '<span class="dash-md-nav__header">' + t("dash.matchday") + '</span>';
     const allMds = _scoredMatchdays.slice();
     /* add placeholder future matchdays up to 8 */
     for (let md = 1; md <= 8; md++) {
@@ -294,7 +292,7 @@ const Scores = (() => {
 
     const breakdown = _scoreByMd[_selectedMd];
     if (!breakdown || !breakdown.breakdown || !breakdown.breakdown.length) {
-      list.innerHTML = '<p class="empty-note">No player data for this matchday.</p>';
+      list.innerHTML = '<p class="empty-note">' + t("dash.no_player_data") + '</p>';
       return;
     }
 
@@ -304,7 +302,7 @@ const Scores = (() => {
     let html = "";
     for (let i = 0; i < players.length; i++) {
       const p = players[i];
-      const seed = encodeURIComponent(p.player_name);
+      const seed = encodeURIComponent(p.player_name).replace(/'/g, "%27");
       const avatarSrc = "https://api.dicebear.com/9.x/micah/svg?seed=" + seed + "&backgroundColor=c6f24a,a6d92e,7aa2ff,ffb06c&radius=50";
       const posColor = POS_COLORS[p.position] || "var(--ink)";
       const cls = p.player_score < 0 ? " scorer-pts--neg" : "";
@@ -330,7 +328,7 @@ const Scores = (() => {
     const breakdown = _scoreByMd[_selectedMd];
     const squad = _squadByMd[_selectedMd];
     if (!breakdown || !squad) {
-      container.innerHTML = '<p class="empty-note">No data for this matchday.</p>';
+      container.innerHTML = '<p class="empty-note">' + t("dash.no_data_md") + '</p>';
       if (legendContainer) legendContainer.innerHTML = "";
       return;
     }
@@ -371,7 +369,7 @@ const Scores = (() => {
     const breakdown = _scoreByMd[_selectedMd];
     const squad = _squadByMd[_selectedMd];
     if (!breakdown || !squad) {
-      container.innerHTML = '<p class="empty-note">No data for this matchday.</p>';
+      container.innerHTML = '<p class="empty-note">' + t("dash.no_data_md") + '</p>';
       return;
     }
 
@@ -407,7 +405,7 @@ const Scores = (() => {
       const color = POS_COLORS[r.position] || "var(--accent)";
       html += '<div class="value-row">' +
         '<span class="value-name">' + r.name + "</span>" +
-        '<span class="value-ratio">' + r.ratio.toFixed(1) + " pts/$m</span>" +
+        '<span class="value-ratio">' + r.ratio.toFixed(1) + " " + t("dash.pts_per_m") + "</span>" +
         '<div class="value-bar-wrap"><div class="value-bar" style="width:' + pct + "%;background:" + color + '"></div></div>' +
         "</div>";
     }
@@ -425,7 +423,7 @@ const Scores = (() => {
     const breakdown = _scoreByMd[_selectedMd];
     if (!breakdown || !breakdown.breakdown) {
       if (centerEl) centerEl.textContent = "0";
-      if (legendEl) legendEl.innerHTML = '<span class="empty-note">No data</span>';
+      if (legendEl) legendEl.innerHTML = '<span class="empty-note">' + t("dash.no_data") + '</span>';
       return;
     }
 
@@ -455,7 +453,7 @@ const Scores = (() => {
     if (!container) return;
 
     if (!_allTransfers.length) {
-      container.innerHTML = '<p class="empty-note">No transfers made yet.</p>';
+      container.innerHTML = '<p class="empty-note">' + t("dash.no_transfers") + '</p>';
       return;
     }
 
@@ -489,34 +487,34 @@ const Scores = (() => {
       }
       const netCls = netCost >= 0 ? "xfer-md-header__net--neg" : "xfer-md-header__net--pos";
       const netSign = netCost > 0 ? "+" : "";
-      const netLabel = netCost !== 0 ? "$" + netSign + netCost.toFixed(1) + "m" : "even";
+      const netLabel = netCost !== 0 ? "$" + netSign + netCost.toFixed(1) + "m" : t("dash.even");
 
       html += '<div class="xfer-md-group' + (isOpen ? " is-open" : "") + '" data-md="' + group.md + '">';
       html += '<div class="xfer-md-header">';
       html += '<svg class="xfer-md-chevron" viewBox="0 0 16 16" fill="none"><path d="M6 4l6 4-6 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       html += '<span class="xfer-md-header__label">' + mdLabel(group.md) + "</span>";
-      html += '<span class="xfer-md-header__count">' + count + " transfer" + (count > 1 ? "s" : "") + "</span>";
+      html += '<span class="xfer-md-header__count">' + (count === 1 ? t("dash.transfer_count", count) : t("dash.transfer_count_plural", count)) + "</span>";
       html += '<span class="xfer-md-header__net ' + netCls + '">' + netLabel + "</span>";
       html += "</div>";
       html += '<div class="xfer-md-body">';
 
       for (let j = 0; j < group.transfers.length; j++) {
-        const t = group.transfers[j];
-        const inPrice = t.player_in_price != null ? "$" + t.player_in_price.toFixed(1) + "m" : "";
-        const outPrice = t.player_out_price != null ? "$" + t.player_out_price.toFixed(1) + "m" : "";
+        const xf = group.transfers[j];
+        const inPrice = xf.player_in_price != null ? "$" + xf.player_in_price.toFixed(1) + "m" : "";
+        const outPrice = xf.player_out_price != null ? "$" + xf.player_out_price.toFixed(1) + "m" : "";
 
         html += '<div class="xfer-card">';
         html += '<div class="xfer-card__row xfer-card__row--out">';
         html += '<span class="xfer-arrow xfer-arrow--out"><svg viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4v8H4" stroke="currentColor" stroke-width="1.5"/></svg></span>';
-        html += '<span class="xfer-name">' + (t.player_out_name || "Unknown") + "</span>";
+        html += '<span class="xfer-name">' + (xf.player_out_name || t("dash.unknown")) + "</span>";
         if (outPrice) html += '<span class="xfer-price">' + outPrice + "</span>";
-        html += '<span class="xfer-badge xfer-badge--out">OUT</span>';
+        html += '<span class="xfer-badge xfer-badge--out">' + t("dash.out") + '</span>';
         html += "</div>";
         html += '<div class="xfer-card__row">';
         html += '<span class="xfer-arrow xfer-arrow--in"><svg viewBox="0 0 16 16" fill="none"><path d="M12 12L4 4M4 12v-8h8" stroke="currentColor" stroke-width="1.5"/></svg></span>';
-        html += '<span class="xfer-name">' + (t.player_in_name || "Unknown") + "</span>";
+        html += '<span class="xfer-name">' + (xf.player_in_name || t("dash.unknown")) + "</span>";
         if (inPrice) html += '<span class="xfer-price">' + inPrice + "</span>";
-        html += '<span class="xfer-badge xfer-badge--in">IN</span>';
+        html += '<span class="xfer-badge xfer-badge--in">' + t("dash.in") + '</span>';
         html += "</div>";
         html += "</div>";
       }
@@ -558,8 +556,15 @@ const Scores = (() => {
   /* ── Public API ────────────────────────────────────────────────────────── */
 
   async function init() {
-    await loadAll();
-    renderAll();
+    Progress.start();
+    try {
+      await loadAll();
+      renderAll();
+    } catch (e) {
+      console.error("Dashboard load error:", e);
+    } finally {
+      Progress.done();
+    }
   }
 
   function refresh() {

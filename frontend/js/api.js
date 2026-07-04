@@ -79,7 +79,7 @@ const Api = (() => {
       if (!useMock) {
         useMock = true;
         console.warn("[Api] backend unreachable — using mock data.", e.message);
-        if (window.Toast) Toast.show("Backend offline — showing demo data.", "info");
+        if (window.Toast) Toast.show(t("toast.backend_offline"), "info");
         announceMode();
       }
       return mockFn();
@@ -88,9 +88,9 @@ const Api = (() => {
 
   return {
     isMock: () => useMock,
-    isDemo: () => demoToken !== null,
+    isDemo: () => false,
     forceMock: () => { useMock = true; announceMode(); },
-    setDemoToken: () => { demoToken = "demo-token"; sessionStorage.setItem("gaffer_demo_token", demoToken); },
+    setDemoToken: () => {},
     clearDemoToken: () => { demoToken = null; sessionStorage.removeItem("gaffer_demo_token"); },
 
     getPlayers: (params = {}) =>
@@ -103,36 +103,23 @@ const Api = (() => {
       withFallback(() => call("/matches/" + id), () => Mock.getMatch(id)),
     getPlayerStats: (params = {}) =>
       withFallback(() => call("/playerstats" + qs(params)), () => Mock.getPlayerStats(params)),
-    getSquad: (matchday) =>
-      withFallback(() => call("/squad" + qs({ matchday })), () => Mock.getSquad(matchday)),
+    getSquad: (matchday) => call("/squad" + qs({ matchday })),
     createSquad: (matchday, player_ids, captain_player_id) =>
-      withFallback(
-        () => call("/squad", { method: "POST", body: JSON.stringify({ matchday, player_ids, captain_player_id }) }),
-        () => Mock.createSquad(matchday, player_ids, captain_player_id)
-      ),
-    getTransfers: (matchday) =>
-      withFallback(() => call("/transfers" + qs({ matchday })), () => Mock.getTransfers(matchday)),
+      call("/squad", { method: "POST", body: JSON.stringify({ matchday, player_ids, captain_player_id }) }),
+    getTransfers: (matchday) => call("/transfers" + qs({ matchday })),
     createTransfer: (player_in_id, player_out_id, matchday) =>
-      withFallback(
-        () => call("/transfer", { method: "POST", body: JSON.stringify({ player_in_id, player_out_id, matchday }) }),
-        () => Mock.createTransfer(player_in_id, player_out_id, matchday)
-      ),
-    getSquadScore: (matchday) =>
-      withFallback(() => call("/analytics/squad-score" + qs({ matchday })), () => Mock.getSquadScore(matchday)),
-    getComposition: (matchday) =>
-      withFallback(() => call("/analytics/composition" + qs({ matchday })), () => Mock.getComposition(matchday)),
-    getRankHistory: () =>
-      withFallback(() => call("/analytics/rank-history"), () => Mock.getRankHistory()),
+      call("/transfer", { method: "POST", body: JSON.stringify({ player_in_id, player_out_id, matchday }) }),
+    getSquadScore: (matchday) => call("/analytics/squad-score" + qs({ matchday })),
+    getComposition: (matchday) => call("/analytics/composition" + qs({ matchday })),
+    getRankHistory: () => call("/analytics/rank-history"),
     updateData: (body = {}) =>
-      withFallback(
-        () => call("/load-stats", { method: "POST", body: JSON.stringify(body) }),
-        () => Mock.updateData(body)
-      ),
+      call("/load-stats", { method: "POST", body: JSON.stringify(body) }),
     getMe: () => call("/me"),
+    completeProfile: (username) =>
+      call("/complete-profile", { method: "POST", body: JSON.stringify({ username }) }),
     getTopStats: (limit = 5) =>
       withFallback(() => call("/playerstats/top" + qs({ limit })), () => Mock.getTopStats(limit)),
-    getLeaderboard: (matchday) =>
-      withFallback(() => call("/leaderboard" + qs({ matchday })), () => Mock.getLeaderboard(matchday)),
+    getLeaderboard: (matchday) => call("/leaderboard" + qs({ matchday })),
   };
 })();
 
