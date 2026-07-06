@@ -761,8 +761,8 @@ ul { list-style: none; }
 .overlay__panel,
 .welcome__card,
 .score-overlay__panel {
-  width: min(884px, 100%);
-  padding: 22px;
+  width: min(1061px, 100%);
+  padding: 26px;
   transform: scale(.92);
   transition: transform var(--dur-enter) var(--ease-spring), opacity var(--dur-enter) var(--ease-smooth);
 }
@@ -773,13 +773,13 @@ ul { list-style: none; }
 .welcome__head {
   display: flex;
   justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 18px;
+  gap: 22px;
+  margin-bottom: 22px;
 }
 .welcome__head { flex-direction: column; }
 .welcome__title,
 .overlay__head h2 {
-  font-size: 24px;
+  font-size: 28.8px;
   line-height: 1;
   letter-spacing: -.03em;
 }

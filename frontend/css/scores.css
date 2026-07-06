@@ -354,6 +354,18 @@
 
 /* ── Composition legend ──────────────────────────────────────────────────── */
 
+.comp-sub-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 14px;
+  margin-bottom: 4px;
+}
+.comp-sub-label:first-of-type { margin-top: 4px; }
+
 .comp-legend {
   display: flex;
   flex-wrap: wrap;

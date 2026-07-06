@@ -232,9 +232,10 @@ const Scores = (() => {
   /* ── Score composition ─────────────────────────────────────────────────── */
 
   function renderComposition() {
-    const container = document.getElementById("compositionChart");
-    const legendContainer = document.getElementById("compositionLegend");
-    if (!container) return;
+    const posContainer = document.getElementById("compositionChartPos");
+    const posLegend = document.getElementById("compositionLegendPos");
+    const negContainer = document.getElementById("compositionChartNeg");
+    const negLegend = document.getElementById("compositionLegendNeg");
 
     const chartData = [];
     const mds = _scoredMatchdays.slice();
@@ -250,15 +251,32 @@ const Scores = (() => {
         cs_pts: comp.cs_pts || 0,
         minute_pts: comp.minute_pts || 0,
         card_pts: comp.card_pts || 0,
+        saves_pts: comp.saves_pts || 0,
+        sot_pts: comp.sot_pts || 0,
+        own_goal_pts: comp.own_goal_pts || 0,
+        foul_pts: comp.foul_pts || 0,
+        offside_pts: comp.offside_pts || 0,
+        gc_pts: comp.gc_pts || 0,
         total: comp.total || 0
       });
     }
 
-    Charts.stackedBar(container, chartData, {
-      selectedMatchday: _selectedMd,
-      onBarClick: selectMatchday,
-      legendContainer: legendContainer
-    });
+    if (posContainer) {
+      Charts.stackedBar(posContainer, chartData, {
+        selectedMatchday: _selectedMd,
+        onBarClick: selectMatchday,
+        legendContainer: posLegend,
+        segments: "positive"
+      });
+    }
+    if (negContainer) {
+      Charts.stackedBar(negContainer, chartData, {
+        selectedMatchday: _selectedMd,
+        onBarClick: selectMatchday,
+        legendContainer: negLegend,
+        segments: "negative"
+      });
+    }
   }
 
   /* ── Rank trajectory ───────────────────────────────────────────────────── */

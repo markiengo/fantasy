@@ -3,7 +3,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 
-from app.queries.match import get_match, update_match_score, get_match_dates_without_stats, advance_bracket_winner
+from app.queries.match import get_match, update_match_score, get_match_dates_without_stats, advance_bracket_winner, find_match_by_teams
 from app.queries.playerstat import post_playerstats_batch
 from tools import espn_client as espn
 
@@ -69,6 +69,12 @@ def stat_body(player_id, match_id, event, player_stat):
         "yellow_cards": player_stat["yellow"],
         "red_cards": player_stat["red"],
         "clean_sheet": clean_sheet,
+        "saves": player_stat.get("saves", 0),
+        "own_goals": player_stat.get("own_goals", 0),
+        "shots_on_target": player_stat.get("shots_on_target", 0),
+        "fouls_committed": player_stat.get("fouls_committed", 0),
+        "offsides": player_stat.get("offsides", 0),
+        "goals_conceded": player_stat.get("goals_conceded", 0),
     }
 
 
@@ -139,6 +145,8 @@ def load_stats(conn, date_value=None, from_date=None, to_date=None, dry_run=Fals
 
             totals["matches_completed"] = totals["matches_completed"] + 1
             match_id = matchmap.get(event["event_id"])
+            if match_id is None:
+                match_id = find_match_by_teams(conn, event["home"], event["away"], event["stage"])
             if match_id is None:
                 totals["skipped_unmapped_match"] = totals["skipped_unmapped_match"] + 1
                 continue

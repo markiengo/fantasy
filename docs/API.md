@@ -88,13 +88,19 @@ Base scores are stored per player per match (GR-08). Captain doubling is applied
 
 | Event | FWD/MID | DEF/GK |
 |---|---:|---:|
-| Goal | +5 | +6 |
+| Goal | +5 | +7 (DEF) / +6 (GK) |
 | Assist | +3 | +3 |
 | Clean sheet | 0 | +4 |
+| Saves (GK only) | 0 | +1 each |
+| Shots on target (FWD/MID only) | +1 each | 0 |
 | 60+ minutes | +2 | +2 |
 | 1-59 minutes | +1 | +1 |
 | Yellow card | -1 | -1 |
 | Red card | -3 | -3 |
+| Own goals | -3 | -3 |
+| Fouls committed | -0.5 each | -0.5 each |
+| Offsides | -0.25 each | -0.25 each |
+| Goals conceded (GK/DEF only) | 0 | -0.5 each |
 
 ## Stats Pipeline — UC-12, GR-08
 
@@ -262,11 +268,11 @@ Without matchday:
 
 **`GET /analytics/composition`** — Auth required
 
-Breaks the user's matchday score into scoring categories: goals, assists, clean sheets, minutes, and cards.
+Breaks the user's matchday score into scoring categories: goals, assists, clean sheets, minutes, cards, saves, shots on target, own goals, fouls, offsides, and goals conceded.
 
 Query: `matchday` (required)
 
-Response: `{ matchday, goals_pts, assist_pts, cs_pts, minute_pts, card_pts, total }`
+Response: `{ matchday, goals_pts, assist_pts, cs_pts, minute_pts, card_pts, saves_pts, sot_pts, own_goal_pts, foul_pts, offside_pts, gc_pts, total }`
 
 ### Rank History — UC-09
 

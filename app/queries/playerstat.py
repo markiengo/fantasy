@@ -5,7 +5,8 @@ def get_playerstats(conn, match_id = None, player_id = None):
     cursor = conn.cursor()
     query = '''
         SELECT stat_id, playerstat.player_id, player.name as player_name, match_id, goals, 
-        assists, minutes_played, yellow_cards, red_cards, clean_sheet, score
+        assists, minutes_played, yellow_cards, red_cards, clean_sheet, score,
+        saves, own_goals, shots_on_target, fouls_committed, offsides, goals_conceded
         FROM playerstat 
         JOIN player 
             ON playerstat.player_id = player.player_id
@@ -46,6 +47,7 @@ def get_top_stats(conn, limit=5):
             SUM(ps.clean_sheet) AS total_clean_sheets,
             SUM(ps.yellow_cards) AS total_yellow_cards,
             SUM(ps.red_cards) AS total_red_cards,
+            SUM(ps.saves) AS total_saves,
             SUM(ps.score) AS total_score
         FROM playerstat ps
         JOIN player p ON ps.player_id = p.player_id
@@ -95,6 +97,10 @@ def get_top_stats(conn, limit=5):
             }
             for r in top_n(rows, lambda r: (r["total_yellow_cards"] or 0) + (r["total_red_cards"] or 0))
         ],
+        "top_saves": [
+            {"player_id": r["player_id"], "name": r["name"], "position": r["position"], "team_id": r["team_id"], "team_name": r["team_name"], "value": int(r["total_saves"] or 0)}
+            for r in top_n(rows, "total_saves")
+        ],
     }
 
 
@@ -119,24 +125,34 @@ def post_playerstats_batch(conn, match_id, stats_list):
             if pos is None:
                 continue
             clean_sheet = s["clean_sheet"] if s["minutes_played"] > 0 else 0
+            saves = s.get("saves", 0) if pos == "GK" else 0
             score = calculate_score(
                 s["goals"], s["assists"], s["minutes_played"],
                 s["yellow_cards"], s["red_cards"], clean_sheet, pos,
+                saves=saves,
+                own_goals=s.get("own_goals", 0),
+                shots_on_target=s.get("shots_on_target", 0),
+                fouls_committed=s.get("fouls_committed", 0),
+                offsides=s.get("offsides", 0),
+                goals_conceded=s.get("goals_conceded", 0),
             )
             values.append((
                 s["player_id"], match_id, s["goals"], s["assists"],
                 s["minutes_played"], s["yellow_cards"], s["red_cards"],
-                clean_sheet, score,
+                clean_sheet, score, saves,
+                s.get("own_goals", 0), s.get("shots_on_target", 0),
+                s.get("fouls_committed", 0), s.get("offsides", 0),
+                s.get("goals_conceded", 0),
             ))
 
         if not values:
             return 0, 0
 
-        placeholders = ",".join(["(%s,%s,%s,%s,%s,%s,%s,%s,%s)"] * len(values))
+        placeholders = ",".join(["(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"] * len(values))
         flat = tuple(v for row in values for v in row)
         cursor.execute(
-            "INSERT INTO playerstat (player_id, match_id, goals, assists, minutes_played, yellow_cards, red_cards, clean_sheet, score) VALUES "
-            + placeholders + " ON CONFLICT (player_id, match_id) DO NOTHING",
+            "INSERT INTO playerstat (player_id, match_id, goals, assists, minutes_played, yellow_cards, red_cards, clean_sheet, score, saves, own_goals, shots_on_target, fouls_committed, offsides, goals_conceded) VALUES "
+            + placeholders + " ON CONFLICT (player_id, match_id) DO UPDATE SET goals = EXCLUDED.goals, assists = EXCLUDED.assists, minutes_played = EXCLUDED.minutes_played, yellow_cards = EXCLUDED.yellow_cards, red_cards = EXCLUDED.red_cards, clean_sheet = EXCLUDED.clean_sheet, score = EXCLUDED.score, saves = EXCLUDED.saves, own_goals = EXCLUDED.own_goals, shots_on_target = EXCLUDED.shots_on_target, fouls_committed = EXCLUDED.fouls_committed, offsides = EXCLUDED.offsides, goals_conceded = EXCLUDED.goals_conceded",
             flat,
         )
         inserted = cursor.rowcount

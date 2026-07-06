@@ -322,13 +322,23 @@ const Charts = (() => {
       return;
     }
 
-    const segments = [
+    const posSegments = [
       { key: "goals_pts", label: t("chart.goals"), color: "var(--pos-FWD)" },
       { key: "assist_pts", label: t("chart.assists"), color: "var(--pos-MID)" },
       { key: "cs_pts", label: t("chart.clean_sheets"), color: "var(--pos-DEF)" },
       { key: "minute_pts", label: t("chart.minutes"), color: "var(--warm)" },
-      { key: "card_pts", label: t("chart.cards"), color: "var(--danger)" }
+      { key: "saves_pts", label: t("chart.saves"), color: "var(--pos-GK)" },
+      { key: "sot_pts", label: t("chart.shots_on_target"), color: "var(--accent)" },
     ];
+    const negSegments = [
+      { key: "card_pts", label: t("chart.cards"), color: "var(--danger)" },
+      { key: "own_goal_pts", label: t("chart.own_goals"), color: "var(--warm)" },
+      { key: "foul_pts", label: t("chart.fouls"), color: "var(--faint)" },
+      { key: "offside_pts", label: t("chart.offsides"), color: "var(--muted-2)" },
+      { key: "gc_pts", label: t("chart.goals_conceded"), color: "var(--blue)" },
+    ];
+
+    const segs = opts.segments === "negative" ? negSegments : posSegments;
 
     const W = container.clientWidth || 400;
     const rowH = 36;
@@ -343,8 +353,8 @@ const Charts = (() => {
     let maxAbs = 1;
     for (let i = 0; i < data.length; i++) {
       let rowTotal = 0;
-      for (let j = 0; j < segments.length; j++) {
-        rowTotal += Math.abs(data[i][segments[j].key]);
+      for (let j = 0; j < segs.length; j++) {
+        rowTotal += Math.abs(data[i][segs[j].key] || 0);
       }
       if (rowTotal > maxAbs) maxAbs = rowTotal;
     }
@@ -357,9 +367,9 @@ const Charts = (() => {
       const gx = padL + (plotW / 4) * g;
       svg.appendChild(el("line", { class: "dash-svg__grid-line", x1: gx, y1: padT, x2: gx, y2: padT + plotH }));
       const val = Math.round((maxX / 4) * g);
-      const t = el("text", { class: "dash-svg__axis-text", x: gx, y: H - 6, "text-anchor": "middle" });
-      t.textContent = val;
-      svg.appendChild(t);
+      const lbl = el("text", { class: "dash-svg__axis-text", x: gx, y: H - 6, "text-anchor": "middle" });
+      lbl.textContent = val;
+      svg.appendChild(lbl);
     }
 
     for (let i = 0; i < data.length; i++) {
@@ -369,14 +379,14 @@ const Charts = (() => {
       const barH = Math.min(24, rowH * 0.7);
 
       /* y-axis label */
-      const t = el("text", { class: "dash-svg__axis-text", x: padL - 8, y: cy + 4, "text-anchor": "end" });
-      t.textContent = d.label;
-      svg.appendChild(t);
+      const lbl = el("text", { class: "dash-svg__axis-text", x: padL - 8, y: cy + 4, "text-anchor": "end" });
+      lbl.textContent = d.label;
+      svg.appendChild(lbl);
 
       let xOffset = padL;
-      for (let j = 0; j < segments.length; j++) {
-        const seg = segments[j];
-        const val = d[seg.key];
+      for (let j = 0; j < segs.length; j++) {
+        const seg = segs[j];
+        const val = d[seg.key] || 0;
         if (val === 0) continue;
         const segW = (Math.abs(val) / maxX) * plotW;
 
@@ -390,8 +400,8 @@ const Charts = (() => {
         });
 
         rect.addEventListener("mouseenter", function (e) {
-          const rect2 = container.getBoundingClientRect();
-          const html = '<div class="dash-tooltip__title">' + escapeHtml(d.label) + "</div>" +
+          var rect2 = container.getBoundingClientRect();
+          var html = '<div class="dash-tooltip__title">' + escapeHtml(d.label) + "</div>" +
             '<div class="dash-tooltip__row"><span class="dash-tooltip__swatch" style="background:' + seg.color + '"></span>' + escapeHtml(seg.label) + " <b>" + fmtSigned(val) + "</b></div>" +
             '<div class="dash-tooltip__row">Total <b>' + d.total + "</b></div>";
           showTooltip(tip, rect2.left + xOffset + segW / 2, rect2.top + cy - barH / 2, html);
@@ -409,8 +419,8 @@ const Charts = (() => {
     /* legend */
     if (opts.legendContainer) {
       let legendHtml = "";
-      for (let j = 0; j < segments.length; j++) {
-        legendHtml += '<span class="comp-legend__item"><span class="comp-legend__swatch" style="background:' + segments[j].color + '"></span>' + segments[j].label + "</span>";
+      for (let k = 0; k < segs.length; k++) {
+        legendHtml += '<span class="comp-legend__item"><span class="comp-legend__swatch" style="background:' + segs[k].color + '"></span>' + segs[k].label + "</span>";
       }
       opts.legendContainer.innerHTML = legendHtml;
     }

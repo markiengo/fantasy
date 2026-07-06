@@ -521,8 +521,12 @@
                   <b class="list-card__title" data-i18n="dash.score_composition">Score composition</b>
                   <span class="panel__hint" data-i18n="dash.where_points">Where points come from</span>
                 </div>
-                <div class="chart chart--composition" id="compositionChart"></div>
-                <div class="comp-legend" id="compositionLegend"></div>
+                <span class="comp-sub-label" data-i18n="dash.adds">Adds</span>
+                <div class="chart chart--composition" id="compositionChartPos"></div>
+                <div class="comp-legend" id="compositionLegendPos"></div>
+                <span class="comp-sub-label" data-i18n="dash.deductions">Deductions</span>
+                <div class="chart chart--composition" id="compositionChartNeg"></div>
+                <div class="comp-legend" id="compositionLegendNeg"></div>
               </article>
               <div class="dash__col">
                 <article class="panel viz-card chart-reveal chart-reveal--3">
@@ -675,6 +679,7 @@
         <button class="scoretab" type="button" data-scope="all" role="tab" aria-selected="false" data-i18n="score.all_players">All players</button>
         <button class="scoretab" type="button" data-scope="gkdef" role="tab" aria-selected="false" data-i18n="score.gk_def">GK &amp; DEF</button>
         <button class="scoretab" type="button" data-scope="midfwd" role="tab" aria-selected="false" data-i18n="score.mid_fwd">MID &amp; FWD</button>
+        <button class="scoretab" type="button" data-scope="deductions" role="tab" aria-selected="false" data-i18n="score.deductions">Deductions</button>
       </div>
       <ul class="scorelist" id="scoreOverlayList" hidden></ul>
       <p class="scorenote muted" id="scoreOverlayNote" hidden></p>

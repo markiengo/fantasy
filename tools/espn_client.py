@@ -137,5 +137,11 @@ def match_player_stats(event_id):
                 "red":     int(stats.get("redCards", 0) or 0),
                 "minutes": int(minutes),
                 "appeared": appeared,
+                "saves":             int(float(stats.get("saves", 0) or 0)),
+                "own_goals":         int(float(stats.get("ownGoals", 0) or 0)),
+                "shots_on_target":   int(float(stats.get("shotsOnTarget", 0) or 0)),
+                "fouls_committed":   int(float(stats.get("foulsCommitted", 0) or 0)),
+                "offsides":          int(float(stats.get("offsides", 0) or 0)),
+                "goals_conceded":    int(float(stats.get("goalsConceded", 0) or 0)),
             })
     return out

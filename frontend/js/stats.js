@@ -5,6 +5,7 @@ const Stats = (() => {
     { key: "top_assists", title: () => t("stats.assists"), hint: () => t("stats.hint_assists"), bento: "normal" },
     { key: "top_goal_involvements", title: () => t("stats.goal_involvements"), hint: () => t("stats.hint_ga"), bento: "normal" },
     { key: "top_clean_sheets", title: () => t("stats.clean_sheets"), hint: () => t("stats.hint_def_gk"), bento: "normal" },
+    { key: "top_saves", title: () => t("stats.top_saves"), hint: () => t("stats.hint_saves"), bento: "normal" },
     { key: "top_cards", title: () => t("stats.most_cards"), hint: () => t("stats.hint_yr"), isCards: true, bento: "wide" },
   ];
 

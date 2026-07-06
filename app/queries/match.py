@@ -55,6 +55,24 @@ def get_matchday_start(conn, matchday):
     cursor.close()
     return row["first_kickoff"] if row else None
 
+def find_match_by_teams(conn, team1_id, team2_id, stage=None):
+    cursor = conn.cursor()
+    filters = [
+        "((m.team1_id = %s AND m.team2_id = %s) OR (m.team1_id = %s AND m.team2_id = %s))",
+    ]
+    values = [team1_id, team2_id, team2_id, team1_id]
+    if stage:
+        filters.append("m.stage = %s")
+        values.append(stage)
+    cursor.execute(
+        "SELECT m.match_id FROM match m WHERE " + " AND ".join(filters) + " LIMIT 1",
+        values,
+    )
+    row = cursor.fetchone()
+    cursor.close()
+    return row["match_id"] if row else None
+
+
 def update_match_score(conn, match_id, team1_score, team2_score, team1_penalty=None, team2_penalty=None):
     cursor = conn.cursor()
     try:

@@ -49,8 +49,7 @@ def get_squad_score(conn, user_id, matchday=None):
 
 def get_squad_score_composition(conn, user_id, matchday):
     """Break down the squad's score for a matchday by stat type.
-    Returns a dict with points from each scoring category:
-      goals_pts, assist_pts, cs_pts, minute_pts, card_pts, total """
+    Returns a dict with points from each scoring category."""
     
     cursor = conn.cursor()
     cursor.execute('''
@@ -61,7 +60,13 @@ def get_squad_score_composition(conn, user_id, matchday):
                ps.minutes_played,
                ps.clean_sheet,
                ps.yellow_cards,
-               ps.red_cards
+               ps.red_cards,
+               ps.saves,
+               ps.own_goals,
+               ps.shots_on_target,
+               ps.fouls_committed,
+               ps.offsides,
+               ps.goals_conceded
         FROM squad s
         JOIN squadplayer sp
             ON s.squad_id = sp.squad_id
@@ -81,12 +86,23 @@ def get_squad_score_composition(conn, user_id, matchday):
     cs_pts = 0
     minute_pts = 0
     card_pts = 0
+    saves_pts = 0
+    sot_pts = 0
+    own_goal_pts = 0
+    foul_pts = 0
+    offside_pts = 0
+    gc_pts = 0
 
     for row in rows:
         pos = row["position"]
         is_captain = row["is_captain"]
 
-        raw_goals = (row["goals"] or 0) * (5 if pos in ("FWD", "MID") else 6)
+        if pos in ("FWD", "MID"):
+            raw_goals = (row["goals"] or 0) * 5
+        elif pos == "DEF":
+            raw_goals = (row["goals"] or 0) * 7
+        else:
+            raw_goals = (row["goals"] or 0) * 6
         goals_pts += captain_score(raw_goals, is_captain)
 
         raw_assists = (row["assists"] or 0) * 3
@@ -95,6 +111,14 @@ def get_squad_score_composition(conn, user_id, matchday):
         if pos in ("DEF", "GK"):
             raw_cs = (row["clean_sheet"] or 0) * 4
             cs_pts += captain_score(raw_cs, is_captain)
+
+        if pos == "GK":
+            raw_saves = (row["saves"] or 0) * 1
+            saves_pts += captain_score(raw_saves, is_captain)
+
+        if pos in ("FWD", "MID"):
+            raw_sot = (row["shots_on_target"] or 0) * 1
+            sot_pts += captain_score(raw_sot, is_captain)
 
         mins = row["minutes_played"] or 0
         if mins >= 60:
@@ -105,7 +129,21 @@ def get_squad_score_composition(conn, user_id, matchday):
         raw_cards = -((row["yellow_cards"] or 0) * 1 + (row["red_cards"] or 0) * 3)
         card_pts += captain_score(raw_cards, is_captain)
 
-    total = goals_pts + assist_pts + cs_pts + minute_pts + card_pts
+        raw_og = -((row["own_goals"] or 0) * 3)
+        own_goal_pts += captain_score(raw_og, is_captain)
+
+        raw_fouls = -((row["fouls_committed"] or 0) * 0.5)
+        foul_pts += captain_score(raw_fouls, is_captain)
+
+        raw_offsides = -((row["offsides"] or 0) * 0.25)
+        offside_pts += captain_score(raw_offsides, is_captain)
+
+        if pos in ("DEF", "GK"):
+            raw_gc = -((row["goals_conceded"] or 0) * 0.5)
+            gc_pts += captain_score(raw_gc, is_captain)
+
+    total = (goals_pts + assist_pts + cs_pts + minute_pts + card_pts
+             + saves_pts + sot_pts + own_goal_pts + foul_pts + offside_pts + gc_pts)
 
     return {
         "matchday": matchday,
@@ -114,6 +152,12 @@ def get_squad_score_composition(conn, user_id, matchday):
         "cs_pts": cs_pts,
         "minute_pts": minute_pts,
         "card_pts": card_pts,
+        "saves_pts": saves_pts,
+        "sot_pts": sot_pts,
+        "own_goal_pts": own_goal_pts,
+        "foul_pts": foul_pts,
+        "offside_pts": offside_pts,
+        "gc_pts": gc_pts,
         "total": total,
     }
 
