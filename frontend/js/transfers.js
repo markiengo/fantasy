@@ -11,12 +11,32 @@ const Transfers = (() => {
       Toast.show(t("toast.no_transfers_left"), "info");
       return;
     }
+
+    var transferTourKey = "gaffer_transfer_tour_done_" + (window._userId || "anon");
+    var startTour = function () {
+      if (!localStorage.getItem(transferTourKey) && window.Tour) {
+        Tour.start(Tour.TRANSFER_STEPS);
+      }
+    };
+
+    if (window._transferOverride) {
+      var current = currentTransferMatchday();
+      if (State.currentMatchday === current - 1) {
+        if (window.showOverrideOverlay) {
+          window.showOverrideOverlay(startTour);
+        } else {
+          startTour();
+        }
+        Toast.show(t("override.toast"), "info");
+      } else {
+        startTour();
+      }
+    } else {
+      startTour();
+    }
+
     if (window.innerWidth <= 760) setTeamPane("pitch");
     State.setMode("transfer");
-    var transferTourKey = "gaffer_transfer_tour_done_" + (window._userId || "anon");
-    if (!localStorage.getItem(transferTourKey) && window.Tour) {
-      Tour.start(Tour.TRANSFER_STEPS);
-    }
   }
 
   // transfer → view: throw away the pending edits, restore the saved squad.

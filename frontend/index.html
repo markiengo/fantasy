@@ -336,7 +336,7 @@
                   </button>
                   <button class="btn btn--ghost" id="makeTransfersBtn" type="button">
                     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M7 16V4m0 0L3 8m4-4 4 4M17 8v12m0 0 4-4m-4 4-4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    <span data-i18n="action.make_transfers">Make transfers</span>
+                    <span data-i18n="action.make_transfers">Edit squad</span>
                   </button>
                   <button class="btn btn--ghost" id="confirmBtn" type="button" data-i18n="action.confirm">Confirm</button>
                   <button class="btn btn--text" id="cancelBtn" type="button" data-i18n="action.cancel">Cancel</button>
@@ -761,6 +761,26 @@
         <button class="btn btn--ghost" id="transferWarningStay" type="button" data-i18n="warning.stay">Stay and edit</button>
         <button class="btn btn--danger" id="transferWarningLeave" type="button" data-i18n="warning.leave">Leave anyway</button>
       </footer>
+    </div>
+  </div>
+
+  <div class="override-overlay overlay" id="overrideOverlay" role="dialog" aria-modal="true" aria-labelledby="overrideTitle" hidden>
+    <div class="override-overlay__panel">
+      <button class="override-overlay__close" id="overrideClose" type="button" data-i18n-aria-label="override.close" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18"><path d="M6 6l12 12M18 6 6 18" stroke-linecap="round" stroke-width="2"/></svg>
+      </button>
+      <div class="override-overlay__glow"></div>
+      <div class="override-overlay__icon">
+        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" width="56" height="56">
+          <circle cx="24" cy="24" r="20" stroke-width="1.5" stroke-dasharray="3 4" opacity="0.5"/>
+          <circle cx="24" cy="24" r="15" stroke-width="1.5"/>
+          <path d="M24 12v12l8 5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="override-overlay__label" data-i18n="override.label">ADMIN GRANT</span>
+      <h2 class="override-overlay__title" id="overrideTitle" data-i18n="override.title">Time Warp Activated</h2>
+      <p class="override-overlay__body" data-i18n="override.body">The admin has granted you temporary access to make transfers on the most recent matchday. You can now go back and edit your squad. This access will be revoked once the admin disables it.</p>
+      <button class="btn btn--primary override-overlay__btn" id="overrideDismiss" type="button" data-i18n="override.dismiss">Got it</button>
     </div>
   </div>
 

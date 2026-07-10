@@ -383,6 +383,14 @@ const I18n = (() => {
       "window.open": "Transfers open",
       "window.locked": "Transfers locked",
 
+      /* ── Override overlay ── */
+      "override.label": "ADMIN GRANT",
+      "override.title": "Time Warp Activated",
+      "override.body": "The admin has granted you temporary access to make transfers on the most recent matchday. You can now go back and edit your squad. This access will be revoked once the admin disables it.",
+      "override.dismiss": "Got it",
+      "override.close": "Close",
+      "override.toast": "Admin override active — you can edit past matchdays",
+
       /* ── Points ── */
       "points.pts": "{0} pts",
 
@@ -965,6 +973,14 @@ const I18n = (() => {
       /* ── Transfer window ── */
       "window.open": "Chuyển nhượng đã mở",
       "window.locked": "Chuyển nhượng đã khóa",
+
+      /* ── Override overlay ── */
+      "override.label": "CẤP QUYỀN ADMIN",
+      "override.title": "Du hành thời gian",
+      "override.body": "Admin đã cấp cho bạn quyền truy cập tạm thời để chuyển nhượng ở vòng gần nhất. Bạn có thể quay lại và chỉnh sửa đội hình. Quyền này sẽ bị thu hồi khi admin tắt.",
+      "override.dismiss": "Đã hiểu",
+      "override.close": "Đóng",
+      "override.toast": "Admin override đang bật — bạn có thể chỉnh sửa các vòng đã qua",
 
       /* ── Points ── */
       "points.pts": "{0} điểm",

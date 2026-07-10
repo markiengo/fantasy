@@ -63,6 +63,7 @@ def get_me_route(payload: dict = Depends(get_current_auth_payload), conn=Depends
         "username": user["username"],
         "display_name": user["display_name"],
         "role": user["role"],
+        "transfer_override": user.get("transfer_override", False),
     }
 
 
