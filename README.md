@@ -33,29 +33,35 @@ New users complete their profile by choosing a display name (2–30 characters) 
 pytest tests/ -v
 ```
 
-Coverage includes validation rules, stat loading, leaderboard behavior, demo seeding, frontend API contracts, frontend security (XSS), rate limiting, and display name validation.
+Coverage includes validation rules, stat loading, leaderboard behavior, demo seeding, frontend API contracts, frontend security (XSS), rate limiting, display name validation, squad upsert, OAuth username modal, and stat loader.
 
 ## Project Structure
 
 ```text
 fantasy-wc/
 |-- app/                        # Backend API server
-|   |-- main.py                 # App entry point, API routes, frontend serving
+|   |-- main.py                 # App entry point, CORS, static frontend serving
 |   |-- auth.py                 # Supabase token verification
 |   |-- permissions.py          # Admin authorization
-|   |-- rate_limit.py           # Rate limiting for auth endpoints
+|   |-- rate_limit.py           # Rate limiting for auth and profile endpoints
 |   |-- database.py             # Database connection management
 |   |-- schemas.py              # Request validation models
-|   |-- routers/                # Route handlers
-|   |-- queries/                # Database queries
+|   |-- routers/                # Route handlers (player, match, playerstat, analytics,
+|   |                           #   squad, transfer, team, load_stats, me, leaderboard, auth)
+|   |-- queries/                # Database queries (raw SQL via psycopg2)
 |   |-- services/               # ESPN stats pipeline
 |   `-- core/                   # Scoring and game rule validation
-|       |-- scoring.py          # Score calculation
+|       |-- scoring.py          # Score calculation (incl. penalty saves)
 |       `-- validation.py       # Squad and transfer rules
 |
 |-- frontend/                   # Web app (HTML/CSS/JS)
-|   |-- js/                     # App logic, screens, translations, charts
-|   |-- css/                    # Styles and design tokens
+|   |-- js/                     # App logic, screens, translations, charts, mock data
+|   |                           # Modules: api.js, auth.js, state.js, app.js, squad.js,
+|   |                           #   fixtures.js, scores.js, stats.js, leaderboard.js,
+|   |                           #   account.js, charts.js, transfers.js, tour.js,
+|   |                           #   onboarding.js, howtoscore.js, i18n.js, progress.js, ui.js
+|   |-- css/                    # Styles and design tokens (tokens, main, auth, squad,
+|   |                           #   fixtures, scores, stats, leaderboard, account, motion)
 |   |-- assets/                 # Logo and brand imagery
 |   `-- docs/                   # Frontend design specification
 |
@@ -102,8 +108,8 @@ The system has five color-coded zones with labeled data-flow arrows showing how 
 
 | Document | What it covers |
 |---|---|
-| [docs/API.md](docs/API.md) | API contract and game rules — what data the system exchanges and how scoring works. |
-| [docs/SRS.md](docs/SRS.md) | Requirements specification — what the product does, architecture, and design decisions. |
+| [docs/API.md](docs/API.md) | API contract and game rules — what data the system exchanges, how scoring works, and all route definitions. |
+| [docs/SRS.md](docs/SRS.md) | Requirements specification — what the product does, architecture, use cases, functional requirements, and design decisions. |
 | [docs/schema.sql](docs/schema.sql) | Database schema reference. |
 | [docs/ERD.png](docs/ERD.png) | Entity relationship diagram. |
 | [docs/DBdesign.jpg](docs/DBdesign.jpg) | Database design visual. |

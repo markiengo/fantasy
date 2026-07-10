@@ -97,9 +97,14 @@ const Api = (() => {
     getSquadScore: (matchday) => call("/analytics/squad-score" + qs({ matchday })),
     getComposition: (matchday) => call("/analytics/composition" + qs({ matchday })),
     getRankHistory: () => call("/analytics/rank-history"),
+    getPlayerBreakdown: (matchday) => call("/analytics/player-breakdown" + qs({ matchday })),
+    getLeagueComparison: () => call("/analytics/league-comparison"),
     updateData: (body = {}) =>
       call("/load-stats", { method: "POST", body: JSON.stringify(body) }),
     getMe: () => call("/me"),
+    updateDisplayName: (displayName) =>
+      call("/me", { method: "PATCH", body: JSON.stringify({ display_name: displayName }) }),
+    getAccount: () => call("/me/account"),
     completeProfile: (displayName) =>
       call("/complete-profile", { method: "POST", body: JSON.stringify({ display_name: displayName }) }),
     getTopStats: (limit = 5) =>

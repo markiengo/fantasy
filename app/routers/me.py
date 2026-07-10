@@ -6,9 +6,9 @@ from psycopg2.errors import UniqueViolation
 
 from app.auth import get_current_auth_payload
 from app.database import get_db
-from app.queries.user import get_user_by_auth_id, create_user_from_auth, check_username_taken
+from app.queries.user import get_user_by_auth_id, create_user_from_auth, check_username_taken, update_display_name, get_user_account_info
 from app.rate_limit import enforce_rate_limit
-from app.schemas import CompleteProfileRequest
+from app.schemas import CompleteProfileRequest, UpdateDisplayNameRequest
 
 router = APIRouter()
 
@@ -63,6 +63,50 @@ def get_me_route(payload: dict = Depends(get_current_auth_payload), conn=Depends
         "username": user["username"],
         "display_name": user["display_name"],
         "role": user["role"],
+    }
+
+
+@router.patch("/me")
+def update_me_route(body: UpdateDisplayNameRequest, request: Request = None, payload: dict = Depends(get_current_auth_payload), conn=Depends(get_db)):
+    enforce_rate_limit(request, "update-me", 10, 60)
+    auth_user_id = payload["sub"]
+    user = get_user_by_auth_id(conn, auth_user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    display_name = body.display_name.strip()
+    if len(display_name) < 2 or len(display_name) > 30:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Display name must be 2-30 characters.")
+
+    updated = update_display_name(conn, user["user_id"], display_name)
+    if not updated:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    return {
+        "user_id": updated["user_id"],
+        "username": updated["username"],
+        "display_name": updated["display_name"],
+        "role": updated["role"],
+    }
+
+
+@router.get("/me/account")
+def get_account_route(payload: dict = Depends(get_current_auth_payload), conn=Depends(get_db)):
+    auth_user_id = payload["sub"]
+    user = get_user_by_auth_id(conn, auth_user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    info = get_user_account_info(conn, user["user_id"])
+    if not info:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    return {
+        "user_id": info["user_id"],
+        "username": info["username"],
+        "display_name": info["display_name"],
+        "role": info["role"],
+        "email": info["email"],
     }
 
 

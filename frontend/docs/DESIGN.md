@@ -1,7 +1,7 @@
 # Frontend Design Specification
 
 **Product:** Gaffer — WC26 Fantasy
-**Last updated:** 2026-07-04
+**Last updated:** 2026-07-09
 
 This is the canonical design document for the Gaffer frontend. It describes what users see, how the interface behaves, and the visual rules that keep the product consistent. Runtime code wins if this document ever drifts.
 
@@ -35,13 +35,14 @@ A two-column layout on desktop:
 - **Left sidebar** (248px): brand, navigation links, deadline status, admin data controls, and profile controls (theme toggle, language toggle, sign out). The manager's avatar appears here, generated from their display name using Dicebear personas style with randomized pastel backgrounds.
 - **Main area** (max 1140px): top bar with screen title and total points, a horizontal matchday strip, and the active screen content.
 
-Five screens:
+Six screens:
 
 1. **Squad** — Build and manage your 11-player squad on a visual pitch. (UC-03, UC-04, UC-05, UC-06)
 2. **Fixtures** — Browse match schedules, group standings, and knockout brackets. (UC-08)
-3. **Dashboard** — View your squad's score breakdown, rank trajectory, and transfer history. (UC-09, UC-10)
+3. **Dashboard** — View your squad's score breakdown, rank trajectory, league comparison, player breakdown, and transfer history. (UC-09, UC-10)
 4. **Top Stats** — See the tournament's top fantasy performers by category. (UC-10)
-5. **Leaderboard** — Compare your ranking against all active managers. (UC-11)
+5. **Leaderboard** — Compare your ranking against all active managers and see popular picks. (UC-11)
+6. **Account** — View account info (email, username, role, user ID), update display name, choose avatar, and sign out. (UC-14)
 
 On mobile, the sidebar remains usable, horizontal strips scroll, and panels stack before content becomes cramped.
 
@@ -257,7 +258,7 @@ Components include match cards with team flags and scores, group standings table
 
 ### Dashboard — UC-09, UC-10, GR-08, GR-09
 
-Components: matchday score hero, matchday navigation, captain impact, score composition, rank trajectory, top scorers, value scatter, efficiency bars, donut composition, and transfer summary.
+Components: total points hero with budget gauge and score trajectory area chart, score composition (adds/deductions split), captain impact, rank trajectory, you vs league average comparison, player breakdown (per-stat point breakdown with raw stats), value for money scatter, position contribution donut, matchday insights (MVP/flop/transfer suggestion), and transfer history with expandable matchday groups.
 
 Chart primary lines and series use blue. Lime is reserved for a single "this is you" data point or marker, if one exists.
 
@@ -269,9 +270,9 @@ The lead row gets stronger visual emphasis using soft blue. This screen has no p
 
 ### Leaderboard — UC-11, GR-08, GR-09
 
-Two modes: overall and matchday.
+Three modes: overall, matchday, and popular picks.
 
-Components: summary block, overall/matchday toggle, matchday tab strip, ranking table, sticky current-user row, zone color coding, and admin badge.
+Components: summary block, overall/matchday/popular toggle, matchday tab strip, ranking table, sticky current-user row, zone color coding, admin badge, and popular players panel with pick count, pick rate, and captain count.
 
 **Admin handling:** Admin users are excluded from normal ranking. They receive rank 0 and are displayed separately with a distinct admin tag. The frontend filters them from the ranked list so they don't take a spot from regular managers.
 
@@ -298,6 +299,10 @@ The current-user marker is one of the three sanctioned lime uses — it's a sing
 - **Score overlay:** scoring explanation with game rules, prize pool, and nation-limit scaling table.
 - **Guided tour:** target highlight with an instruction card. The highlight ring uses blue, not lime, to avoid confusion with live-status or primary-action pills.
 - **Transfer warning modal:** when the user tries to leave with unsaved changes, a blocking modal asks them to stay or leave. The modal must be fully visible when shown — it uses the overlay open state with full opacity and pointer events.
+
+### Account — UC-14
+
+A centered card with avatar display, avatar picker (preset Dicebear seeds), display name edit form, account info section (username, email, role, user ID), and a sign out button. The avatar picker shows a row of preset persona seeds; selecting one updates both the account avatar and the sidebar avatar. The display name form validates 2–30 characters and submits via PATCH /me. The sign out button clears local state and signs out from Supabase Auth.
 
 ## 9. Data Flow — UC-01 to UC-12
 

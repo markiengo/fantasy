@@ -21,8 +21,12 @@ def test_authenticated_api_calls_do_not_use_mock_fallback():
         "getSquadScore",
         "getComposition",
         "getRankHistory",
+        "getPlayerBreakdown",
+        "getLeagueComparison",
         "updateData",
         "getMe",
+        "updateDisplayName",
+        "getAccount",
         "completeProfile",
         "getLeaderboard",
     ]

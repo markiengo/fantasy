@@ -136,4 +136,11 @@ def test_load_stats_inserts_valid_mapped_player(monkeypatch):
         "yellow_cards": 0,
         "red_cards": 0,
         "clean_sheet": 1,
+        "saves": 0,
+        "own_goals": 0,
+        "shots_on_target": 0,
+        "fouls_committed": 0,
+        "offsides": 0,
+        "goals_conceded": 0,
+        "penalty_saves": 0,
     }]

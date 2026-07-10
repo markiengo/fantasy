@@ -75,6 +75,7 @@ def stat_body(player_id, match_id, event, player_stat):
         "fouls_committed": player_stat.get("fouls_committed", 0),
         "offsides": player_stat.get("offsides", 0),
         "goals_conceded": player_stat.get("goals_conceded", 0),
+        "penalty_saves": player_stat.get("penalty_saves", 0),
     }
 
 

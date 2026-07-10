@@ -8,6 +8,7 @@ CREATE TABLE public.users (
   display_name character varying,
   role character varying NOT NULL DEFAULT 'user',
   is_active boolean NOT NULL DEFAULT true,
+  transfer_override boolean NOT NULL DEFAULT false,
   created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT users_pkey PRIMARY KEY (user_id)
 );
@@ -65,6 +66,7 @@ CREATE TABLE public.playerstat (
   fouls_committed integer DEFAULT 0,
   offsides integer DEFAULT 0,
   goals_conceded integer DEFAULT 0,
+  penalty_saves integer DEFAULT 0,
   CONSTRAINT playerstat_pkey PRIMARY KEY (stat_id),
   CONSTRAINT fk_stat_player FOREIGN KEY (player_id) REFERENCES public.player(player_id),
   CONSTRAINT fk_stat_match FOREIGN KEY (match_id) REFERENCES public.match(match_id),

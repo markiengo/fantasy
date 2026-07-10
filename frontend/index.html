@@ -32,6 +32,7 @@
   <link rel="stylesheet" href="css/scores.css" />
   <link rel="stylesheet" href="css/stats.css" />
   <link rel="stylesheet" href="css/leaderboard.css" />
+  <link rel="stylesheet" href="css/account.css" />
   <link rel="stylesheet" href="css/motion.css" />
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -217,14 +218,12 @@
           </span>
         </button>
 
-        <div class="profile">
+        <div class="profile" id="profileBtn" role="button" tabindex="0" data-screen="account" data-i18n-aria-label="nav.account" aria-label="Account">
           <span class="avatar avatar--36" id="managerAvatar" style="background-image:url('https://api.dicebear.com/9.x/personas/svg?seed=Gaffer&backgroundColor=ffd5dc,e6d4f0,c4f0e8,ffe8c4,d4e8ff&radius=50')"></span>
           <span class="profile__id">
             <span class="profile__name" data-i18n="sidebar.manager">Manager</span>
           </span>
-          <button class="icon-btn" id="signOutBtn" type="button" data-i18n-aria-label="nav.sign_out" aria-label="Sign out">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
+          <svg class="icon profile__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
       </div>
     </aside>
@@ -362,6 +361,7 @@
                 <div class="pitch-stage__canvas">
                   <div class="pitch" id="pitch" data-i18n-aria-label="nav.aria_squad_pitch" aria-label="Squad pitch"></div>
                 </div>
+                <div class="bench-strip" id="benchStrip" hidden></div>
               </section>
 
               <aside class="panel pool team-shell__rail team-pane" data-pane="players" data-i18n-aria-label="nav.aria_player_pool" aria-label="Player pool">
@@ -545,55 +545,66 @@
                   </div>
                   <div class="chart chart--rank" id="rankChart"></div>
                 </article>
+                <article class="panel viz-card chart-reveal chart-reveal--4">
+                  <div class="dash-card__head">
+                    <span class="dash-card__dot"></span>
+                    <b class="list-card__title" data-i18n="dash.vs_league">You vs league average</b>
+                    <span class="panel__hint" data-i18n="dash.your_score_vs_avg">Your cumulative score vs league average</span>
+                  </div>
+                  <div class="chart chart--league" id="leagueChart"></div>
+                </article>
               </div>
             </div>
 
             <!-- SECTION 2: Squad Analysis -->
             <h3 class="dash-section__heading" data-i18n="dash.section_squad">Squad Analysis</h3>
 
-            <!-- ROW 4: Top scorers + Value scatter + Efficiency bars -->
-            <div class="dash__row dash__row--three dashboard-grid">
-              <article class="panel list-card viz-card chart-reveal chart-reveal--5">
+            <!-- ROW 4: Player breakdown (2/3) + Value scatter + Position donut (1/3) -->
+            <div class="dash__row dash__row--breakdown">
+              <article class="panel list-card viz-card chart-reveal chart-reveal--5 dash-card--breakdown">
                 <div class="dash-card__head">
                   <span class="dash-card__dot"></span>
-                  <b class="list-card__title" data-i18n="dash.top_scorers">Top scorers</b>
+                  <b class="list-card__title" data-i18n="dash.player_breakdown">Player breakdown</b>
+                  <span class="panel__hint" data-i18n="dash.stat_by_stat">Stat by stat breakdown</span>
                 </div>
-                <ol class="scorers" id="contribBody"></ol>
+                <div class="breakdown-list" id="breakdownBody"></div>
               </article>
-              <article class="panel list-card viz-card chart-reveal chart-reveal--5">
-                <div class="dash-card__head">
-                  <span class="dash-card__dot"></span>
-                  <b class="list-card__title" data-i18n="dash.value_for_money">Value for money</b>
-                  <span class="panel__hint" data-i18n="dash.price_vs_points">Price vs points</span>
-                </div>
-                <div class="chart chart--scatter" id="valueScatter"></div>
-                <div class="scatter-legend" id="scatterLegend"></div>
-              </article>
-              <article class="panel list-card viz-card chart-reveal chart-reveal--5">
-                <div class="dash-card__head">
-                  <span class="dash-card__dot"></span>
-                  <b class="list-card__title" data-i18n="dash.efficiency">Efficiency</b>
-                  <span class="panel__hint" data-i18n="dash.points_per_m">Points per $m</span>
-                </div>
-                <div class="vfm" id="valueRows"></div>
-              </article>
+              <div class="dash__col dash__col--side">
+                <article class="panel list-card viz-card chart-reveal chart-reveal--5">
+                  <div class="dash-card__head">
+                    <span class="dash-card__dot"></span>
+                    <b class="list-card__title" data-i18n="dash.value_for_money">Value for money</b>
+                    <span class="panel__hint" data-i18n="dash.price_vs_points">Price vs points</span>
+                  </div>
+                  <div class="chart chart--scatter" id="valueScatter"></div>
+                  <div class="scatter-legend" id="scatterLegend"></div>
+                </article>
+                <article class="panel list-card viz-card chart-reveal chart-reveal--5 dash-card--donut">
+                  <div class="dash-card__head">
+                    <span class="dash-card__dot"></span>
+                    <b class="list-card__title" data-i18n="dash.position_contribution">Position contribution</b>
+                  </div>
+                  <div class="metric__split donut-wrap">
+                    <div class="chart chart--donut donut" id="scoreDonut"><span class="donut__center" id="donutCenter">0</span></div>
+                    <ul class="legend" id="donutLegend"></ul>
+                  </div>
+                </article>
+                <article class="panel list-card viz-card chart-reveal chart-reveal--5 dash-card--insights">
+                  <div class="dash-card__head">
+                    <span class="dash-card__dot"></span>
+                    <b class="list-card__title" data-i18n="dash.matchday_insights">Matchday insights</b>
+                  </div>
+                  <div class="insights-mvp-flop" id="insightsMvpFlop"></div>
+                  <div class="insights-transfer" id="insightsTransfer"></div>
+                </article>
+              </div>
             </div>
 
             <!-- SECTION 3: Breakdown -->
             <h3 class="dash-section__heading" data-i18n="dash.section_breakdown">Breakdown</h3>
 
-            <!-- ROW 5: Position donut (small) + Transfer history panel (large) -->
-            <div class="dash__row dash__row--asym">
-              <article class="panel list-card viz-card chart-reveal chart-reveal--6 dash-card--donut">
-                <div class="dash-card__head">
-                  <span class="dash-card__dot"></span>
-                  <b class="list-card__title" data-i18n="dash.position_contribution">Position contribution</b>
-                </div>
-                <div class="metric__split donut-wrap">
-                  <div class="chart chart--donut donut" id="scoreDonut"><span class="donut__center" id="donutCenter">0</span></div>
-                  <ul class="legend" id="donutLegend"></ul>
-                </div>
-              </article>
+            <!-- ROW 5: Transfer history (full width) -->
+            <div class="dash__row">
               <article class="panel list-card viz-card chart-reveal chart-reveal--6 dash-card--transfers">
                 <div class="dash-card__head">
                   <span class="dash-card__dot"></span>
@@ -632,6 +643,56 @@
               <div class="lb-list" id="lbList"></div>
               <div class="lb-popular" id="lbPopular" hidden></div>
               <div id="lbSticky"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="screen" id="screen-account" data-i18n-aria-label="nav.account" aria-label="Account">
+          <div class="account-shell">
+            <div class="account-card panel">
+              <div class="account-card__avatar-wrap">
+                <span class="avatar avatar--80" id="accountAvatar"></span>
+              </div>
+              <div class="account-card__avatar-picker" id="avatarPicker"></div>
+
+              <div class="account-card__divider"></div>
+
+              <form class="account-card__form" id="accountNameForm">
+                <label class="field" for="accountNameInput">
+                  <span class="label" data-i18n="account.display_name">Display name</span>
+                  <input type="text" id="accountNameInput" maxlength="30" data-i18n-placeholder="account.display_name_placeholder" placeholder="2-30 characters" />
+                </label>
+                <button class="btn btn--primary" type="submit" id="accountSaveBtn" data-i18n="account.save">Save</button>
+              </form>
+
+              <div class="account-card__divider"></div>
+
+              <div class="account-card__info">
+                <h3 class="account-card__info-title" data-i18n="account.account_info">Account Info</h3>
+                <div class="account-card__info-row">
+                  <span class="account-card__info-label" data-i18n="account.username">Username</span>
+                  <span class="account-card__info-value" id="accountUsername">-</span>
+                </div>
+                <div class="account-card__info-row">
+                  <span class="account-card__info-label" data-i18n="account.email">Email</span>
+                  <span class="account-card__info-value" id="accountEmail">-</span>
+                </div>
+                <div class="account-card__info-row">
+                  <span class="account-card__info-label" data-i18n="account.role">Role</span>
+                  <span class="account-card__info-value" id="accountRole">-</span>
+                </div>
+                <div class="account-card__info-row">
+                  <span class="account-card__info-label" data-i18n="account.user_id">User ID</span>
+                  <span class="account-card__info-value" id="accountUserId">-</span>
+                </div>
+              </div>
+
+              <div class="account-card__divider"></div>
+
+              <button class="btn btn--ghost btn--block" id="accountLogoutBtn" type="button">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span data-i18n="account.logout">Log Out</span>
+              </button>
             </div>
           </div>
         </section>
@@ -715,6 +776,7 @@
   <script src="js/scores.js"></script>
   <script src="js/stats.js"></script>
   <script src="js/leaderboard.js"></script>
+  <script src="js/account.js"></script>
   <script src="js/charts.js"></script>
   <script src="js/tour.js"></script>
   <script src="js/onboarding.js"></script>

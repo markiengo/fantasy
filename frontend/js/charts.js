@@ -323,19 +323,19 @@ const Charts = (() => {
     }
 
     const posSegments = [
-      { key: "goals_pts", label: t("chart.goals"), color: "var(--pos-FWD)" },
-      { key: "assist_pts", label: t("chart.assists"), color: "var(--pos-MID)" },
-      { key: "cs_pts", label: t("chart.clean_sheets"), color: "var(--pos-DEF)" },
-      { key: "minute_pts", label: t("chart.minutes"), color: "var(--warm)" },
-      { key: "saves_pts", label: t("chart.saves"), color: "var(--pos-GK)" },
-      { key: "sot_pts", label: t("chart.shots_on_target"), color: "var(--accent)" },
+      { key: "goals_pts", label: t("chart.goals"), color: "var(--chart-goals, var(--pos-FWD))" },
+      { key: "assist_pts", label: t("chart.assists"), color: "var(--chart-assists, var(--pos-MID))" },
+      { key: "cs_pts", label: t("chart.clean_sheets"), color: "var(--chart-clean-sheets, var(--pos-DEF))" },
+      { key: "minute_pts", label: t("chart.minutes"), color: "var(--chart-minutes, var(--warm))" },
+      { key: "saves_pts", label: t("chart.saves"), color: "var(--chart-saves, var(--pos-GK))" },
+      { key: "sot_pts", label: t("chart.shots_on_target"), color: "var(--chart-shots, var(--accent))" },
     ];
     const negSegments = [
-      { key: "card_pts", label: t("chart.cards"), color: "var(--danger)" },
-      { key: "own_goal_pts", label: t("chart.own_goals"), color: "var(--warm)" },
-      { key: "foul_pts", label: t("chart.fouls"), color: "var(--faint)" },
-      { key: "offside_pts", label: t("chart.offsides"), color: "var(--muted-2)" },
-      { key: "gc_pts", label: t("chart.goals_conceded"), color: "var(--blue)" },
+      { key: "card_pts", label: t("chart.cards"), color: "var(--chart-cards, var(--danger))" },
+      { key: "own_goal_pts", label: t("chart.own_goals"), color: "var(--chart-own-goals, var(--warm))" },
+      { key: "foul_pts", label: t("chart.fouls"), color: "var(--chart-fouls, var(--faint))" },
+      { key: "offside_pts", label: t("chart.offsides"), color: "var(--chart-offsides, var(--muted-2))" },
+      { key: "gc_pts", label: t("chart.goals_conceded"), color: "var(--chart-goals-conceded, var(--blue))" },
     ];
 
     const segs = opts.segments === "negative" ? negSegments : posSegments;
@@ -734,6 +734,142 @@ const Charts = (() => {
     }
   }
 
+  /* ── 7. League comparison — dual-line area chart ─────────────────────── */
+
+  function leagueComparison(container, data, opts) {
+    opts = opts || {};
+    var selectedMd = opts.selectedMatchday;
+    var onPointClick = opts.onPointClick;
+    var tip = makeTooltip();
+
+    if (!container) return;
+    container.innerHTML = "";
+
+    if (!data.length) {
+      container.innerHTML = '<p class="empty-note">' + t("chart.no_matches") + "</p>";
+      return;
+    }
+
+    var W = container.clientWidth || 600;
+    var H = 120;
+    var padL = 36;
+    var padR = 16;
+    var padT = 12;
+    var padB = 24;
+    var plotW = W - padL - padR;
+    var plotH = H - padT - padB;
+
+    var allVals = [];
+    for (var i = 0; i < data.length; i++) {
+      allVals.push(data[i].user_score);
+      allVals.push(data[i].league_avg);
+    }
+    var maxY = niceMax(Math.max(1, Math.max.apply(null, allVals)));
+    var xStep = data.length > 1 ? plotW / (data.length - 1) : 0;
+
+    function px(i) { return padL + i * xStep; }
+    function py(v) { return padT + plotH - (v / maxY) * plotH; }
+
+    var svg = el("svg", { class: "dash-svg", viewBox: "0 0 " + W + " " + H, preserveAspectRatio: "none" });
+
+    /* gradient defs */
+    var defs = el("defs");
+
+    var gradUser = el("linearGradient", { id: "leagueGradUser", x1: "0", y1: "0", x2: "0", y2: "1" });
+    gradUser.appendChild(el("stop", { offset: "0%", "stop-color": "var(--accent)", "stop-opacity": "0.30" }));
+    gradUser.appendChild(el("stop", { offset: "100%", "stop-color": "var(--accent)", "stop-opacity": "0.02" }));
+    defs.appendChild(gradUser);
+
+    var gradAvg = el("linearGradient", { id: "leagueGradAvg", x1: "0", y1: "0", x2: "0", y2: "1" });
+    gradAvg.appendChild(el("stop", { offset: "0%", "stop-color": "var(--muted)", "stop-opacity": "0.18" }));
+    gradAvg.appendChild(el("stop", { offset: "100%", "stop-color": "var(--muted)", "stop-opacity": "0.01" }));
+    defs.appendChild(gradAvg);
+
+    svg.appendChild(defs);
+
+    /* grid lines */
+    for (var g = 0; g <= 4; g++) {
+      var gy = padT + (plotH / 4) * g;
+      svg.appendChild(el("line", { class: "dash-svg__grid-line", x1: padL, y1: gy, x2: W - padR, y2: gy }));
+      var val = Math.round(maxY - (maxY / 4) * g);
+      var txt = el("text", { class: "dash-svg__axis-text", x: padL - 6, y: gy + 4, "text-anchor": "end" });
+      txt.textContent = val;
+      svg.appendChild(txt);
+    }
+
+    /* league avg area + line */
+    var avgArea = "M " + px(0) + " " + py(data[0].league_avg);
+    for (var a = 1; a < data.length; a++) {
+      avgArea += " L " + px(a) + " " + py(data[a].league_avg);
+    }
+    avgArea += " L " + px(data.length - 1) + " " + (padT + plotH);
+    avgArea += " L " + px(0) + " " + (padT + plotH) + " Z";
+    svg.appendChild(el("path", { d: avgArea, fill: "url(#leagueGradAvg)" }));
+
+    var avgLine = "M " + px(0) + " " + py(data[0].league_avg);
+    for (var a2 = 1; a2 < data.length; a2++) {
+      avgLine += " L " + px(a2) + " " + py(data[a2].league_avg);
+    }
+    svg.appendChild(el("path", { class: "dash-svg__line", d: avgLine, stroke: "var(--muted)", "stroke-dasharray": "4 3", "stroke-width": "1.5" }));
+
+    /* user area + line */
+    var userArea = "M " + px(0) + " " + py(data[0].user_score);
+    for (var u = 1; u < data.length; u++) {
+      userArea += " L " + px(u) + " " + py(data[u].user_score);
+    }
+    userArea += " L " + px(data.length - 1) + " " + (padT + plotH);
+    userArea += " L " + px(0) + " " + (padT + plotH) + " Z";
+    svg.appendChild(el("path", { d: userArea, fill: "url(#leagueGradUser)" }));
+
+    var userLine = "M " + px(0) + " " + py(data[0].user_score);
+    for (var u2 = 1; u2 < data.length; u2++) {
+      userLine += " L " + px(u2) + " " + py(data[u2].user_score);
+    }
+    svg.appendChild(el("path", { class: "dash-svg__line", d: userLine, stroke: "var(--accent)", "stroke-width": "2" }));
+
+    /* dots */
+    for (var d = 0; d < data.length; d++) {
+      var isActive = data[d].matchday === selectedMd;
+      var diff = data[d].user_score - data[d].league_avg;
+      var dot = el("circle", {
+        class: "dash-svg__dot" + (isActive ? " dash-svg__dot--active" : ""),
+        cx: px(d),
+        cy: py(data[d].user_score),
+        r: isActive ? 6 : 4,
+        fill: isActive ? "var(--accent)" : "var(--bg)",
+        stroke: "var(--accent)",
+        "stroke-width": isActive ? 3 : 2.5,
+        style: "color: var(--accent)"
+      });
+
+      (function (idx, dd) {
+        dot.addEventListener("mouseenter", function (e) {
+          var rect = container.getBoundingClientRect();
+          var html = '<div class="dash-tooltip__title">' + escapeHtml(data[idx].label || ("MD " + data[idx].matchday)) + "</div>" +
+            '<div class="dash-tooltip__row">You <b style="color:var(--accent)">' + data[idx].user_score + "</b></div>" +
+            '<div class="dash-tooltip__row">League avg <b style="color:var(--muted)">' + data[idx].league_avg + "</b></div>" +
+            '<div class="dash-tooltip__row">Diff <b>' + fmtSigned(Math.round(dd * 100) / 100) + "</b></div>";
+          showTooltip(tip, rect.left + px(idx), rect.top + py(data[idx].user_score), html);
+        });
+        dot.addEventListener("mouseleave", function () { hideTooltip(tip); });
+        dot.addEventListener("click", function () {
+          if (onPointClick) onPointClick(data[idx].matchday);
+        });
+      })(d, diff);
+
+      svg.appendChild(dot);
+    }
+
+    /* x-axis labels */
+    for (var x = 0; x < data.length; x++) {
+      var xt = el("text", { class: "dash-svg__axis-text", x: px(x), y: H - 6, "text-anchor": "middle" });
+      xt.textContent = "MD" + data[x].matchday;
+      svg.appendChild(xt);
+    }
+
+    container.appendChild(svg);
+  }
+
   return {
     areaChart: areaChart,
     captainBars: captainBars,
@@ -742,6 +878,7 @@ const Charts = (() => {
     scatterPlot: scatterPlot,
     bars: bars,
     donut: donut,
+    leagueComparison: leagueComparison,
   };
 })();
 

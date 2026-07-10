@@ -95,7 +95,9 @@ def validate_squad(players, matchday=None):
 ## Section 2: Transfer rules
 
 ### 1. GR-07: Lock transfers once the matchday's first match starts.
-def validate_transfer_window(now_utc, first_kickoff_utc):
+def validate_transfer_window(now_utc, first_kickoff_utc, override=False):
+    if override:
+        return
     from datetime import timedelta
     lock_time = first_kickoff_utc - timedelta(hours=1)
     if now_utc >= lock_time:

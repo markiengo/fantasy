@@ -6,7 +6,8 @@ const Stats = (() => {
     { key: "top_goal_involvements", title: () => t("stats.goal_involvements"), hint: () => t("stats.hint_ga"), bento: "normal" },
     { key: "top_clean_sheets", title: () => t("stats.clean_sheets"), hint: () => t("stats.hint_def_gk"), bento: "normal" },
     { key: "top_saves", title: () => t("stats.top_saves"), hint: () => t("stats.hint_saves"), bento: "normal" },
-    { key: "top_cards", title: () => t("stats.most_cards"), hint: () => t("stats.hint_yr"), isCards: true, bento: "wide" },
+    { key: "top_penalty_saves", title: () => t("stats.top_penalty_saves"), hint: () => t("stats.hint_psv"), bento: "normal" },
+    { key: "top_cards", title: () => t("stats.most_cards"), hint: () => t("stats.hint_yr"), isCards: true, bento: "normal" },
   ];
 
   function faceHtml(player, size) {

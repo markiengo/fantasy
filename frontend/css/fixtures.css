@@ -27,7 +27,7 @@
 .fixture-tab.is-active {
   color: var(--accent-ink);
   background: var(--accent);
-  box-shadow: 0 6px 16px -8px rgba(184,232,80,.7);
+  box-shadow: 0 6px 16px -8px rgba(var(--accent-rgb),.7);
 }
 .fixture-pane { display: none; }
 .fixture-pane.is-active { display: block; }
@@ -101,7 +101,7 @@
   color: var(--ink-2);
 }
 .table-row > span { text-align: center; }
-.table-row.is-qualifying { background: rgba(184,232,80,.05); }
+.table-row.is-qualifying { background: rgba(var(--positive-rgb),.05); }
 .table-row__rank {
   position: relative;
   text-align: left !important;
@@ -118,8 +118,8 @@
   display: block;
 }
 .table-row[data-qual="1"] .qbar { background: var(--accent); }
-.table-row[data-qual="2"] .qbar { background: rgba(184,232,80,.45); }
-.table-row[data-qual="3"] .qbar { background: rgba(255,176,108,.5); }
+.table-row[data-qual="2"] .qbar { background: rgba(var(--positive-rgb),.45); }
+.table-row[data-qual="3"] .qbar { background: rgba(var(--warm-rgb),.5); }
 .table-row__team {
   display: flex;
   align-items: center;
@@ -152,9 +152,9 @@
   align-items: center;
   justify-content: center;
 }
-.form-badge--w { color: var(--accent); background: rgba(184,232,80,.16); }
+.form-badge--w { color: var(--positive); background: rgba(var(--positive-rgb),.16); }
 .form-badge--d { color: var(--ink-2); background: var(--control-bg-strong); }
-.form-badge--l { color: var(--danger); background: rgba(255,143,143,.16); }
+.form-badge--l { color: var(--danger); background: rgba(var(--danger-rgb),.16); }
 
 /* ===== Fixtures list — horizontal card strip ===== */
 .fixtures__head {
@@ -383,8 +383,8 @@
   animation: livePulse 1.3s ease-in-out infinite;
 }
 @keyframes livePulse {
-  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(184,232,80,.5); }
-  50% { opacity: .6; box-shadow: 0 0 0 5px rgba(184,232,80,0); }
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(var(--accent-rgb),.5); }
+  50% { opacity: .6; box-shadow: 0 0 0 5px rgba(var(--accent-rgb),0); }
 }
 
 /* ===== Knockout bracket ===== */
@@ -399,7 +399,7 @@
   position: absolute;
   inset: 0;
   z-index: 0;
-  stroke: rgba(184,232,80,.22);
+  stroke: rgba(var(--accent-rgb),.22);
   stroke-width: 1.4;
   fill: none;
   pointer-events: none;
@@ -438,8 +438,8 @@
   transform: translateY(-50%);
 }
 .bracket-node--final {
-  background: linear-gradient(150deg, rgba(184,232,80,.14), rgba(184,232,80,.04));
-  border-color: rgba(184,232,80,.3);
+  background: linear-gradient(150deg, rgba(var(--accent-rgb),.14), rgba(var(--accent-rgb),.04));
+  border-color: rgba(var(--accent-rgb),.3);
 }
 .bracket-node__slot {
   display: flex;
@@ -516,7 +516,7 @@
   height: 46px;
   border-radius: 14px;
   background: linear-gradient(150deg, var(--accent), var(--accent-2));
-  box-shadow: 0 8px 22px -8px rgba(184,232,80,.7);
+  box-shadow: 0 8px 22px -8px rgba(var(--accent-rgb),.7);
   font-size: 22px;
 }
 .bracket__champion b {

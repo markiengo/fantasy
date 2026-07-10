@@ -146,7 +146,7 @@ const Leaderboard = (() => {
     let html = '<div class="lb-table__head" role="row">';
     html += '<span class="lb-table__rank" role="columnheader">' + t("lb.rank") + '</span>';
     html += '<span class="lb-table__manager" role="columnheader">' + t("lb.manager") + '</span>';
-    if (showDelta) html += '<span class="lb-table__delta" role="columnheader">&Delta;</span>';
+    if (showDelta) html += '<span class="lb-table__delta" role="columnheader">' + t("lb.delta") + '</span>';
     html += '<span class="lb-table__timeleft" role="columnheader">\u23F1 ' + t("lb.before_ko") + '</span>';
     html += '<span class="lb-table__score" role="columnheader">' + t("lb.pts") + '</span>';
     html += '</div>';

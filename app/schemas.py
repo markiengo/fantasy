@@ -24,4 +24,7 @@ class LoginRequest(BaseModel):
 class CompleteProfileRequest(BaseModel):
     display_name: str
 
+class UpdateDisplayNameRequest(BaseModel):
+    display_name: str
+
 

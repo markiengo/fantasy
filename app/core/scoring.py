@@ -1,7 +1,7 @@
 def calculate_score(goals, assists, minutes_played, yellow_cards, red_cards,
                     clean_sheet, position, saves=0, own_goals=0,
                     shots_on_target=0, fouls_committed=0, offsides=0,
-                    goals_conceded=0):
+                    goals_conceded=0, penalty_saves=0):
     score = 0
 
     # goals
@@ -23,6 +23,10 @@ def calculate_score(goals, assists, minutes_played, yellow_cards, red_cards,
     # saves (GK only)
     if position == "GK":
         score += saves * 1
+
+    # penalty saves (GK only)
+    if position == "GK":
+        score += penalty_saves * 8
 
     # shots on target (FWD/MID only)
     if position in ["FWD", "MID"]:

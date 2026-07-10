@@ -101,7 +101,7 @@ const Squad = (() => {
     const preview = previewPlayer();
     const canTarget = preview && State.mode !== "view" && State.addBlockReason(preview) === null;
 
-    const showEmptyPulse = State.mode === "build" && State.currentSquad.players.length === 0;
+    const showEmptyPulse = State.mode === "build" && State.currentSquad.players.length === 0 && State.currentSquad.bench.length === 0;
 
     let html = PITCH_MARKINGS;
     for (const pos of ROW_ORDER) {
@@ -168,6 +168,47 @@ const Squad = (() => {
         showCaptainPopover(token, pid);
       });
     });
+  }
+
+  function renderBench() {
+    const el = document.getElementById("benchStrip");
+    if (!el) return;
+    const bench = State.currentSquad.bench;
+    if (!bench.length) {
+      el.hidden = true;
+      el.innerHTML = "";
+      return;
+    }
+    el.hidden = false;
+    const canPromote = State.mode === "build" || State.mode === "transfer";
+    let html = `<div class="bench-strip__label">${t("squad.benched")}</div>`;
+    for (const player of bench) {
+      const need = FORMATIONS[State.currentSquad.formation];
+      const slotFull = State.posCounts()[player.position] >= need[player.position];
+      const promoteBtn = canPromote && !slotFull
+        ? `<button class="bench-card__promote" type="button" data-pid="${player.player_id}" aria-label="${escapeHtml(t("squad.promote", player.name))}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="14" height="14"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>`
+        : "";
+      html += `<div class="bench-card" data-pid="${player.player_id}">
+        <span class="bench-card__photo">${faceHtml(player, true)}${flagImg(player.team_id, "avatar__flag avatar__flag--sm")}</span>
+        <span class="bench-card__info">
+          <b>${escapeHtml(player.name)}</b>
+          <small><i class="pos pos--${player.position.toLowerCase()}">${player.position}</i> \u00b7 $${Number(player.base_price).toFixed(1)}m</small>
+        </span>
+        ${promoteBtn}
+      </div>`;
+    }
+    el.innerHTML = html;
+    if (canPromote) {
+      el.querySelectorAll(".bench-card__promote").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const pid = +btn.dataset.pid;
+          if (State.promoteFromBench(pid)) {
+            Toast.show(t("toast.player_promoted", State.currentSquad.players.find((p) => p.player_id === pid)?.name || ""), "success");
+          }
+        });
+      });
+    }
   }
 
   let _activePopover = null;
@@ -274,7 +315,7 @@ const Squad = (() => {
   }
 
   function renderSummary() {
-    const selected = State.currentSquad.players.length;
+    const selected = State.currentSquad.players.length + State.currentSquad.bench.length;
     const used = State.budgetUsed();
     const remaining = State.budgetRemaining();
     const pending = State.pendingTransfers();
@@ -294,7 +335,7 @@ const Squad = (() => {
     if (pitchLabel) {
       const meta = currentRoundMeta(State.currentMatchday);
       const roundLabel = meta ? meta.label : t("stage.group_stage", State.currentMatchday);
-      if (State.mode === "build" && State.currentSquad.players.length === 0) {
+      if (State.mode === "build" && State.currentSquad.players.length === 0 && State.currentSquad.bench.length === 0) {
         pitchLabel.textContent = t("pitch.tap_to_start");
       } else {
         pitchLabel.textContent = t("pitch.your_xi_round", roundLabel, State.currentSquad.formation);
@@ -751,6 +792,7 @@ const Squad = (() => {
 
     State.subscribe(() => {
       renderPitch();
+      renderBench();
       renderSummary();
       renderPool();
       renderProgressChecklist();
@@ -847,14 +889,17 @@ const Squad = (() => {
     }
 
     const mode = State.mode;
-    const count = State.currentSquad.players.length;
+    const count = State.currentSquad.players.length + State.currentSquad.bench.length;
+    const benchCount = State.currentSquad.bench.length;
     const used = State.budgetUsed();
     const pending = State.pendingTransfers();
 
     let msg = null;
 
     if (mode === "build") {
-      if (count === 0) {
+      if (benchCount > 0) {
+        msg = t("squad.bench_tip", benchCount);
+      } else if (count === 0) {
         msg = t("squad.tap_empty");
       } else if (count < 11) {
         msg = t("squad.good_progress", count);
@@ -895,6 +940,7 @@ const Squad = (() => {
   return {
     init,
     renderPitch,
+    renderBench,
     renderSummary,
     renderPool,
     renderProgressChecklist,

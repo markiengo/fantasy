@@ -38,7 +38,7 @@ def post_transfer_route(
     first_kickoff = get_matchday_start(conn, body.matchday)
     if first_kickoff is not None:
         now_utc = datetime.now(timezone.utc)
-        validate_transfer_window(now_utc, first_kickoff)
+        validate_transfer_window(now_utc, first_kickoff, override=current_user.get("transfer_override", False))
 
     transfers_used = count_transfers(conn, user_id, body.matchday)
     transfers_remaining = max_transfers - transfers_used

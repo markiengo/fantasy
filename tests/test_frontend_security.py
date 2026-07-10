@@ -33,7 +33,7 @@ def test_api_derived_frontend_names_are_escaped_before_html_injection():
     assert "${escapeHtml(team.name)}" in squad_js
     assert "${escapeHtml(row.name)}" in fixtures_js
     assert "${escapeHtml(t1Name)}" in fixtures_js
-    assert "escapeHtml(p.player_name)" in scores_js
+    assert "escapeHtml(p.name)" in scores_js
     assert "escapeHtml(xf.player_out_name || t(\"dash.unknown\"))" in scores_js
     assert "${escapeHtml(entry.name)}" in stats_js
     assert "${escapeHtml(err.message || \"\")}" in stats_js

@@ -49,7 +49,7 @@
   padding: 3px 10px;
   border-radius: 999px;
   background: var(--accent-12);
-  border: 1px solid var(--accent-24, rgba(184,232,80,.24));
+  border: 1px solid var(--accent-24, rgba(var(--accent-rgb),.24));
   font-size: 11px;
   font-weight: 700;
   color: var(--accent);
@@ -319,7 +319,7 @@
 }
 
 .lb-row--me {
-  box-shadow: inset 3px 0 0 var(--accent), inset 0 0 0 1px rgba(184,232,80,.34);
+  box-shadow: inset 3px 0 0 var(--accent), inset 0 0 0 1px rgba(var(--accent-rgb),.34);
 }
 
 .lb-row--admin {
@@ -408,9 +408,9 @@
 .lb-row__you {
   flex-shrink: 0;
   padding: 2px 6px;
-  border: 1px solid rgba(184,232,80,.24);
+  border: 1px solid rgba(var(--accent-rgb),.24);
   border-radius: var(--r-pill);
-  background: rgba(184,232,80,.10);
+  background: rgba(var(--accent-rgb),.10);
   color: var(--accent);
   font-size: var(--fs-label);
   font-weight: 800;
@@ -435,8 +435,8 @@
 }
 
 .lb-row__delta--up {
-  background: rgba(184,232,80,.12);
-  color: var(--accent);
+  background: rgba(var(--positive-rgb),.12);
+  color: var(--positive);
 }
 
 .lb-row__delta--down {
@@ -496,7 +496,7 @@
 .lb-sticky__label {
   padding: 3px 7px;
   border-radius: var(--r-pill);
-  background: rgba(184,232,80,.11);
+  background: rgba(var(--accent-rgb),.11);
   color: var(--accent);
   font-size: var(--fs-label);
   font-weight: 800;
@@ -728,8 +728,8 @@
   width: 18px;
   height: 18px;
   border-radius: var(--r-pill);
-  background: rgba(184,232,80,.14);
-  border: 1px solid rgba(184,232,80,.30);
+  background: rgba(var(--accent-rgb),.14);
+  border: 1px solid rgba(var(--accent-rgb),.30);
   color: var(--accent);
   font-size: 10px;
   font-weight: 800;
@@ -749,10 +749,10 @@
   font-family: var(--font-body);
 }
 
-.lb-pop-card__pos-pill[data-pos="GK"] { background: rgba(255,116,40,.14); color: var(--pos-GK); }
-.lb-pop-card__pos-pill[data-pos="DEF"] { background: rgba(122,162,255,.14); color: var(--pos-DEF); }
-.lb-pop-card__pos-pill[data-pos="MID"] { background: rgba(168,237,220,.12); color: var(--pos-MID); }
-.lb-pop-card__pos-pill[data-pos="FWD"] { background: rgba(255,143,176,.14); color: var(--pos-FWD); }
+.lb-pop-card__pos-pill[data-pos="GK"] { background: rgba(var(--pos-GK-rgb),.14); color: var(--pos-GK); }
+.lb-pop-card__pos-pill[data-pos="DEF"] { background: rgba(var(--pos-DEF-rgb),.14); color: var(--pos-DEF); }
+.lb-pop-card__pos-pill[data-pos="MID"] { background: rgba(var(--pos-MID-rgb),.12); color: var(--pos-MID); }
+.lb-pop-card__pos-pill[data-pos="FWD"] { background: rgba(var(--pos-FWD-rgb),.14); color: var(--pos-FWD); }
 
 .lb-pop-card__team {
   display: flex;
@@ -873,10 +873,6 @@
   background: rgba(30,27,58,.07);
 }
 
-:root[data-theme="light"] .lb-pop-card__pos-pill[data-pos="GK"] { background: rgba(232,149,72,.16); }
-:root[data-theme="light"] .lb-pop-card__pos-pill[data-pos="DEF"] { background: rgba(159,122,234,.14); }
-:root[data-theme="light"] .lb-pop-card__pos-pill[data-pos="MID"] { background: rgba(78,205,196,.14); }
-:root[data-theme="light"] .lb-pop-card__pos-pill[data-pos="FWD"] { background: rgba(244,137,154,.14); }
 
 
 

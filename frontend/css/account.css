@@ -1,0 +1,168 @@
+.account-shell {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+}
+
+.account-card {
+  width: 100%;
+  max-width: 440px;
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.account-card__avatar-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.avatar--80 {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 2px solid var(--stroke-mid);
+  background: center/cover no-repeat var(--accent-12);
+}
+
+.account-card__avatar-picker {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.avatar-pick {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--stroke-soft);
+  background: center/cover no-repeat var(--accent-12);
+  cursor: pointer;
+  transition: border-color 180ms var(--ease-smooth), transform 180ms var(--ease-smooth);
+  flex: 0 0 auto;
+}
+
+.avatar-pick:hover {
+  border-color: var(--accent);
+  transform: scale(1.08);
+}
+
+.avatar-pick.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-12);
+}
+
+.account-card__divider {
+  height: 1px;
+  background: var(--stroke-soft);
+  margin: 24px 0;
+}
+
+.account-card__form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.account-card__form .field .label {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  color: var(--muted-2);
+  margin-bottom: 6px;
+}
+
+.account-card__form input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--r-xl);
+  border: 1px solid var(--stroke);
+  background: var(--control-bg);
+  color: var(--ink);
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 600;
+}
+
+.account-card__form input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-12);
+}
+
+.account-card__form .btn--primary {
+  align-self: flex-end;
+  min-width: 100px;
+}
+
+.account-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.account-card__info-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  color: var(--muted-2);
+  text-transform: uppercase;
+  margin: 0 0 4px;
+}
+
+.account-card__info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.account-card__info-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted-2);
+  flex: 0 0 auto;
+}
+
+.account-card__info-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-2);
+  text-align: right;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-card__info-value.is-admin {
+  color: var(--accent);
+}
+
+.account-card .btn--block {
+  width: 100%;
+  justify-content: center;
+  gap: 8px;
+}
+
+.profile__chev {
+  width: 18px;
+  height: 18px;
+  color: var(--muted-2);
+  flex: 0 0 auto;
+}
+
+.profile[role="button"] {
+  cursor: pointer;
+  transition: background 160ms var(--ease-smooth);
+}
+
+.profile[role="button"]:hover {
+  background: var(--control-bg-strong);
+}

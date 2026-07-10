@@ -6,6 +6,8 @@ from app.queries.analytics import (
     get_squad_score,
     get_squad_score_composition,
     get_rank_history,
+    get_player_breakdown,
+    get_league_comparison,
 )
 
 router = APIRouter()
@@ -68,3 +70,25 @@ def get_rank_history_route(
 ):
     result = get_rank_history(conn, current_user["user_id"])
     return {"rank_history": result}
+
+# Per-player raw stats + per-stat point breakdown for a matchday.
+# Captain x2 applied per stat. Only non-zero stats included.
+# If matchday is omitted, defaults to the user's latest squad matchday.
+@router.get("/analytics/player-breakdown")
+def get_player_breakdown_route(
+    matchday: int = None,
+    conn = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    result = get_player_breakdown(conn, current_user["user_id"], matchday)
+    return result
+
+# Compares user's cumulative score vs league average at each matchday.
+# Response: [{matchday, user_score, league_avg}]
+@router.get("/analytics/league-comparison")
+def get_league_comparison_route(
+    conn = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    result = get_league_comparison(conn, current_user["user_id"])
+    return {"comparison": result}

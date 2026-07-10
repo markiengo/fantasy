@@ -7,9 +7,11 @@
 
 const Scores = (() => {
   let _scoreByMd = {};       // { md: { matchday, breakdown: [...] } }
+  let _breakdownByMd = {};    // { md: { matchday, players: [...] } }
   let _cumulativeData = [];  // [{ matchday, score }]
   let _compositionByMd = {}; // { md: { goals_pts, ... } }
   let _rankHistory = [];     // [{ matchday, rank, score, total_managers }]
+  let _leagueComparison = []; // [{ matchday, user_score, league_avg }]
   let _squadByMd = {};       // { md: squadObj }
   let _transfersByMd = {};   // { md: [transferObj, ...] }
   let _allTransfers = [];
@@ -39,8 +41,10 @@ const Scores = (() => {
   async function loadAll() {
     _cumulativeData = [];
     _scoreByMd = {};
+    _breakdownByMd = {};
     _compositionByMd = {};
     _rankHistory = [];
+    _leagueComparison = [];
     _squadByMd = {};
     _transfersByMd = {};
     _allTransfers = [];
@@ -65,6 +69,14 @@ const Scores = (() => {
       }
     } catch (e) { /* no data yet */ }
 
+    /* league comparison */
+    try {
+      const leagueRes = await Api.getLeagueComparison();
+      if (leagueRes && leagueRes.comparison) {
+        _leagueComparison = leagueRes.comparison;
+      }
+    } catch (e) { /* no data yet */ }
+
     /* per-matchday data: score breakdown, composition, squad — all in parallel */
     const mds = _scoredMatchdays.slice();
     const promises = [];
@@ -79,8 +91,26 @@ const Scores = (() => {
       promises.push(
         Api.getSquad(md).then(function (r) { if (r) _squadByMd[md] = r; }).catch(function () {})
       );
+      promises.push(
+        Api.getPlayerBreakdown(md).then(function (r) { if (r) _breakdownByMd[md] = r; }).catch(function () {})
+      );
     }
     await Promise.all(promises);
+
+    /* if no scored matchdays, load breakdown for latest squad matchday */
+    if (_scoredMatchdays.length === 0) {
+      try {
+        const bd = await Api.getPlayerBreakdown();
+        if (bd && bd.matchday) {
+          _breakdownByMd[bd.matchday] = bd;
+          _selectedMd = bd.matchday;
+          try {
+            const sq = await Api.getSquad(bd.matchday);
+            if (sq) _squadByMd[bd.matchday] = sq;
+          } catch (e) { /* skip */ }
+        }
+      } catch (e) { /* no squad yet */ }
+    }
 
     /* transfers (all) */
     try {
@@ -302,41 +332,143 @@ const Scores = (() => {
     });
   }
 
-  /* ── Top scorers (selected matchday breakdown) ─────────────────────────── */
+  /* ── League comparison (cumulative) ────────────────────────────────────── */
 
-  function renderTopScorers() {
-    const list = document.getElementById("contribBody");
-    if (!list) return;
+  function renderLeagueComparison() {
+    var container = document.getElementById("leagueChart");
+    if (!container) return;
 
-    const breakdown = _scoreByMd[_selectedMd];
-    if (!breakdown || !breakdown.breakdown || !breakdown.breakdown.length) {
-      list.innerHTML = '<p class="empty-note">' + t("dash.no_player_data") + '</p>';
+    var chartData = [];
+    for (var i = 0; i < _leagueComparison.length; i++) {
+      chartData.push({
+        matchday: _leagueComparison[i].matchday,
+        user_score: _leagueComparison[i].user_score,
+        league_avg: _leagueComparison[i].league_avg,
+        label: mdLabel(_leagueComparison[i].matchday)
+      });
+    }
+
+    Charts.leagueComparison(container, chartData, {
+      selectedMatchday: _selectedMd,
+      onPointClick: selectMatchday
+    });
+  }
+
+  /* ── Player breakdown (selected matchday) ─────────────────────────────── */
+
+  var _expandedBreakdownPid = null;
+
+  function renderPlayerBreakdown() {
+    var container = document.getElementById("breakdownBody");
+    if (!container) return;
+
+    var data = _breakdownByMd[_selectedMd];
+    if (!data || !data.players || !data.players.length) {
+      container.innerHTML = '<p class="empty-note">' + t("dash.no_player_data") + '</p>';
       return;
     }
 
-    const players = breakdown.breakdown.slice();
-    players.sort(function (a, b) { return b.player_score - a.player_score; });
+    var players = data.players.slice();
+    players.sort(function (a, b) { return b.total_points - a.total_points; });
 
-    let html = "";
-    for (let i = 0; i < players.length; i++) {
-      const p = players[i];
-      const seed = encodeURIComponent(p.player_name).replace(/'/g, "%27");
-      const avatarSrc = "https://api.dicebear.com/9.x/micah/svg?seed=" + seed + "&backgroundColor=c6f24a,a6d92e,7aa2ff,ffb06c&radius=50";
-      const posColor = POS_COLORS[p.position] || "var(--ink)";
-      const cls = p.player_score < 0 ? " scorer-pts--neg" : "";
-      const cap = p.is_captain ? '<span class="scorer-cap">C</span>' : "";
-      const x2 = p.is_captain ? '<span class="scorer-x2">x2</span>' : "";
-      html += '<li><span class="rank">' + (i + 1) + "</span>" +
-        '<span class="avatar avatar--30" style="background-image:url(\'' + avatarSrc + '\')"></span>' +
-        '<span class="scorer-name">' + escapeHtml(p.player_name) + " " + cap + "</span>" +
-        '<i class="pos pos--' + p.position.toLowerCase() + '">' + p.position + "</i>" +
-        x2 +
-        '<b class="scorer-pts' + cls + '" style="color:' + posColor + '">' + p.player_score + "</b></li>";
+    var html = "";
+    for (var i = 0; i < players.length; i++) {
+      var p = players[i];
+      var seed = encodeURIComponent(p.name).replace(/'/g, "%27");
+      var avatarSrc = "https://api.dicebear.com/9.x/micah/svg?seed=" + seed + "&backgroundColor=c6f24a,a6d92e,7aa2ff,ffb06c&radius=50";
+      var posColor = POS_COLORS[p.position] || "var(--ink)";
+      var cap = p.is_captain ? '<span class="scorer-cap">C</span>' : "";
+      var ptsCls = p.total_points < 0 ? " breakdown-pts--neg" : "";
+      var expanded = _expandedBreakdownPid === p.player_id;
+
+      var allZero = p.has_stats;
+      if (p.has_stats) {
+        for (var k in p.raw) {
+          if (p.raw[k] !== 0) { allZero = false; break; }
+        }
+      }
+
+      var badge = "";
+      var chevron = "";
+      var expandHtml = "";
+
+      if (!p.has_stats) {
+        badge = '<span class="breakdown-badge breakdown-badge--nodata">' + t("dash.no_data") + '</span>';
+      } else if (allZero) {
+        badge = '<span class="breakdown-badge breakdown-badge--dnp">' + t("dash.dnp") + '</span>';
+      } else {
+        chevron = '<span class="breakdown-chevron' + (expanded ? " is-open" : "") + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="14" height="14"><path d="M6 9l6 6 6-6"/></svg></span>';
+        if (expanded) {
+          expandHtml = renderBreakdownDetail(p);
+        }
+      }
+
+      html += '<div class="breakdown-row' + (expanded ? " is-open" : "") + '" data-pid="' + p.player_id + '">' +
+        '<div class="breakdown-row__head">' +
+          '<span class="breakdown-rank">' + (i + 1) + '</span>' +
+          '<span class="avatar avatar--30" style="background-image:url(\'' + avatarSrc + '\')"></span>' +
+          '<span class="breakdown-name">' + escapeHtml(p.name) + " " + cap + '</span>' +
+          '<i class="pos pos--' + p.position.toLowerCase() + '">' + p.position + '</i>' +
+          badge +
+          '<b class="breakdown-pts' + ptsCls + '" style="color:' + posColor + '">' + p.total_points + '</b>' +
+          chevron +
+        '</div>' +
+        expandHtml +
+      '</div>';
     }
-    list.innerHTML = html;
+    container.innerHTML = html;
+
+    var rows = container.querySelectorAll(".breakdown-row");
+    for (var j = 0; j < rows.length; j++) {
+      (function (row) {
+        var pid = parseInt(row.dataset.pid, 10);
+        var head = row.querySelector(".breakdown-row__head");
+        if (head) {
+          head.addEventListener("click", function () {
+            if (_expandedBreakdownPid === pid) {
+              _expandedBreakdownPid = null;
+            } else {
+              _expandedBreakdownPid = pid;
+            }
+            renderPlayerBreakdown();
+          });
+        }
+      })(rows[j]);
+    }
   }
 
-  /* ── Value scatter + efficiency bars ───────────────────────────────────── */
+  function renderBreakdownDetail(player) {
+    var sp = player.stat_points;
+    if (!sp || !sp.length) return "";
+
+    var html = '<div class="breakdown-detail">';
+    for (var i = 0; i < sp.length; i++) {
+      var s = sp[i];
+      var isNeg = s.pts < 0;
+      var cls = isNeg ? " breakdown-stat--neg" : " breakdown-stat--pos";
+      var capNote = s.is_captain_doubled ? ' <span class="breakdown-cap-x2">' + t("dash.captain_x2") + '</span>' : "";
+      var ptsStr = s.pts >= 0 ? "+" + s.pts : "" + s.pts;
+      var formulaStr;
+      if (s.is_flat) {
+        formulaStr = s.value + " min";
+      } else {
+        var multStr = s.multiplier >= 0 ? "+" + s.multiplier : "" + s.multiplier;
+        formulaStr = s.value + " \u00d7 " + multStr;
+      }
+      html += '<div class="breakdown-stat' + cls + '">' +
+        '<span class="breakdown-stat__label">' + t(s.label_key) + '</span>' +
+        '<span class="breakdown-stat__formula">' + formulaStr + '</span>' +
+        '<span class="breakdown-stat__pts">' + ptsStr + ' pts' + capNote + '</span>' +
+      '</div>';
+    }
+    var totalStr = player.total_points >= 0 ? "+" + player.total_points : "" + player.total_points;
+    html += '<div class="breakdown-total">' +
+      '<span class="breakdown-total__label">' + t("dash.total") + '</span>' +
+      '<span class="breakdown-total__pts">' + totalStr + ' pts</span>' +
+    '</div>';
+    html += '</div>';
+    return html;
+  }
 
   function renderValueScatter() {
     const container = document.getElementById("valueScatter");
@@ -380,56 +512,6 @@ const Scores = (() => {
     });
   }
 
-  function renderEfficiencyBars() {
-    const container = document.getElementById("valueRows");
-    if (!container) return;
-
-    const breakdown = _scoreByMd[_selectedMd];
-    const squad = _squadByMd[_selectedMd];
-    if (!breakdown || !squad) {
-      container.innerHTML = '<p class="empty-note">' + t("dash.no_data_md") + '</p>';
-      return;
-    }
-
-    const priceMap = {};
-    for (let i = 0; i < squad.players.length; i++) {
-      priceMap[squad.players[i].player_id] = squad.players[i].base_price;
-    }
-
-    const rows = [];
-    for (let i = 0; i < breakdown.breakdown.length; i++) {
-      const p = breakdown.breakdown[i];
-      const price = priceMap[p.player_id] || 0;
-      const ratio = price > 0 ? p.player_score / price : 0;
-      rows.push({
-        name: p.player_name,
-        position: p.position,
-        price: price,
-        points: p.player_score,
-        ratio: ratio
-      });
-    }
-    rows.sort(function (a, b) { return b.ratio - a.ratio; });
-
-    let maxRatio = 1;
-    for (let i = 0; i < rows.length; i++) {
-      if (Math.abs(rows[i].ratio) > maxRatio) maxRatio = Math.abs(rows[i].ratio);
-    }
-
-    let html = "";
-    for (let i = 0; i < rows.length; i++) {
-      const r = rows[i];
-      const pct = Math.max(3, Math.abs(r.ratio) / maxRatio * 100);
-      const color = POS_COLORS[r.position] || "var(--accent)";
-      html += '<div class="value-row">' +
-        '<span class="value-name">' + escapeHtml(r.name) + "</span>" +
-        '<span class="value-ratio">' + r.ratio.toFixed(1) + " " + t("dash.pts_per_m") + "</span>" +
-        '<div class="value-bar-wrap"><div class="value-bar" style="width:' + pct + "%;background:" + color + '"></div></div>' +
-        "</div>";
-    }
-    container.innerHTML = html;
-  }
-
   /* ── Position donut (selected matchday) ────────────────────────────────── */
 
   function renderDonut() {
@@ -460,6 +542,120 @@ const Scores = (() => {
     ];
 
     Charts.donut(svgEl, centerEl, legendEl, data);
+  }
+
+  /* ── Matchday insights: MVP/Flop + Transfer impact ─────────────────────── */
+
+  function renderMatchdayInsights() {
+    var mvpFlopEl = document.getElementById("insightsMvpFlop");
+    var transferEl = document.getElementById("insightsTransfer");
+    if (!mvpFlopEl) return;
+
+    var breakdown = _breakdownByMd[_selectedMd];
+    if (!breakdown || !breakdown.players || !breakdown.players.length) {
+      mvpFlopEl.innerHTML = '<p class="empty-note">' + t("dash.no_data_md") + "</p>";
+      if (transferEl) transferEl.innerHTML = "";
+      return;
+    }
+
+    var players = [];
+    for (var i = 0; i < breakdown.players.length; i++) {
+      var p = breakdown.players[i];
+      if (p.has_stats) players.push(p);
+    }
+
+    if (players.length === 0) {
+      mvpFlopEl.innerHTML = '<p class="empty-note">' + t("dash.no_data_md") + "</p>";
+      if (transferEl) transferEl.innerHTML = "";
+      return;
+    }
+
+    players.sort(function (a, b) { return b.total_points - a.total_points; });
+
+    var mvp = players[0];
+    var flop = players[players.length - 1];
+
+    var mvpHtml = buildInsightCard(mvp, true);
+    var flopHtml = buildInsightCard(flop, false);
+    mvpFlopEl.innerHTML = mvpHtml + flopHtml;
+
+    /* transfer impact */
+    if (transferEl) {
+      var transfers = _transfersByMd[_selectedMd];
+      if (!transfers || !transfers.length) {
+        transferEl.innerHTML = "";
+      } else {
+        var ptsIn = 0;
+        var ptsOut = 0;
+        var playerMap = {};
+        for (var j = 0; j < breakdown.players.length; j++) {
+          playerMap[breakdown.players[j].player_id] = breakdown.players[j].total_points;
+        }
+        for (var k = 0; k < transfers.length; k++) {
+          var xf = transfers[k];
+          var inPts = playerMap[xf.player_in_id] || 0;
+          var outPts = playerMap[xf.player_out_id] || 0;
+          ptsIn += inPts;
+          ptsOut += outPts;
+        }
+        var net = Math.round((ptsIn - ptsOut) * 100) / 100;
+        var isPos = net >= 0;
+        var barColor = isPos ? "var(--positive)" : "var(--danger)";
+        var netStr = isPos ? "+" + net : "" + net;
+        var label = t("dash.net_from_transfers", transfers.length);
+
+        var maxAbs = Math.max(Math.abs(ptsIn), Math.abs(ptsOut), 1);
+        var inPct = Math.round((ptsIn / maxAbs) * 100);
+        var outPct = Math.round((ptsOut / maxAbs) * 100);
+
+        var html = '<div class="insights-transfer__head">' +
+          '<span class="insights-transfer__label">' + t("dash.transfer_impact") + "</span>" +
+          '<span class="insights-transfer__net" style="color:' + barColor + '">' + netStr + " pts</span>" +
+          "</div>";
+        html += '<div class="insights-transfer__bar">';
+        html += '<div class="insights-transfer__seg insights-transfer__seg--in" style="width:' + inPct + '%;background:var(--positive)"></div>';
+        html += '<div class="insights-transfer__seg insights-transfer__seg--out" style="width:' + outPct + '%;background:var(--danger)"></div>';
+        html += "</div>";
+        html += '<div class="insights-transfer__legend">' +
+          '<span class="insights-transfer__leg-item"><span class="legend__swatch" style="background:var(--positive)"></span>' + t("dash.in") + " " + ptsIn + "</span>" +
+          '<span class="insights-transfer__leg-item"><span class="legend__swatch" style="background:var(--danger)"></span>' + t("dash.out") + " " + ptsOut + "</span>" +
+          '<span class="insights-transfer__leg-item insights-transfer__leg-item--net">' + label + "</span>" +
+          "</div>";
+        transferEl.innerHTML = html;
+      }
+    }
+  }
+
+  function buildInsightCard(player, isMvp) {
+    var seed = encodeURIComponent(player.name).replace(/'/g, "%27");
+    var avatarSrc = "https://api.dicebear.com/9.x/micah/svg?seed=" + seed + "&backgroundColor=c6f24a,a6d92e,7aa2ff,ffb06c&radius=50";
+    var posColor = POS_COLORS[player.position] || "var(--ink)";
+    var pts = player.total_points;
+    var ptsStr = pts >= 0 ? "+" + pts : "" + pts;
+    var cardClass = isMvp ? "insight-card insight-card--mvp" : "insight-card insight-card--flop";
+    var badge = isMvp ? t("dash.mvp") : t("dash.flop");
+
+    /* top 2 stats by absolute pts */
+    var stats = (player.stat_points || []).slice();
+    stats.sort(function (a, b) { return Math.abs(b.pts) - Math.abs(a.pts); });
+    var topStats = stats.slice(0, 2);
+    var statsHtml = "";
+    for (var s = 0; s < topStats.length; s++) {
+      var st = topStats[s];
+      var stPts = st.pts >= 0 ? "+" + st.pts : "" + st.pts;
+      statsHtml += '<span class="insight-card__stat">' + escapeHtml(t(st.label_key)) + " " + stPts + "</span>";
+    }
+
+    var html = '<div class="' + cardClass + '">';
+    html += '<div class="insight-card__badge">' + escapeHtml(badge) + "</div>";
+    html += '<img class="insight-card__avatar" src="' + avatarSrc + '" alt="" loading="lazy">';
+    html += '<div class="insight-card__info">';
+    html += '<span class="insight-card__name">' + escapeHtml(player.name) + "</span>";
+    html += '<span class="insight-card__stats">' + statsHtml + "</span>";
+    html += "</div>";
+    html += '<span class="insight-card__pts">' + ptsStr + "</span>";
+    html += "</div>";
+    return html;
   }
 
   /* ── Transfer history — expandable accordion ───────────────────────────── */
@@ -564,10 +760,11 @@ const Scores = (() => {
     renderCaptainImpact();
     renderComposition();
     renderRankTrajectory();
-    renderTopScorers();
+    renderLeagueComparison();
+    renderPlayerBreakdown();
     renderValueScatter();
-    renderEfficiencyBars();
     renderDonut();
+    renderMatchdayInsights();
     renderTransfers();
   }
 

@@ -1,22 +1,25 @@
 const HowToScore = (() => {
-  const common = [
-    { label: () => t("hts.appearance"), note: () => t("hts.up_to_60"), pts: 1 },
-    { label: () => t("hts.appearance"), note: () => t("hts.60_plus"), pts: 2 },
-    { label: () => t("hts.assist"), pts: 3 },
-  ];
-
   const tables = {
-    all: common,
+    all: [
+      { label: () => t("hts.appearance"), note: () => t("hts.up_to_60"), pts: 1 },
+      { label: () => t("hts.appearance"), note: () => t("hts.60_plus"), pts: 2 },
+      { label: () => t("hts.assist"), pts: 3 },
+    ],
     gkdef: [
       { label: () => t("hts.goal_scored"), pts: 7 },
       { label: () => t("hts.clean_sheet"), pts: 4 },
       { label: () => t("hts.saves"), note: () => t("hts.gk_only"), pts: 1 },
-      ...common,
+      { label: () => t("hts.penalty_save"), note: () => t("hts.gk_only"), pts: 8 },
+      { label: () => t("hts.appearance"), note: () => t("hts.up_to_60"), pts: 1 },
+      { label: () => t("hts.appearance"), note: () => t("hts.60_plus"), pts: 2 },
+      { label: () => t("hts.assist"), pts: 3 },
     ],
     midfwd: [
       { label: () => t("hts.goal_scored"), pts: 5 },
       { label: () => t("hts.shots_on_target"), note: () => t("hts.fwd_mid_only"), pts: 1 },
-      ...common,
+      { label: () => t("hts.appearance"), note: () => t("hts.up_to_60"), pts: 1 },
+      { label: () => t("hts.appearance"), note: () => t("hts.60_plus"), pts: 2 },
+      { label: () => t("hts.assist"), pts: 3 },
     ],
     deductions: [
       { label: () => t("hts.yellow"), pts: -1 },

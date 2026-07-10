@@ -19,26 +19,38 @@
   /* accent */
   --accent: #b8e850;
   --accent-2: #9cd838;
+  --accent-rgb: 184, 232, 80;
   --accent-12: rgba(184,232,80,.12);
   --accent-18: rgba(184,232,80,.18);
   --accent-glow: 0 8px 22px -10px rgba(184,232,80,.6);
   --accent-ink: #0a0c14;
 
+  /* positive — semantic green for wins, rank-up, transfer-in */
+  --positive: var(--accent);
+  --positive-rgb: 184, 232, 80;
+
   /* status */
   --blue: #7aa2ff;
+  --blue-rgb: 122, 162, 255;
   --blue-12: rgba(122,162,255,.12);
   --blue-18: rgba(122,162,255,.18);
   --warm: #ffb06c;
+  --warm-rgb: 255, 176, 108;
   --danger: #ff8f8f;
+  --danger-rgb: 255, 143, 143;
   --danger-soft: rgba(255,143,143,.14);
   --warning: #ffb06c;
   --warning-soft: rgba(255,176,108,.14);
 
   /* position */
   --pos-GK: #ffb06c;
+  --pos-GK-rgb: 255, 176, 108;
   --pos-DEF: #7aa2ff;
+  --pos-DEF-rgb: 122, 162, 255;
   --pos-MID: #7fe8de;
+  --pos-MID-rgb: 127, 232, 222;
   --pos-FWD: #ff8fb0;
+  --pos-FWD-rgb: 255, 143, 176;
 
   /* surfaces */
   --panel: linear-gradient(135deg, #161824, #0e1018);
@@ -161,9 +173,9 @@
   /* base — warm off-white with pink aurora */
   --bg: #FAF9FB;
   --bg-env:
-    radial-gradient(ellipse 80% 50% at 85% 0%, rgba(244,137,154,0.12) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 40% at 10% 90%, rgba(159,122,234,0.08) 0%, transparent 50%),
-    radial-gradient(ellipse 50% 30% at 60% 100%, rgba(244,137,154,0.06) 0%, transparent 45%);
+    radial-gradient(ellipse 80% 50% at 85% 0%, rgba(201,46,84,0.08) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 40% at 10% 90%, rgba(123,77,201,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 30% at 60% 100%, rgba(201,46,84,0.04) 0%, transparent 45%);
 
   /* text */
   --ink: #1E1B3A;
@@ -173,47 +185,59 @@
   --faint: #58546E;
   --faint-2: #48445E;
 
-  /* accent — coral pink */
-  --accent: #F4899A;
-  --accent-2: #E87A8B;
-  --accent-12: rgba(244,137,154,.16);
-  --accent-18: rgba(244,137,154,.24);
-  --accent-glow: 0 8px 24px -12px rgba(244,137,154,.48);
+  /* accent — deep coral (4.9:1 on bg, 5.15:1 for white-on-accent) */
+  --accent: #C92E54;
+  --accent-2: #B8284A;
+  --accent-rgb: 201, 46, 84;
+  --accent-12: rgba(201,46,84,.14);
+  --accent-18: rgba(201,46,84,.22);
+  --accent-glow: 0 8px 24px -12px rgba(201,46,84,.40);
   --accent-ink: #FFFFFF;
 
-  /* status — blue mapped to orchid, coral as warm */
-  --blue: #9F7AEA;
-  --blue-12: rgba(159,122,234,.12);
-  --blue-18: rgba(159,122,234,.18);
-  --warm: #F4899A;
-  --danger: #C05656;
-  --danger-soft: rgba(192,86,86,.14);
-  --warning: #E89548;
-  --warning-soft: rgba(232,149,72,.15);
+  /* positive — emerald green for wins, rank-up, transfer-in (4.5:1 on bg) */
+  --positive: #1A8B4A;
+  --positive-rgb: 26, 139, 74;
 
-  /* position — pink palette harmonized */
-  --pos-GK: #E89548;
-  --pos-DEF: #9F7AEA;
-  --pos-MID: #4ECDC4;
-  --pos-FWD: #F4899A;
+  /* status — orchid (5.3:1), deep coral warm, darker danger/warning */
+  --blue: #7B4DC9;
+  --blue-rgb: 123, 77, 201;
+  --blue-12: rgba(123,77,201,.12);
+  --blue-18: rgba(123,77,201,.18);
+  --warm: #C92E54;
+  --warm-rgb: 201, 46, 84;
+  --danger: #B04545;
+  --danger-rgb: 176, 69, 69;
+  --danger-soft: rgba(176,69,69,.14);
+  --warning: #C77324;
+  --warning-soft: rgba(199,115,36,.15);
+
+  /* position — darkened for ≥3:1 on white */
+  --pos-GK: #C77324;
+  --pos-GK-rgb: 199, 115, 36;
+  --pos-DEF: #7B4DC9;
+  --pos-DEF-rgb: 123, 77, 201;
+  --pos-MID: #1A9D94;
+  --pos-MID-rgb: 26, 157, 148;
+  --pos-FWD: #C92E54;
+  --pos-FWD-rgb: 201, 46, 84;
 
   /* surfaces — white with faint pink tint */
   --panel: linear-gradient(135deg, #FFFFFF, #FDF8FA);
   --panel-flush: linear-gradient(135deg, #FDFBFC, #F8F4F8);
   --panel-strong: linear-gradient(135deg, #FFFFFF, #F5F0F4);
   --toast: linear-gradient(135deg, #FFFFFF, #FDF8FA);
-  --tile: rgba(30,27,58,.14);
-  --tile-2: rgba(30,27,58,.10);
-  --inset: rgba(30,27,58,.16);
+  --tile: rgba(30,27,58,.18);
+  --tile-2: rgba(30,27,58,.14);
+  --inset: rgba(30,27,58,.18);
 
   /* themed helpers */
-  --surface-lime-glow: rgba(244,137,154,.16);
-  --surface-blue-glow: rgba(159,122,234,.12);
-  --surface-warm-glow: rgba(244,137,154,.10);
+  --surface-lime-glow: rgba(201,46,84,.14);
+  --surface-blue-glow: rgba(123,77,201,.12);
+  --surface-warm-glow: rgba(201,46,84,.08);
   --sidebar-bg: linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,244,250,.90)), rgba(245,240,244,.82);
-  --control-bg: rgba(30,27,58,.12);
-  --control-bg-soft: rgba(30,27,58,.08);
-  --control-bg-strong: rgba(30,27,58,.18);
+  --control-bg: rgba(30,27,58,.16);
+  --control-bg-soft: rgba(30,27,58,.12);
+  --control-bg-strong: rgba(30,27,58,.22);
   --dropdown-bg: rgba(255,255,255,.97);
   --overlay-scrim: rgba(30,27,58,.32);
   --tour-scrim: rgba(30,27,58,.28);
@@ -222,10 +246,10 @@
     radial-gradient(circle at 50% 50%, rgba(244,137,154,.06), transparent 18%),
     linear-gradient(180deg, rgba(255,255,255,.38), transparent 22%),
     linear-gradient(180deg, #F0EBF4, #E4DEEC);
-  --pitch-stroke: rgba(159,122,234,.14);
-  --pitch-line: rgba(159,122,234,.16);
-  --pitch-midline: rgba(159,122,234,.14);
-  --pitch-spot: rgba(159,122,234,.36);
+  --pitch-stroke: rgba(123,77,201,.14);
+  --pitch-line: rgba(123,77,201,.16);
+  --pitch-midline: rgba(123,77,201,.14);
+  --pitch-spot: rgba(123,77,201,.36);
   --pitch-shadow: inset 0 1px 0 rgba(255,255,255,.82), inset 0 -50px 70px rgba(30,27,58,.08);
   --token-bg: linear-gradient(150deg, rgba(255,255,255,.92), rgba(252,248,250,.72)), rgba(245,240,244,.86);
   --token-border: rgba(30,27,58,.14);
@@ -236,15 +260,15 @@
   --list-well: rgba(30,27,58,.12);
   --table-head-bg: linear-gradient(180deg, rgba(255,255,255,.98), rgba(245,240,244,.95));
   --sticky-panel-bg: linear-gradient(145deg, rgba(255,255,255,.96), rgba(240,235,242,.92));
-  --sticky-panel-border: rgba(244,137,154,.28);
+  --sticky-panel-border: rgba(201,46,84,.28);
   --sticky-panel-shadow: 0 -8px 24px -14px rgba(30,27,58,.18), inset 0 1px 0 rgba(255,255,255,.92);
   --rule-alert-bg: rgba(255,248,248,.97);
   --rule-alert-border: rgba(192,86,86,.28);
-  --tour-spotlight-border: rgba(244,137,154,.44);
+  --tour-spotlight-border: rgba(201,46,84,.44);
   --tour-spotlight-shadow:
     0 0 0 1px rgba(255,255,255,.6),
     0 18px 48px rgba(30,27,58,.16),
-    0 0 24px rgba(244,137,154,.14);
+    0 0 24px rgba(201,46,84,.14);
   --tour-card-border: rgba(30,27,58,.14);
   --tour-card-shadow: 0 24px 64px rgba(30,27,58,.18);
   --avatar-flag-bg: #F5F0F4;
@@ -253,7 +277,7 @@
 
   /* strokes */
   --stroke: rgba(30,27,58,.28);
-  --stroke-soft: rgba(30,27,58,.20);
+  --stroke-soft: rgba(30,27,58,.24);
   --stroke-mid: rgba(30,27,58,.34);
   --stroke-strong: rgba(30,27,58,.46);
   --hairline: rgba(30,27,58,.22);
@@ -268,12 +292,25 @@
   --chart-card-bg: rgba(255,255,255,.92);
   --chart-card-border: var(--stroke);
   --chart-card-shadow: var(--shadow-panel);
-  --chart-accent: #F4899A;
+  --chart-accent: #C92E54;
   --chart-grid-stroke: rgba(30,27,58,.20);
   --chart-axis-text: var(--muted);
   --chart-label-text: var(--ink);
   --chart-legend-text: var(--muted);
   --chart-dot-fill: #FAF9FB;
+
+  /* score composition segment colors — 11 distinct hues for light mode contrast */
+  --chart-goals: #E63946;
+  --chart-assists: #2A9D8F;
+  --chart-clean-sheets: #5B75E6;
+  --chart-minutes: #F4A261;
+  --chart-saves: #B5651D;
+  --chart-shots: #9B5DE5;
+  --chart-cards: #C1121F;
+  --chart-own-goals: #E76F51;
+  --chart-fouls: #6C757D;
+  --chart-offsides: #495057;
+  --chart-goals-conceded: #8338EC;
 }
 
 

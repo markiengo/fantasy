@@ -1,8 +1,8 @@
 # World Cup Fantasy Football 2026 — Software Requirements Specification
 
-**Version:** 3.3
+**Version:** 3.4
 **Author:** Tan
-**Last updated:** 2026-07-04
+**Last updated:** 2026-07-09
 
 ## 1. Introduction
 
@@ -113,6 +113,7 @@ Authorization decisions:
 | UC-11 | User | View leaderboard | Compare active managers overall or by matchday, and see most-picked players. |
 | UC-12 | Admin | Load stats | Update scorelines and player stats from ESPN. |
 | UC-13 | Operator | Seed demo users | Create presentation accounts and squads. |
+| UC-14 | User | Manage account | View account info (email, role, user ID) and update display name. Avatar selection from preset Dicebear seeds. |
 
 ## 5. Functional Requirements
 
@@ -142,8 +143,14 @@ Authorization decisions:
 | FR-20 | The UI supports English and Vietnamese. All text is translated — no hardcoded English. | All |
 | FR-21 | Language preference is saved and restored on return. | All |
 | FR-22 | Admin users are excluded from leaderboard ranking. They appear separately with an admin tag, not in the ranked list. | UC-11 |
-| FR-23 | Auth endpoints are rate-limited: login (10/min), profile completion (20/min) per client. | UC-02 |
+| FR-23 | Auth endpoints are rate-limited: login (10/min), profile completion (20/min), display name update (10/min) per client. | UC-02 |
 | FR-24 | Unsaved squad drafts persist to local storage so accidental refreshes don't lose progress. | UC-03 |
+| FR-27 | Users can update their display name from the account screen (PATCH /me). | UC-14 |
+| FR-28 | Users can view their account info including email, username, role, and user ID. | UC-14 |
+| FR-29 | Per-player stat breakdowns are available per matchday — raw stats, per-stat point breakdown, and total points with captain x2 applied per stat. | UC-09 |
+| FR-30 | League comparison shows the user's cumulative score vs the league average at each matchday. Admin scores are excluded from the league average. | UC-09 |
+| FR-31 | Penalty saves are scored at +8 points (GK only). | UC-09 |
+| FR-32 | Users can choose their avatar from a set of preset Dicebear personas seeds. The selection persists in local storage. | UC-14 |
 | FR-25 | Leaderboard ties are broken by: highest score, fewest transfers, most time remaining, then user ID. | UC-11 |
 | FR-26 | Each leaderboard entry includes time remaining, transfer count, and admin flag. | UC-11 |
 
@@ -227,7 +234,7 @@ Base scores are stored for fast reads. Captain doubling is applied at query time
 | NFR-09 | All user-facing text is translated — no hardcoded English in the UI. |
 | NFR-10 | Dates render using the user's locale format, not hardcoded month names. |
 | NFR-11 | All user-supplied text rendered in HTML is escaped to prevent XSS. |
-| NFR-12 | User profile pictures use Dicebear personas style with randomized pastel backgrounds. |
+| NFR-12 | User profile pictures use Dicebear personas style with randomized pastel backgrounds. Users can pick from preset avatar seeds on the account screen. |
 
 ## 10. Key Design Decisions
 
@@ -257,10 +264,11 @@ Base scores are stored for fast reads. Captain doubling is applied at query time
 
 Known current limits:
 
-- Auth endpoints have an in-process rate limit; production should add an edge/WAF limit.
+- Auth endpoints have an in-process rate limit (login, profile completion, display name update); production should add an edge/WAF limit.
 - Hosted Supabase has RLS enabled with no app-owned public policies; direct table access should remain denied.
 - Broad table grants on Supabase should be revoked before any permissive RLS policy is added.
 - Admin stat loads are not audit-logged.
+- CORS is configured via the `CORS_ALLOW_ORIGINS` environment variable; production should verify allowed origins are restrictive enough.
 
 ## 12. Verification
 

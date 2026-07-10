@@ -100,9 +100,49 @@ def _substitution_minutes(key_events):
     return subbed_on, subbed_off
 
 
+def _penalty_saves(key_events, rosters):
+    """Parse penalty---saved keyEvents and return {espn_id: count} for GKs who saved."""
+    team_id_to_abbr = {}
+    for side in rosters:
+        team = side.get("team") or {}
+        team_id_to_abbr[team.get("id")] = team.get("abbreviation")
+
+    gk_by_team = {}
+    for side in rosters:
+        team_abbr = (side.get("team") or {}).get("abbreviation")
+        for entry in side.get("roster", []):
+            if not entry.get("starter"):
+                continue
+            stats = {}
+            for s in (entry.get("stats") or []):
+                stats[s["name"]] = s.get("value", 0)
+            if "saves" in stats:
+                gk_by_team[team_abbr] = entry["athlete"]["id"]
+                break
+
+    saves = {}
+    for ev in key_events:
+        if (ev.get("type") or {}).get("type") != "penalty---saved":
+            continue
+        if ev.get("shootout"):
+            continue
+        attacking_team_id = (ev.get("team") or {}).get("id")
+        attacking_abbr = team_id_to_abbr.get(attacking_team_id)
+        defending_abbr = None
+        for abbr in team_id_to_abbr.values():
+            if abbr != attacking_abbr:
+                defending_abbr = abbr
+                break
+        gk_id = gk_by_team.get(defending_abbr)
+        if gk_id:
+            saves[gk_id] = saves.get(gk_id, 0) + 1
+    return saves
+
+
 def match_player_stats(event_id):
     data = _get("/summary?event=" + str(event_id))
     subbed_on, subbed_off = _substitution_minutes(data.get("keyEvents", []))
+    penalty_saves = _penalty_saves(data.get("keyEvents", []), data.get("rosters", []))
 
     out = []
     for side in data.get("rosters", []):
@@ -143,5 +183,6 @@ def match_player_stats(event_id):
                 "fouls_committed":   int(float(stats.get("foulsCommitted", 0) or 0)),
                 "offsides":          int(float(stats.get("offsides", 0) or 0)),
                 "goals_conceded":    int(float(stats.get("goalsConceded", 0) or 0)),
+                "penalty_saves":     penalty_saves.get(aid, 0),
             })
     return out

@@ -1,7 +1,7 @@
 # API And Game Logic Contract
 
-**Version:** 3.3
-**Last updated:** 2026-07-04
+**Version:** 3.4
+**Last updated:** 2026-07-09
 
 This document describes what the backend API does, what data it exchanges with the frontend, and the game rules it enforces. It's written for anyone who needs to understand the product's data contract — product managers, designers, and developers.
 
@@ -53,6 +53,8 @@ Auth failures:
 **Protected routes** (auth required):
 
 - `GET /me` — Current user profile
+- `PATCH /me` — Update display name
+- `GET /me/account` — View account info (includes email)
 - `POST /complete-profile` — Complete onboarding (choose display name)
 - `GET /squad` — View squad for a matchday
 - `POST /squad` — Save squad for a matchday
@@ -61,6 +63,8 @@ Auth failures:
 - `GET /analytics/squad-score` — View squad score
 - `GET /analytics/composition` — Score breakdown by category
 - `GET /analytics/rank-history` — Rank over time
+- `GET /analytics/player-breakdown` — Per-player raw stats and per-stat point breakdown
+- `GET /analytics/league-comparison` — User score vs league average per matchday
 - `GET /leaderboard` — Compare against other managers
 
 **Admin routes** (admin role required):
@@ -92,6 +96,7 @@ Base scores are stored per player per match (GR-08). Captain doubling is applied
 | Assist | +3 | +3 |
 | Clean sheet | 0 | +4 |
 | Saves (GK only) | 0 | +1 each |
+| Penalty saves (GK only) | 0 | +8 each |
 | Shots on target (FWD/MID only) | +1 each | 0 |
 | 60+ minutes | +2 | +2 |
 | 1-59 minutes | +1 | +1 |
@@ -177,9 +182,9 @@ Returns the authenticated user's profile: `{ user_id, username, display_name, ro
 
 **`POST /complete-profile`** — Auth required
 
-Completes onboarding for authenticated users who don't have a local profile (especially Google OAuth users). Accepts `{ username }` and creates the local profile.
+Completes onboarding for authenticated users who don't have a local profile (especially Google OAuth users). Accepts `{ display_name }` and creates the local profile. A unique username is auto-generated from the display name.
 
-Returns `{ user_id, username, display_name, role }`. Returns 400 for invalid display name, 409 if already completed or display name taken.
+Returns `{ user_id, username, display_name, role }`. Returns 400 for invalid display name (must be 2–30 characters), 409 if profile is already completed.
 
 ### View Squad — UC-05, GR-10
 
@@ -197,7 +202,7 @@ Returns 404 if no squad exists at or before the requested matchday.
 
 **`POST /squad`** — Auth required
 
-Creates or replaces the user's squad for a matchday. If a squad already exists for that matchday, players are replaced and the captain is updated. Enforces budget cap (GR-01), squad size (GR-02), formation (GR-03), national team limit (GR-04), and captain doubling (GR-09).
+Creates or replaces the user's squad for a matchday. Returns 201 on success. If a squad already exists for that matchday, players are replaced and the captain is updated. Enforces budget cap (GR-01), squad size (GR-02), formation (GR-03), national team limit (GR-04), and captain doubling (GR-09).
 
 Body:
 
@@ -221,7 +226,7 @@ Returns the user's transfer history, optionally filtered by matchday. Each entry
 
 **`POST /transfer`** — Auth required
 
-Swaps one player out and one player in for the current user. Enforces transfer limit (GR-05), transfer window lock (GR-07), and post-transfer squad validity (GR-01 to GR-04, GR-10).
+Swaps one player out and one player in for the current user. Returns 201 on success. Enforces transfer limit (GR-05), transfer window lock (GR-07), and post-transfer squad validity (GR-01 to GR-04, GR-10).
 
 Body:
 
@@ -236,6 +241,20 @@ Body:
 Returns: `{ transfer_id, player_in_id, player_in_name, player_out_id, player_out_name, matchday, transfers_used, transfers_remaining, budget_remaining }`
 
 Returns 400 if the transfer window is locked, max transfers reached, player not in squad, or the post-transfer squad violates game rules.
+
+### Update Display Name — UC-14
+
+**`PATCH /me`** — Auth required
+
+Updates the authenticated user's display name. Accepts `{ display_name }` (2–30 characters).
+
+Returns `{ user_id, username, display_name, role }`. Returns 400 for invalid display name, 404 if user not found.
+
+### View Account Info — UC-14
+
+**`GET /me/account`** — Auth required
+
+Returns the authenticated user's account info including email: `{ user_id, username, display_name, role, email }`. Returns 404 if user not found.
 
 ### Squad Score — UC-09, GR-08, GR-09
 
@@ -272,7 +291,7 @@ Breaks the user's matchday score into scoring categories: goals, assists, clean 
 
 Query: `matchday` (required)
 
-Response: `{ matchday, goals_pts, assist_pts, cs_pts, minute_pts, card_pts, saves_pts, sot_pts, own_goal_pts, foul_pts, offside_pts, gc_pts, total }`
+Response: `{ matchday, goals_pts, assist_pts, cs_pts, minute_pts, card_pts, saves_pts, psave_pts, sot_pts, own_goal_pts, foul_pts, offside_pts, gc_pts, total }`
 
 ### Rank History — UC-09
 
@@ -281,6 +300,44 @@ Response: `{ matchday, goals_pts, assist_pts, cs_pts, minute_pts, card_pts, save
 Returns the user's cumulative rank at each matchday where they have squad scores.
 
 Response: `{ rank_history: [{ matchday, rank, squad_score, total_managers }] }`
+
+### Player Breakdown — UC-09, GR-08, GR-09
+
+**`GET /analytics/player-breakdown`** — Auth required
+
+Returns per-player raw stats and per-stat point breakdown for a matchday. Captain x2 is applied per stat. Only non-zero stats are included in the stat breakdown. If matchday is omitted, defaults to the user's latest squad matchday.
+
+Query: optional `matchday`
+
+Response:
+
+```json
+{
+  "matchday": 1,
+  "players": [
+    {
+      "player_id": 1,
+      "name": "Name",
+      "position": "MID",
+      "is_captain": true,
+      "has_stats": true,
+      "raw": { "goals": 1, "assists": 0, "minutes_played": 90, "clean_sheet": 0, "yellow_cards": 0, "red_cards": 0, "saves": 0, "penalty_saves": 0, "own_goals": 0, "shots_on_target": 2, "fouls_committed": 1, "offsides": 0, "goals_conceded": 0 },
+      "stat_points": [
+        { "key": "goals", "label_key": "hts.goal_scored", "value": 1, "multiplier": 5, "pts": 10, "is_captain_doubled": true }
+      ],
+      "total_points": 18
+    }
+  ]
+}
+```
+
+### League Comparison — UC-09
+
+**`GET /analytics/league-comparison`** — Auth required
+
+Compares the user's cumulative score against the league average at each matchday. Admin scores are excluded from the league average.
+
+Response: `{ comparison: [{ matchday, user_score, league_avg }] }`
 
 ### Leaderboard — UC-11, GR-08, GR-09
 
@@ -369,12 +426,13 @@ The backend includes an in-process rate limiter for auth-sensitive endpoints:
 |---|---|---|
 | Login | 10 requests | per minute |
 | Complete profile | 20 requests | per minute |
+| Update display name | 10 requests | per minute |
 
 Rate-limited responses return 429 Too Many Requests. This is an in-process limiter — production should still add edge/WAF rate limits.
 
 ## Known Hardening Items
 
-- Configure CORS if the frontend is deployed on a different origin from the API.
+- CORS is configured via the `CORS_ALLOW_ORIGINS` environment variable (comma-separated origins). Production should verify the allowed origins are restrictive enough.
 - Add edge/WAF rate limits in front of the app. The in-process limiter is not a durable abuse boundary.
 - Supabase RLS is enabled but no app-owned public policies exist. Direct table access should remain denied.
 - Revoke broad table privileges before adding any permissive RLS policies.

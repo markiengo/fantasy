@@ -121,6 +121,7 @@ const SCREEN_COPY = {
   scores: { eyebrow: () => t("topbar.scores_eyebrow"), title: () => t("topbar.scores_title") },
   stats: { eyebrow: () => t("topbar.stats_eyebrow"), title: () => t("topbar.stats_title") },
   leaderboard: { eyebrow: () => t("topbar.leaderboard_eyebrow"), title: () => t("topbar.leaderboard_title") },
+  account: { eyebrow: () => t("topbar.account_eyebrow"), title: () => t("topbar.account_title") },
 };
 
 const THEME_KEY = "gaffer_theme";
@@ -303,6 +304,7 @@ function _doSwitchScreen(name) {
   if (name === "scores") Scores.render();
   if (name === "stats") Stats.render();
   if (name === "leaderboard") Leaderboard.render();
+  if (name === "account") { Account.bind(); Account.render(); }
 
   if (bar) {
     bar.style.width = "100%";
@@ -500,6 +502,7 @@ function hydrate(player) {
 }
 function applySquadForMatchday(squad, md, transfersUsed) {
   State.currentSquad.players = squad.players.map(hydrate);
+  State.currentSquad.bench = [];
   State.currentSquad.formation = inferFormation(State.currentSquad.players);
   const captain = State.currentSquad.players.find((p) => p.is_captain);
   State.currentSquad.captainId = captain ? captain.player_id : null;
@@ -518,9 +521,10 @@ async function loadSquadForMatchday(md) {
     ]);
     applySquadForMatchday(squad, md, transfersUsed);
   } catch (e) {
-    if (State.currentSquad.matchday !== md) State.currentSquad.players = [];
+    if (State.currentSquad.matchday !== md) { State.currentSquad.players = []; State.currentSquad.bench = []; }
     const draft = State.currentSquad.players;
     State.currentSquad.players = [];
+    State.currentSquad.bench = [];
     State.setBaseline();
     State.currentSquad.players = draft;
     State.squadSaved = false;
@@ -852,7 +856,7 @@ function hideAuthOverlay() {
 
 function resetAppStateForSession() {
   if (_freshLogin) {
-    State.currentSquad = { matchday: 1, formation: "4-3-3", players: [], captainId: null };
+    State.currentSquad = { matchday: 1, formation: "4-3-3", players: [], captainId: null, bench: [] };
   }
   State.squadSaved = false;
   State.transfersUsed = 0;
@@ -1176,15 +1180,13 @@ async function boot() {
     return;
   }
 
-  const signOutBtn = document.getElementById("signOutBtn");
-  if (signOutBtn) {
-    signOutBtn.addEventListener("click", async () => {
-      try {
-        localStorage.removeItem("wcf2026");
-        await window.signOut();
-        window.location.reload();
-      } catch (error) {
-        Toast.show(error.message || t("toast.signout_failed"), "error");
+  const profileBtn = document.getElementById("profileBtn");
+  if (profileBtn && profileBtn.dataset.bound !== "1") {
+    profileBtn.dataset.bound = "1";
+    profileBtn.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        profileBtn.click();
       }
     });
   }
@@ -1250,13 +1252,15 @@ async function continueBoot() {
   _usernameGateProfile = null;
   setAppGateInert(false);
 
+  Account.prepopulate(me);
+
   const profileName = document.querySelector(".profile__name");
   if (profileName && me.display_name) profileName.textContent = me.display_name;
 
   const managerAvatar = document.getElementById("managerAvatar");
   if (managerAvatar) {
-    const seed = me.display_name || me.user_id || "Gaffer";
-    managerAvatar.style.backgroundImage = "url('https://api.dicebear.com/9.x/personas/svg?seed=" + encodeURIComponent(seed) + "&backgroundColor=ffd5dc,e6d4f0,c4f0e8,ffe8c4,d4e8ff&radius=50')";
+    let seed = localStorage.getItem("gaffer_avatar_seed") || me.display_name || me.user_id || "Gaffer";
+    managerAvatar.style.backgroundImage = "url('https://api.dicebear.com/9.x/personas/svg?seed=" + encodeURIComponent(seed).replace(/'/g, "%27") + "&backgroundColor=ffd5dc,e6d4f0,c4f0e8,ffe8c4,d4e8ff&radius=50')";
   }
 
   if (me.role === "admin") {
@@ -1273,6 +1277,7 @@ async function continueBoot() {
   Squad.init();
   Fixtures.init();
   Leaderboard.init();
+  Account.bind();
 
   State.subscribe(() => {
     updateShellSummary();
@@ -1333,7 +1338,7 @@ async function continueBoot() {
     applySquadForMatchday(rawSquad, md, transfersUsed);
   } else {
     if (_freshLogin || !State.currentSquad.players || !State.currentSquad.players.length) {
-      State.currentSquad = { matchday: md, formation: "4-3-3", players: [], captainId: null };
+      State.currentSquad = { matchday: md, formation: "4-3-3", players: [], captainId: null, bench: [] };
     } else {
       State.currentSquad.matchday = md;
     }

@@ -18,7 +18,7 @@ const State = {
   currentMatchday: 1,
   players: [],
   teams: [],
-  currentSquad: { matchday: 1, formation: "4-3-3", players: [], captainId: null },
+  currentSquad: { matchday: 1, formation: "4-3-3", players: [], captainId: null, bench: [] },
   fixtures: [],
   scores: null,
   _subs: [],
@@ -50,7 +50,7 @@ const State = {
       if (!raw) return;
       const data = JSON.parse(raw);
       if (data.currentMatchday) this.currentMatchday = data.currentMatchday;
-      if (data.currentSquad) this.currentSquad = data.currentSquad;
+      if (data.currentSquad) { this.currentSquad = data.currentSquad; if (!this.currentSquad.bench) this.currentSquad.bench = []; }
       if (data.activeScreen) State._activeScreen = data.activeScreen;
       if (data.teamPane) State._teamPane = data.teamPane;
     } catch (e) { /* ignore corrupt state */ }
@@ -58,17 +58,18 @@ const State = {
 
   /* --- baseline snapshot (for "Cancel changes") --- */
   _baseline: null,
-  setBaseline() { this._baseline = JSON.stringify({ f: this.currentSquad.formation, p: this.currentSquad.players, c: this.currentSquad.captainId }); },
+  setBaseline() { this._baseline = JSON.stringify({ f: this.currentSquad.formation, p: this.currentSquad.players, b: this.currentSquad.bench, c: this.currentSquad.captainId }); },
   restoreBaseline() {
-    if (!this._baseline) { this.currentSquad.players = []; this.currentSquad.captainId = null; this.emit(); return; }
+    if (!this._baseline) { this.currentSquad.players = []; this.currentSquad.bench = []; this.currentSquad.captainId = null; this.emit(); return; }
     const b = JSON.parse(this._baseline);
     this.currentSquad.formation = b.f;
     this.currentSquad.players = b.p;
+    this.currentSquad.bench = b.b || [];
     this.currentSquad.captainId = b.c || null;
     this.emit();
   },
   isDirty() {
-    return this._baseline !== JSON.stringify({ f: this.currentSquad.formation, p: this.currentSquad.players, c: this.currentSquad.captainId });
+    return this._baseline !== JSON.stringify({ f: this.currentSquad.formation, p: this.currentSquad.players, b: this.currentSquad.bench, c: this.currentSquad.captainId });
   },
 
   /* --- render bus --- */
@@ -95,13 +96,14 @@ const State = {
   },
   hasPlayer(id) {
     for (const p of this.currentSquad.players) if (p.player_id === id) return true;
+    for (const p of this.currentSquad.bench) if (p.player_id === id) return true;
     return false;
   },
 
   /* --- rule check: why a player can or cannot be added now --- */
   addBlockReason(player) {
     if (this.hasPlayer(player.player_id)) return "Already in squad";
-    if (this.currentSquad.players.length >= RULES.squadSize) return "Squad full (11)";
+    if (this.currentSquad.players.length + this.currentSquad.bench.length >= RULES.squadSize) return "Squad full (11)";
     const need = FORMATIONS[this.currentSquad.formation];
     if (this.posCounts()[player.position] >= need[player.position]) return `No ${player.position} slot left`;
     const tc = this.teamCounts();
@@ -124,6 +126,7 @@ const State = {
   },
   removePlayer(id) {
     this.currentSquad.players = this.currentSquad.players.filter((p) => p.player_id !== id);
+    this.currentSquad.bench = this.currentSquad.bench.filter((p) => p.player_id !== id);
     if (this.currentSquad.captainId === id) this.currentSquad.captainId = null;
     this.emit();
   },
@@ -132,6 +135,7 @@ const State = {
     this.currentSquad.formation = formation;
     var need = FORMATIONS[formation];
     var counts = this.posCounts();
+    // Step 1: move overflow from active to bench
     for (var i = 0; i < POSITIONS.length; i++) {
       var pos = POSITIONS[i];
       while (counts[pos] > need[pos]) {
@@ -140,12 +144,40 @@ const State = {
           if (this.currentSquad.players[j].position === pos) { last = this.currentSquad.players[j]; break; }
         }
         if (!last) break;
+        this.currentSquad.bench.push(last);
         this.currentSquad.players = this.currentSquad.players.filter(function (p) { return p.player_id !== last.player_id; });
         if (this.currentSquad.captainId === last.player_id) this.currentSquad.captainId = null;
         counts[pos]--;
       }
     }
+    // Step 2: pull from bench to fill empty slots
+    for (var i = 0; i < POSITIONS.length; i++) {
+      var pos = POSITIONS[i];
+      while (counts[pos] < need[pos]) {
+        var found = null;
+        for (var j = 0; j < this.currentSquad.bench.length; j++) {
+          if (this.currentSquad.bench[j].position === pos) { found = this.currentSquad.bench[j]; break; }
+        }
+        if (!found) break;
+        this.currentSquad.players.push(found);
+        this.currentSquad.bench = this.currentSquad.bench.filter(function (p) { return p.player_id !== found.player_id; });
+        counts[pos]++;
+      }
+    }
     this.emit();
+  },
+  promoteFromBench(playerId) {
+    var player = null;
+    for (var i = 0; i < this.currentSquad.bench.length; i++) {
+      if (this.currentSquad.bench[i].player_id === playerId) { player = this.currentSquad.bench[i]; break; }
+    }
+    if (!player) return false;
+    var need = FORMATIONS[this.currentSquad.formation];
+    if (this.posCounts()[player.position] >= need[player.position]) return false;
+    this.currentSquad.players.push(player);
+    this.currentSquad.bench = this.currentSquad.bench.filter(function (p) { return p.player_id !== playerId; });
+    this.emit();
+    return true;
   },
   setMatchday(md) { this.currentMatchday = md; this.currentSquad.matchday = md; this.emit(); },
   setMode(m) { this.mode = m; this.emit(); },
@@ -169,6 +201,7 @@ const State = {
     if (!this._baseline) return [];
     const base = JSON.parse(this._baseline).p;
     const curIds = new Set(this.currentSquad.players.map((p) => p.player_id));
+    for (const p of this.currentSquad.bench) curIds.add(p.player_id);
     const baseIds = new Set(base.map((p) => p.player_id));
     const outs = [];
     const ins = [];
@@ -182,6 +215,7 @@ const State = {
   },
 
   isComplete() {
+    if (this.currentSquad.bench.length > 0) return false;
     if (this.currentSquad.players.length !== RULES.squadSize) return false;
     const need = FORMATIONS[this.currentSquad.formation];
     const c = this.posCounts();
