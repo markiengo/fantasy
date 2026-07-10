@@ -19,29 +19,29 @@
 
 .login-screen__ambient .glow {
   position: absolute;
-  width: 520px;
-  height: 520px;
+  width: 700px;
+  height: 700px;
   border-radius: 50%;
-  filter: blur(100px);
-  opacity: .22;
+  opacity: .45;
+  pointer-events: none;
 }
 
 .login-screen__ambient .glow--lime {
-  top: -180px;
-  right: 8%;
-  background: var(--surface-lime-glow);
+  top: -220px;
+  right: 4%;
+  background: radial-gradient(circle, var(--surface-lime-glow) 0%, transparent 70%);
 }
 
 .login-screen__ambient .glow--blue {
-  bottom: 5%;
-  left: 10%;
-  background: var(--surface-blue-glow);
+  bottom: 2%;
+  left: 6%;
+  background: radial-gradient(circle, var(--surface-blue-glow) 0%, transparent 70%);
 }
 
 .login-screen__ambient .glow--warm {
-  top: 45%;
-  right: 4%;
-  background: var(--surface-warm-glow);
+  top: 40%;
+  right: 2%;
+  background: radial-gradient(circle, var(--surface-warm-glow) 0%, transparent 70%);
 }
 
 .login-screen__card {

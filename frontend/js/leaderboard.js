@@ -384,6 +384,64 @@ const Leaderboard = (() => {
     } else {
       buildMatchdayStrip(new Set());
     }
+
+    _cachedRender = {
+      data: data,
+      availableMatchdays: availableMatchdays,
+      isPopular: isPopular,
+      showDelta: showDelta,
+      entries: entries,
+      nonAdminEntries: nonAdminEntries,
+      myEntry: myEntry,
+    };
+  }
+
+  let _cachedRender = null;
+
+  function retranslate() {
+    if (!_cachedRender) return;
+    var data = _cachedRender.data;
+    var availableMatchdays = _cachedRender.availableMatchdays;
+    var isPopular = _cachedRender.isPopular;
+    var showDelta = _cachedRender.showDelta;
+    var entries = _cachedRender.entries;
+    var nonAdminEntries = _cachedRender.nonAdminEntries;
+    var myEntry = _cachedRender.myEntry;
+    var scoredSet = new Set(availableMatchdays);
+
+    var list = document.getElementById("lbList");
+    var popular = document.getElementById("lbPopular");
+    var sticky = document.getElementById("lbSticky");
+    var summary = document.getElementById("lbSummary");
+    if (!list) return;
+
+    if (summary) summary.innerHTML = renderSummary(nonAdminEntries, myEntry);
+
+    if (isPopular) {
+      var popularPlayers = data.popular_players || [];
+      if (popular) popular.innerHTML = renderPopularCards(popularPlayers);
+      buildMatchdayStrip(scoredSet);
+      return;
+    }
+
+    list.classList.toggle("lb-list--matchday", showDelta);
+    list.classList.toggle("lb-list--overall", !showDelta);
+
+    if (!entries.length) {
+      var emptyCopy = _mode === "matchday" ? t("lb.no_data_md") : t("lb.no_data");
+      list.innerHTML = '<div class="lb-empty">' + emptyCopy + '</div>';
+      buildMatchdayStrip(scoredSet);
+      return;
+    }
+
+    list.innerHTML = renderTable(entries, showDelta);
+    if (sticky) sticky.innerHTML = renderSticky(myEntry);
+
+    if (_mode === "matchday") {
+      buildMatchdayStrip(scoredSet);
+    } else {
+      buildMatchdayStrip(new Set());
+    }
   }
 
   function bindToggle() {
@@ -401,7 +459,7 @@ const Leaderboard = (() => {
     bindToggle();
   }
 
-  return { render, init };
+  return { render, init, retranslate };
 })();
 
 

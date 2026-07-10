@@ -219,6 +219,10 @@ function currentTransferMatchday() {
 }
 
 function isWindowOpen(md) {
+  if (window._transferOverride) {
+    const current = currentTransferMatchday();
+    if (md === current - 1) return true;
+  }
   const meta = currentRoundMeta(md);
   const lock = roundLockTime(meta);
   if (!lock) return true;
@@ -228,6 +232,9 @@ window.isWindowOpen = isWindowOpen;
 
 function isTransferAllowed(md) {
   const current = currentTransferMatchday();
+  if (window._transferOverride) {
+    return md === current || md === current - 1;
+  }
   return md === current || md === current + 1;
 }
 window.isTransferAllowed = isTransferAllowed;
@@ -1269,6 +1276,11 @@ async function continueBoot() {
     if (updateBtn) updateBtn.hidden = false;
   }
 
+  if (me.transfer_override) {
+    window._transferOverride = true;
+    showOverrideOverlay();
+  }
+
   if (me.user_id) window._userId = me.user_id;
 
   Onboarding.maybeShow();
@@ -1378,9 +1390,9 @@ window.addEventListener("lang-changed", function () {
     Fixtures.setRound(State.currentMatchday);
     Fixtures.render();
   }
-  if (name === "scores") Scores.render();
-  if (name === "stats") Stats.render();
-  if (name === "leaderboard") Leaderboard.render();
+  if (name === "scores") Scores.retranslate();
+  if (name === "stats") Stats.retranslate();
+  if (name === "leaderboard") Leaderboard.retranslate();
 });
 
 if (document.readyState === "loading") {
@@ -1389,5 +1401,27 @@ if (document.readyState === "loading") {
   boot();
 }
 
+function showOverrideOverlay(onClose) {
+  const overlay = document.getElementById("overrideOverlay");
+  if (!overlay) return;
+  overlay.hidden = false;
+  requestAnimationFrame(() => overlay.classList.add("is-open"));
+  const closeBtn = document.getElementById("overrideClose");
+  const dismissBtn = document.getElementById("overrideDismiss");
+  var bound = false;
+  function close() {
+    if (bound) return;
+    bound = true;
+    overlay.classList.remove("is-open");
+    setTimeout(() => { overlay.hidden = true; }, 220);
+    if (typeof onClose === "function") onClose();
+  }
+  if (closeBtn) closeBtn.addEventListener("click", close, { once: true });
+  if (dismissBtn) dismissBtn.addEventListener("click", close, { once: true });
+  overlay.addEventListener("click", function (e) {
+    if (e.target === overlay) close();
+  }, { once: true });
+}
+window.showOverrideOverlay = showOverrideOverlay;
 
 

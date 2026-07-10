@@ -786,7 +786,12 @@ const Scores = (() => {
     return init();
   }
 
-  return { init: init, render: refresh, refresh: refresh };
+  function retranslate() {
+    if (_scoredMatchdays.length === 0) return;
+    renderAll();
+  }
+
+  return { init: init, render: refresh, refresh: refresh, retranslate: retranslate };
 })();
 
 

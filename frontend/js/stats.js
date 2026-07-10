@@ -108,6 +108,8 @@ const Stats = (() => {
     return html;
   }
 
+  let _cachedData = null;
+
   async function render() {
     const root = document.getElementById("screen-stats");
     if (!root) return;
@@ -119,6 +121,7 @@ const Stats = (() => {
 
     try {
       const data = await Api.getTopStats(5);
+      _cachedData = data;
       let html = `<div class="stats-grid">`;
       for (const cat of CATEGORIES) {
         html += renderCard(cat, data);
@@ -131,6 +134,20 @@ const Stats = (() => {
     Progress.done();
   }
 
-  return { render };
+  function retranslate() {
+    if (!_cachedData) return;
+    const root = document.getElementById("screen-stats");
+    if (!root) return;
+    const shell = root.querySelector(".stats-shell");
+    if (!shell) return;
+    let html = `<div class="stats-grid">`;
+    for (const cat of CATEGORIES) {
+      html += renderCard(cat, _cachedData);
+    }
+    html += `</div>`;
+    shell.innerHTML = html;
+  }
+
+  return { render, retranslate };
 })();
 window.Stats = Stats;

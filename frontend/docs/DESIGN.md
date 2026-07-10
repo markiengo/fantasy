@@ -1,7 +1,7 @@
 # Frontend Design Specification
 
 **Product:** Gaffer — WC26 Fantasy
-**Last updated:** 2026-07-09
+**Last updated:** 2026-07-10
 
 This is the canonical design document for the Gaffer frontend. It describes what users see, how the interface behaves, and the visual rules that keep the product consistent. Runtime code wins if this document ever drifts.
 
@@ -200,6 +200,12 @@ Rules:
 - Buttons use small press and hover movement.
 - Screen changes use a short enter animation.
 - Respect reduced-motion preferences.
+- **No `filter: blur()` on large or always-visible elements.** Use `radial-gradient` backgrounds for glow effects instead — blurred 600px circles cause GPU re-rasterization on every frame.
+- **No infinite animations on large elements.** Infinite animations are restricted to tiny indicators (≤6px pulse dots, small badges) or temporary loading states (skeleton shimmer, button spinner).
+- **No `background-attachment: fixed` on gradient backgrounds.** It forces full background recomposite on every scroll frame — a major CPU hog on lower-end hardware.
+- **Theme transitions must use scoped selectors, not `*`.** A universal `:root.theme-transitioning *` selector applies transitions to every DOM element simultaneously, causing CPU spikes. Scope transitions to specific element types (body, panels, sidebar, pitch, pool rows, player tokens).
+- **Language transitions must not use `filter: blur()` on `:root`.** A full-page blur filter during text swap forces the browser to re-rasterize the entire page. Use opacity-only fades.
+- **Language switches must not trigger API refetches.** Use cached `retranslate()` methods (Scores, Stats, Leaderboard) instead of full `render()` calls — a language switch only swaps text, it doesn't change data.
 
 ## 8. Components
 
@@ -345,6 +351,10 @@ Do not add:
 - Decorative UI that reduces scan density.
 - **Lime as a background tint, secondary button, hover state, decorative fill, or "currently viewing" indicator.** If you're reaching for lime and it's not the primary commit action, the live pill, or the current-user marker, use blue instead.
 - **More than one active lime element on screen at the same time.**
+- **`filter: blur()` on large or always-visible elements** — use `radial-gradient` for glows instead.
+- **`background-attachment: fixed` on gradient backgrounds** — causes scroll-frame recomposite spikes.
+- **Universal-selector transitions** (`:root.class *`) — scope to specific element types only.
+- **`filter: blur()` on `:root` or `body`** — forces full-page re-rasterization.
 
 ## 13. When Adding A New Frontend Feature
 

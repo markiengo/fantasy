@@ -9,7 +9,6 @@ body {
   color: var(--ink);
   background-color: var(--bg);
   background-image: var(--bg-env);
-  background-attachment: fixed;
   background-repeat: no-repeat;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
@@ -63,15 +62,15 @@ ul { list-style: none; }
 }
 .glow {
   position: absolute;
-  width: 420px;
-  height: 420px;
+  width: 600px;
+  height: 600px;
   border-radius: 50%;
-  filter: blur(80px);
-  opacity: .24;
+  opacity: .5;
+  pointer-events: none;
 }
-.glow--lime { top: -160px; right: 10%; background: var(--surface-lime-glow); }
-.glow--blue { bottom: 7%; left: 12%; background: var(--surface-blue-glow); }
-.glow--warm { top: 48%; right: 6%; background: var(--surface-warm-glow); }
+.glow--lime { top: -200px; right: 4%; background: radial-gradient(circle, var(--surface-lime-glow) 0%, transparent 70%); }
+.glow--blue { bottom: 2%; left: 6%; background: radial-gradient(circle, var(--surface-blue-glow) 0%, transparent 70%); }
+.glow--warm { top: 44%; right: 2%; background: radial-gradient(circle, var(--surface-warm-glow) 0%, transparent 70%); }
 
 .sidebar {
   position: sticky;
@@ -86,8 +85,8 @@ ul { list-style: none; }
   overflow: hidden;
   border-right: 1px solid var(--hairline);
   background: var(--sidebar-bg);
-  backdrop-filter: blur(28px) saturate(1.25);
-  -webkit-backdrop-filter: blur(28px) saturate(1.25);
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
 }
 .brand {
   display: flex;
@@ -351,8 +350,8 @@ ul { list-style: none; }
 .glass-subpanel {
   position: relative;
   background: var(--panel);
-  backdrop-filter: blur(var(--blur)) saturate(1.3);
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(1.3);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
   border: 1px solid var(--stroke);
   border-radius: var(--r-2xl);
   box-shadow: var(--shadow-panel);
@@ -404,25 +403,23 @@ ul { list-style: none; }
 :root[data-theme="light"] .theme-icon--sun { opacity: 0; transform: translate(-50%, -50%) rotate(90deg) scale(0.85); }
 :root[data-theme="light"] .theme-icon--moon { opacity: 1; transform: translate(-50%, -50%) rotate(0deg) scale(1); }
 
-/* Smooth theme transition — only during toggle */
-:root.theme-transitioning,
-:root.theme-transitioning * {
+/* Smooth theme transition — scoped to body + panels only to avoid CPU spike */
+:root.theme-transitioning body,
+:root.theme-transitioning .panel,
+:root.theme-transitioning .glass-subpanel,
+:root.theme-transitioning .sidebar,
+:root.theme-transitioning .pitch,
+:root.theme-transitioning .pool-row,
+:root.theme-transitioning .player-token {
   transition: background-color var(--dur-base) var(--ease),
               border-color var(--dur-base) var(--ease),
-              color var(--dur-base) var(--ease),
-              box-shadow var(--dur-base) var(--ease),
-              fill var(--dur-base) var(--ease),
-              stroke var(--dur-base) var(--ease) !important;
+              color var(--dur-base) var(--ease) !important;
 }
 
-/* Smooth language transition — fade + blur during text swap */
-:root,
+/* Smooth language transition — opacity fade only (blur on :root is too expensive) */
 :root.lang-transitioning {
-  transition: opacity var(--dur-fast) var(--ease), filter var(--dur-fast) var(--ease);
-}
-:root.lang-transitioning {
-  opacity: 0.55;
-  filter: blur(1.5px);
+  transition: opacity var(--dur-fast) var(--ease);
+  opacity: 0.6;
 }
 
 /* Reduced motion: strip transitions for accessibility */
@@ -433,7 +430,6 @@ ul { list-style: none; }
   }
   :root.lang-transitioning {
     opacity: 1;
-    filter: none;
     transition: none;
   }
 }
@@ -729,8 +725,8 @@ ul { list-style: none; }
   background: var(--toast);
   border: 1px solid var(--stroke-mid);
   box-shadow: var(--shadow-toast);
-  backdrop-filter: blur(26px) saturate(1.4);
-  -webkit-backdrop-filter: blur(26px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.3);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3);
   transition: opacity var(--dur-base) var(--ease), transform var(--dur-base) var(--ease);
 }
 .toast.is-hidden { opacity: 0; transform: translateY(10px); }
@@ -753,7 +749,7 @@ ul { list-style: none; }
   -webkit-backdrop-filter: blur(0px);
   opacity: 0;
   pointer-events: none;
-  transition: opacity var(--dur-enter) var(--ease-smooth), backdrop-filter var(--dur-enter) var(--ease-smooth);
+  transition: opacity var(--dur-enter) var(--ease-smooth);
 }
 .overlay.is-open,
 .welcome.is-open,
@@ -1294,5 +1290,125 @@ ul { list-style: none; }
   display: flex;
   gap: 10px;
   justify-content: center;
+}
+
+/* ── Override overlay (glassmorphism) ───────────────────────────────── */
+.override-overlay__panel {
+  position: relative;
+  max-width: 400px;
+  padding: 40px 32px 32px;
+  text-align: center;
+  border-radius: var(--r-2xl);
+  background: linear-gradient(135deg, rgba(22,24,36,0.85), rgba(14,16,24,0.92));
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  border: 1px solid rgba(var(--blue-rgb), 0.22);
+  box-shadow:
+    0 32px 80px -20px rgba(10,12,26,0.8),
+    0 0 0 1px rgba(var(--blue-rgb), 0.06),
+    inset 0 1px 0 rgba(var(--blue-rgb), 0.12);
+  transform: scale(0.9);
+  opacity: 0;
+  transition: transform var(--dur-enter) var(--ease-spring), opacity var(--dur-enter) var(--ease-smooth);
+}
+.override-overlay.is-open .override-overlay__panel {
+  transform: scale(1);
+  opacity: 1;
+}
+.override-overlay__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--stroke-soft);
+  background: var(--control-bg);
+  color: var(--muted);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.override-overlay__close:hover {
+  color: var(--ink);
+  background: var(--control-bg-strong);
+  border-color: var(--stroke-mid);
+}
+.override-overlay__glow {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--blue-rgb), 0.35) 0%, transparent 65%);
+  filter: blur(30px);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-enter) var(--ease-smooth);
+}
+.override-overlay.is-open .override-overlay__glow { opacity: 1; }
+.override-overlay__icon {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+  color: var(--blue);
+  filter: drop-shadow(0 0 16px rgba(var(--blue-rgb), 0.5));
+  animation: override-icon-spin 8s linear infinite;
+}
+@keyframes override-icon-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.override-overlay__label {
+  display: inline-block;
+  font-size: var(--fs-label);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--blue);
+  padding: 4px 12px;
+  border-radius: var(--r-pill);
+  background: var(--blue-12);
+  border: 1px solid rgba(var(--blue-rgb), 0.2);
+  margin-bottom: 14px;
+}
+.override-overlay__title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 12px;
+  line-height: 1.2;
+}
+.override-overlay__body {
+  color: var(--muted);
+  font-size: var(--fs-body);
+  line-height: 1.55;
+  margin-bottom: 24px;
+}
+.override-overlay__btn {
+  width: 100%;
+}
+
+/* ── Override overlay — light mode ──────────────────────────────────── */
+:root[data-theme="light"] .override-overlay .override-overlay__panel {
+  background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(253,248,250,0.98)) !important;
+  border-color: rgba(var(--blue-rgb), 0.28);
+  box-shadow:
+    0 32px 80px -20px rgba(30,27,58,0.25),
+    0 0 0 1px rgba(var(--blue-rgb), 0.08),
+    inset 0 1px 0 rgba(255,255,255,0.9);
+}
+:root[data-theme="light"] .override-overlay .override-overlay__glow {
+  background: radial-gradient(circle, rgba(var(--blue-rgb), 0.22) 0%, transparent 65%);
+}
+:root[data-theme="light"] .override-overlay .override-overlay__icon {
+  filter: drop-shadow(0 0 12px rgba(var(--blue-rgb), 0.35));
 }
 
