@@ -877,7 +877,7 @@ external IDs to local database IDs.
 | `seed_players.py`    | inserts every squad into `player`, assigns a `base_price`; writes `maps/idmap.json` (ESPN player id → our `player_id`)                                      | once, up front                                              |
 | `scrape_wikipedia_squads.py` | scrapes the Wikipedia "2026 FIFA World Cup squads" page; writes `maps/tournament_squad.json` (48 teams × 26 players — the canonical roster) | once, after FIFA publishes final squads; re-run if injury replacements are announced |
 | `activate_tournament_squads.py` | matches `tournament_squad.json` against the live `player` table by team_id + normalized name (exact + fuzzy), sets `in_tournament = true`, inserts missing players with position-based default prices | after `scrape_wikipedia_squads.py`; re-run when the Wikipedia map changes |
-| `load_stats.py`      | CLI loader for finished matches; pulls per-player stats and POSTs each row to `/api/playerstats` | after each matchday, when running manually                 |
+| `tools/repeat/load_stats.py` | CLI wrapper for the protected `/api/load-stats` endpoint; triggers the backend ESPN loader | after each matchday, when running manually                 |
 | `POST /api/load-stats` | backend loader route for the frontend Update Data flow when enabled; updates scorelines and inserts stats through `app/services/stat_loader.py` | when triggering refresh from the app or API                |
 
 Both stat-loading paths use the existing scoring path, so scores are computed by

@@ -513,7 +513,10 @@ function applySquadForMatchday(squad, md, transfersUsed) {
   State.currentSquad.formation = inferFormation(State.currentSquad.players);
   const captain = State.currentSquad.players.find((p) => p.is_captain);
   State.currentSquad.captainId = captain ? captain.player_id : null;
-  State.squadSaved = squad.matchday === md;
+  // The endpoint may return the most recent prior squad. An override user can
+  // transfer from that effective squad into the locked target round.
+  const isOverrideMatchday = window._transferOverride && md === currentTransferMatchday() - 1;
+  State.squadSaved = squad.matchday === md || isOverrideMatchday;
   State.transfersUsed = State.squadSaved ? transfersUsed : 0;
   State.setBaseline();
   State.mode = State.squadSaved ? "view" : "build";
@@ -1276,8 +1279,8 @@ async function continueBoot() {
     if (updateBtn) updateBtn.hidden = false;
   }
 
-  if (me.transfer_override) {
-    window._transferOverride = true;
+  window._transferOverride = Boolean(me.transfer_override);
+  if (window._transferOverride) {
     showOverrideOverlay();
   }
 

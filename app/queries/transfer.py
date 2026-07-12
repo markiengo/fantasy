@@ -1,3 +1,12 @@
+def lock_transfer_slot(conn, user_id, matchday):
+    """Serialize transfer requests for one user and matchday."""
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT pg_advisory_xact_lock(%s, %s)", (user_id, matchday))
+    finally:
+        cursor.close()
+
+
 def get_transfers(conn, user_id, matchday = None):
     cursor = conn.cursor()
     query = '''

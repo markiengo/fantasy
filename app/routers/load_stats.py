@@ -29,7 +29,7 @@ def load_stats_route(
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail="Failed to load stats: " + str(exc))
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail="Stats loader configuration is unavailable")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to load stats")

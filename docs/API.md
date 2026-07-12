@@ -176,7 +176,7 @@ Returns 401 for invalid credentials, 503 if the auth service is unreachable.
 
 **`GET /me`** — Auth required
 
-Returns the authenticated user's profile: `{ user_id, username, display_name, role }`. If the user has no local profile and no valid display name, returns `{ needs_username: true, email, name, avatar_url }` — the frontend blocks the app until the user completes their profile.
+Returns the authenticated user's profile: `{ user_id, username, display_name, role, transfer_override }`. If the user has no local profile and no valid display name, returns `{ needs_username: true, email, name, avatar_url }` — the frontend blocks the app until the user completes their profile.
 
 ### Complete Profile — UC-02
 

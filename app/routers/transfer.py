@@ -2,10 +2,10 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from app.database import get_db
 from app.auth import get_current_user
-from app.queries.transfer import get_transfers, post_transfer, count_transfers
+from app.queries.transfer import get_transfers, post_transfer, count_transfers, lock_transfer_slot
 from app.queries.player import get_player
 from app.queries.squad import get_effective_squad
-from app.queries.match import get_matchday_start
+from app.queries.match import get_matchday_start, get_current_transfer_matchday
 from app.schemas import TransferCreate
 from app.core.validation import validate_transfer_window, simulate_transfer, validate_squad, budget_cap, max_transfers
 
@@ -35,11 +35,18 @@ def post_transfer_route(
     if not player_out:
         raise HTTPException(status_code=404, detail=f"Player {body.player_out_id} not found")
 
+    current_transfer_matchday = get_current_transfer_matchday(conn)
+    has_override = bool(current_user.get("transfer_override", False))
+    override_matchday = has_override and current_transfer_matchday is not None and body.matchday == current_transfer_matchday - 1
+    if has_override and current_transfer_matchday is not None and body.matchday < current_transfer_matchday and not override_matchday:
+        raise HTTPException(status_code=403, detail="Override is limited to the previous matchday")
+
     first_kickoff = get_matchday_start(conn, body.matchday)
     if first_kickoff is not None:
         now_utc = datetime.now(timezone.utc)
-        validate_transfer_window(now_utc, first_kickoff, override=current_user.get("transfer_override", False))
+        validate_transfer_window(now_utc, first_kickoff, override=override_matchday)
 
+    lock_transfer_slot(conn, user_id, body.matchday)
     transfers_used = count_transfers(conn, user_id, body.matchday)
     transfers_remaining = max_transfers - transfers_used
     if transfers_remaining <= 0:

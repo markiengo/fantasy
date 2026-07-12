@@ -55,6 +55,28 @@ def get_matchday_start(conn, matchday):
     cursor.close()
     return row["first_kickoff"] if row else None
 
+def get_current_transfer_matchday(conn):
+    """Return the first round whose transfer lock has not passed."""
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT COALESCE(
+            MIN(matchday) FILTER (WHERE first_kickoff - INTERVAL '1 hour' > NOW()),
+            MAX(matchday)
+        ) AS matchday
+        FROM (
+            SELECT matchday, MIN(kickoff) AS first_kickoff
+            FROM match
+            WHERE kickoff IS NOT NULL
+            GROUP BY matchday
+        ) rounds
+        """
+    )
+    row = cursor.fetchone()
+    cursor.close()
+    return row["matchday"] if row and row["matchday"] is not None else None
+
+
 def find_match_by_teams(conn, team1_id, team2_id, stage=None):
     cursor = conn.cursor()
     filters = [
