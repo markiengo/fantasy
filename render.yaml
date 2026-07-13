@@ -4,6 +4,25 @@ services:
     runtime: python
     buildCommand: pip install --no-cache-dir -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    autoDeploy: true
+    buildFilter:
+      paths:
+        - app/**
+        - frontend/**
+        - requirements.txt
+        - render.yaml
+      ignoredPaths:
+        - docs/**
+        - personal/**
+        - tests/**
+        - tools/**
+        - .agents/**
+        - .claude/**
+        - .codex/**
+        - mcp_excalidraw/**
+        - README.md
+        - AGENTS.md
+        - CLAUDE.md
     envVars:
       - key: DATABASE_URL
         sync: false
