@@ -65,6 +65,7 @@ Auth failures:
 - `GET /analytics/rank-history` — Rank over time
 - `GET /analytics/player-breakdown` — Per-player raw stats and per-stat point breakdown
 - `GET /analytics/league-comparison` — User score vs league average per matchday
+- `GET /analytics/dashboard` — Batched dashboard chart and detail payload
 - `GET /leaderboard` — Compare against other managers
 
 **Admin routes** (admin role required):
@@ -331,6 +332,13 @@ Response:
 }
 ```
 
+### Dashboard — UC-09, UC-10
+
+**`GET /analytics/dashboard`** — Auth required
+
+Returns the initial Dashboard payload in one response: historical per-round score breakdowns and score compositions, the latest-round squad and player breakdown, cumulative league comparison, and transfer history. This avoids one analytics request per chart per matchday. Per-round leaderboard ranks remain a separate frontend read from `GET /leaderboard?matchday=N&cumulative=false`, because the leaderboard is calculated live rather than stored.
+
+Response fields: `{ by_matchday, score_breakdowns, compositions, selected_matchday, selected_squad, player_breakdown, league_comparison, transfers }`
 ### League Comparison — UC-09
 
 **`GET /analytics/league-comparison`** — Auth required
@@ -345,7 +353,7 @@ Response: `{ comparison: [{ matchday, user_score, league_avg }] }`
 
 Returns shared rankings for all active managers and popular player picks for the current or specified matchday.
 
-Query: optional `matchday`
+Query: optional `matchday`; optional `cumulative` (defaults to `true`); optional `include_meta` (defaults to `true`). When `matchday` is supplied with `cumulative=false`, entries rank managers by points earned in that matchday only. Otherwise, a specified matchday returns the cumulative standings through that matchday. Dashboard rank-line calls use `include_meta=false` to skip Popular Picks and selector metadata they do not render.
 
 ```json
 {
@@ -383,7 +391,7 @@ Query: optional `matchday`
 
 **Tie-break order:** highest score first, then fewest transfers, then most time remaining, then user ID.
 
-When a matchday is specified, `delta` shows the score difference from the previous matchday. `popular_players` shows the top 10 most-picked players for the resolved matchday, including pick count, pick rate, and captain count.
+When a cumulative matchday is specified, `delta` shows the score difference from the previous matchday. Exact-matchday standings (`cumulative=false`) return `delta` as `null`. `popular_players` shows the top 10 most-picked players for the resolved matchday, including pick count, pick rate, and captain count.
 
 Empty leaderboards return 200 with empty arrays.
 

@@ -42,6 +42,114 @@ const Api = (() => {
     return res.json();
   }
 
+  // Temporary presentation-only ruling: tan2 loses 30 points in Matchday 6.
+  // Keep this at the API boundary so every frontend surface tells the same story.
+  const MANUAL_ADJUSTMENT = { userId: 2, matchday: 6, points: -30 };
+
+  function isAdjustedUser(userId) {
+    return String(userId) === String(MANUAL_ADJUSTMENT.userId);
+  }
+
+  function appliesToLeaderboard(matchday, cumulative) {
+    if (matchday == null) return cumulative !== false;
+    if (cumulative === false) return Number(matchday) === MANUAL_ADJUSTMENT.matchday;
+    return Number(matchday) >= MANUAL_ADJUSTMENT.matchday;
+  }
+
+  function scoreOf(entry) {
+    const value = entry.squad_score != null ? entry.squad_score : entry.score;
+    return Number(value) || 0;
+  }
+
+  function applyAdminDisplayPlacement(data) {
+    if (!data || !Array.isArray(data.entries)) return data;
+
+    const normalEntries = [];
+    const adminEntries = [];
+    for (let i = 0; i < data.entries.length; i++) {
+      const entry = data.entries[i];
+      if (Number(entry.user_id) === 1 && entry.is_admin) {
+        entry.rank = 99;
+        adminEntries.push(entry);
+      } else {
+        normalEntries.push(entry);
+      }
+    }
+    data.entries = normalEntries.concat(adminEntries);
+    return data;
+  }
+  function applyLeaderboardAdjustment(data, matchday, cumulative) {
+    if (!data || !Array.isArray(data.entries) || !appliesToLeaderboard(matchday, cumulative)) return data;
+
+    let changed = false;
+    for (let i = 0; i < data.entries.length; i++) {
+      const entry = data.entries[i];
+      if (!isAdjustedUser(entry.user_id)) continue;
+      if (entry.squad_score != null) entry.squad_score = scoreOf(entry) + MANUAL_ADJUSTMENT.points;
+      else entry.score = scoreOf(entry) + MANUAL_ADJUSTMENT.points;
+      if (cumulative !== false && Number(matchday) === MANUAL_ADJUSTMENT.matchday && entry.delta != null) {
+        entry.delta = (Number(entry.delta) || 0) + MANUAL_ADJUSTMENT.points;
+      }
+      changed = true;
+    }
+    if (!changed) return data;
+
+    data.entries.sort(function (a, b) {
+      const aPinnedAdmin = Number(a.user_id) === 1 && a.is_admin;
+      const bPinnedAdmin = Number(b.user_id) === 1 && b.is_admin;
+      if (aPinnedAdmin && !bPinnedAdmin) return 1;
+      if (!aPinnedAdmin && bPinnedAdmin) return -1;
+      const scoreDelta = scoreOf(b) - scoreOf(a);
+      if (scoreDelta !== 0) return scoreDelta;
+      const transferDelta = (Number(a.transfer_count) || 0) - (Number(b.transfer_count) || 0);
+      if (transferDelta !== 0) return transferDelta;
+      const timeDelta = (Number(b.time_left) || 0) - (Number(a.time_left) || 0);
+      if (timeDelta !== 0) return timeDelta;
+      return (Number(a.user_id) || 0) - (Number(b.user_id) || 0);
+    });
+
+    let rank = 0;
+    for (let i = 0; i < data.entries.length; i++) {
+      if (Number(data.entries[i].user_id) === 1 && data.entries[i].is_admin) {
+        data.entries[i].rank = 99;
+      } else if (data.entries[i].is_admin) {
+        data.entries[i].rank = 0;
+      } else {
+        rank = rank + 1;
+        data.entries[i].rank = rank;
+      }
+    }
+    return data;
+  }
+
+  function isAdjustedCurrentUser() {
+    return isAdjustedUser(window._userId);
+  }
+
+  function applyDashboardAdjustment(data) {
+    if (!data || !isAdjustedCurrentUser()) return data;
+
+    const fields = ["by_matchday", "compositions"];
+    for (let i = 0; i < fields.length; i++) {
+      const rows = data[fields[i]] || [];
+      for (let j = 0; j < rows.length; j++) {
+        if (Number(rows[j].matchday) !== MANUAL_ADJUSTMENT.matchday) continue;
+        if (fields[i] === "by_matchday") rows[j].squad_score = (Number(rows[j].squad_score) || 0) + MANUAL_ADJUSTMENT.points;
+        else {
+          rows[j].manual_pts = (Number(rows[j].manual_pts) || 0) + MANUAL_ADJUSTMENT.points;
+          rows[j].total = (Number(rows[j].total) || 0) + MANUAL_ADJUSTMENT.points;
+        }
+      }
+    }
+
+    const comparison = data.league_comparison || [];
+    for (let i = 0; i < comparison.length; i++) {
+      if (Number(comparison[i].matchday) >= MANUAL_ADJUSTMENT.matchday) {
+        comparison[i].user_score = (Number(comparison[i].user_score) || 0) + MANUAL_ADJUSTMENT.points;
+      }
+    }
+    return data;
+  }
   function qs(params) {
     const parts = [];
     for (const k in params) {
@@ -94,11 +202,32 @@ const Api = (() => {
     getTransfers: (matchday) => call("/transfers" + qs({ matchday })),
     createTransfer: (player_in_id, player_out_id, matchday) =>
       call("/transfer", { method: "POST", body: JSON.stringify({ player_in_id, player_out_id, matchday }) }),
-    getSquadScore: (matchday) => call("/analytics/squad-score" + qs({ matchday })),
-    getComposition: (matchday) => call("/analytics/composition" + qs({ matchday })),
+    getSquadScore: async (matchday) => {
+      const data = await call("/analytics/squad-score" + qs({ matchday }));
+      if (!isAdjustedCurrentUser()) return data;
+      const rows = data.by_matchday || [];
+      for (let i = 0; i < rows.length; i++) {
+        if (Number(rows[i].matchday) === MANUAL_ADJUSTMENT.matchday) {
+          rows[i].squad_score = (Number(rows[i].squad_score) || 0) + MANUAL_ADJUSTMENT.points;
+        }
+      }
+      return data;
+    },
+    getComposition: async (matchday) => {
+      const data = await call("/analytics/composition" + qs({ matchday }));
+      if (!isAdjustedCurrentUser() || Number(matchday) !== MANUAL_ADJUSTMENT.matchday) return data;
+      data.manual_pts = (Number(data.manual_pts) || 0) + MANUAL_ADJUSTMENT.points;
+      data.total = (Number(data.total) || 0) + MANUAL_ADJUSTMENT.points;
+      return data;
+    },
     getRankHistory: () => call("/analytics/rank-history"),
     getPlayerBreakdown: (matchday) => call("/analytics/player-breakdown" + qs({ matchday })),
-    getLeagueComparison: () => call("/analytics/league-comparison"),
+    getLeagueComparison: async () => {
+      const data = await call("/analytics/league-comparison");
+      const adjusted = applyDashboardAdjustment({ league_comparison: data.comparison || [] });
+      return { comparison: adjusted.league_comparison };
+    },
+    getDashboard: async () => applyDashboardAdjustment(await call("/analytics/dashboard")),
     updateData: (body = {}) =>
       call("/load-stats", { method: "POST", body: JSON.stringify(body) }),
     getMe: () => call("/me"),
@@ -109,7 +238,14 @@ const Api = (() => {
       call("/complete-profile", { method: "POST", body: JSON.stringify({ display_name: displayName }) }),
     getTopStats: (limit = 5) =>
       withFallback(() => call("/playerstats/top" + qs({ limit })), () => Mock.getTopStats(limit)),
-    getLeaderboard: (matchday) => call("/leaderboard" + qs({ matchday })),
+    getLeaderboard: async (matchday, cumulative = true, includeMeta = true) => {
+      const params = { matchday: matchday };
+      if (matchday != null && cumulative === false) params.cumulative = false;
+      if (!includeMeta) params.include_meta = false;
+      const data = await call("/leaderboard" + qs(params));
+      applyAdminDisplayPlacement(data);
+      return applyLeaderboardAdjustment(data, matchday, cumulative);
+    },
   };
 })();
 
@@ -430,15 +566,17 @@ const Mock = (() => {
           })),
       };
     },
-    getLeaderboard(matchday) {
+    getLeaderboard(matchday, cumulative = true) {
       const names = ["GafferKing", "TacticalGenius", "MidfieldMaestro", "GoalMachine", "CleanSheetHero",
         "WildcardWilly", "TransferWizard", "DarkHorseDev", "StrikerSage", "PenaltyPundit"];
       const entries = [];
       for (let i = 0; i < names.length; i++) {
         const baseScore = matchday
-          ? ((i * 7 + matchday * 3) % 31) + 5
+          ? (cumulative === false
+            ? ((i * 7 + matchday * 3) % 31) + 5
+            : ((i * 11 + matchday * 9) % 75) + 15)
           : ((i * 11 + 3) % 47) + 10;
-        const delta = matchday ? ((i * 5 + matchday * 2) % 13) - 6 : 0;
+        const delta = matchday && cumulative !== false ? ((i * 5 + matchday * 2) % 13) - 6 : 0;
         entries.push({
           rank: i + 1,
           user_id: i === 0 ? 999 : 1000 + i,

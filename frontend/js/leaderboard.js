@@ -3,6 +3,14 @@ const Leaderboard = (() => {
   let _selectedMd = null;
   let _myUserId = null;
 
+  function isMatchdayRanking() {
+    return _mode === "matchday" || _mode === "round";
+  }
+
+  function usesMatchdaySelector() {
+    return isMatchdayRanking() || _mode === "popular";
+  }
+
   function avatarUrl(seed) {
     return "https://api.dicebear.com/9.x/personas/svg?seed=" + encodeURIComponent(seed) + "&backgroundColor=ffd5dc,e6d4f0,c4f0e8,ffe8c4,d4e8ff&radius=50";
   }
@@ -222,27 +230,27 @@ const Leaderboard = (() => {
   function buildMatchdayStrip(scoredSet) {
     const strip = document.getElementById("lbMdStrip");
     if (!strip) return;
-    if (_mode !== "matchday" && _mode !== "popular") { strip.hidden = true; return; }
+    if (!usesMatchdaySelector()) { strip.hidden = true; return; }
+
+    const scoredMatchdays = normalizeMatchdays(scoredSet);
+    if (!scoredMatchdays.length) {
+      strip.hidden = true;
+      strip.innerHTML = "";
+      return;
+    }
     strip.hidden = false;
 
-    const allMd = [];
-    for (const meta of _roundMeta) {
-      allMd.push(meta.matchday);
-    }
-    if (!allMd.length) { strip.innerHTML = ""; return; }
-
-    if (_selectedMd == null || !allMd.includes(_selectedMd)) {
-      _selectedMd = allMd[0];
+    if (_selectedMd == null || !scoredMatchdays.includes(_selectedMd)) {
+      _selectedMd = scoredMatchdays[scoredMatchdays.length - 1];
     }
 
     let html = "";
-    for (const md of allMd) {
+    for (const md of scoredMatchdays) {
       const meta = _roundMeta.find(function (r) { return r.matchday === md; });
       const label = roundDisplayLabel(md, meta);
       const active = md === _selectedMd;
-      const hasData = scoredSet && scoredSet.has(md);
-      const cls = "lb-md-tab" + (active ? " is-active" : "") + (!hasData ? " lb-md-tab--empty" : "");
-      html += '<button class="' + cls + '" type="button" data-md="' + md + '">' + escapeHtml(label) + '</button>';
+      const cls = "lb-md-tab" + (active ? " is-active" : "");
+      html += '<button class="' + cls + '" type="button" data-md="' + md + '" aria-pressed="' + active + '">' + escapeHtml(label) + '</button>';
     }
     strip.innerHTML = html;
 
@@ -306,6 +314,7 @@ const Leaderboard = (() => {
     if (!list) return;
 
     const isPopular = _mode === "popular";
+    const isRoundPoints = _mode === "round";
     const loadingMatchday = _mode === "matchday";
 
     Progress.start();
@@ -327,15 +336,15 @@ const Leaderboard = (() => {
     let data = null;
     let availableMatchdays = [];
     try {
-      if ((_mode === "matchday" || _mode === "popular") && _selectedMd == null) {
+      if (usesMatchdaySelector() && _selectedMd == null) {
         const seed = await Api.getLeaderboard(null);
         _myUserId = seed.my_user_id || _myUserId;
         availableMatchdays = normalizeMatchdays(seed.available_matchdays);
         chooseDefaultMatchday(availableMatchdays);
       }
 
-      const fetchMd = (_mode === "matchday" || _mode === "popular") ? _selectedMd : null;
-      data = await Api.getLeaderboard(fetchMd);
+      const fetchMd = usesMatchdaySelector() ? _selectedMd : null;
+      data = await Api.getLeaderboard(fetchMd, !isRoundPoints);
       availableMatchdays = normalizeMatchdays(data.available_matchdays);
       chooseDefaultMatchday(availableMatchdays);
     } catch (e) {
@@ -370,7 +379,7 @@ const Leaderboard = (() => {
     list.classList.toggle("lb-list--overall", !showDelta);
 
     if (!entries.length) {
-      const emptyCopy = _mode === "matchday" ? t("lb.no_data_md") : t("lb.no_data");
+      const emptyCopy = isMatchdayRanking() ? t("lb.no_data_md") : t("lb.no_data");
       list.innerHTML = '<div class="lb-empty">' + emptyCopy + '</div>';
       buildMatchdayStrip(scoredSet);
       return;
@@ -379,11 +388,7 @@ const Leaderboard = (() => {
     list.innerHTML = renderTable(entries, showDelta);
     if (sticky) sticky.innerHTML = renderSticky(myEntry);
 
-    if (_mode === "matchday") {
-      buildMatchdayStrip(scoredSet);
-    } else {
-      buildMatchdayStrip(new Set());
-    }
+    buildMatchdayStrip(scoredSet);
 
     _cachedRender = {
       data: data,
@@ -428,7 +433,7 @@ const Leaderboard = (() => {
     list.classList.toggle("lb-list--overall", !showDelta);
 
     if (!entries.length) {
-      var emptyCopy = _mode === "matchday" ? t("lb.no_data_md") : t("lb.no_data");
+      var emptyCopy = isMatchdayRanking() ? t("lb.no_data_md") : t("lb.no_data");
       list.innerHTML = '<div class="lb-empty">' + emptyCopy + '</div>';
       buildMatchdayStrip(scoredSet);
       return;
@@ -437,18 +442,18 @@ const Leaderboard = (() => {
     list.innerHTML = renderTable(entries, showDelta);
     if (sticky) sticky.innerHTML = renderSticky(myEntry);
 
-    if (_mode === "matchday") {
-      buildMatchdayStrip(scoredSet);
-    } else {
-      buildMatchdayStrip(new Set());
-    }
+    buildMatchdayStrip(scoredSet);
   }
 
   function bindToggle() {
     const btns = document.querySelectorAll(".lb-toggle__btn");
     btns.forEach(function (btn) {
       btn.addEventListener("click", function () {
-        btns.forEach(function (b) { b.classList.toggle("is-active", b === btn); });
+        btns.forEach(function (b) {
+          const active = b === btn;
+          b.classList.toggle("is-active", active);
+          b.setAttribute("aria-pressed", String(active));
+        });
         _mode = btn.dataset.mode;
         render();
       });

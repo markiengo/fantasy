@@ -459,3 +459,112 @@ def get_league_comparison(conn, user_id):
             "league_avg": round(league_avg, 2),
         })
     return result
+
+def get_dashboard_score_data(conn, user_id):
+    """Fetch every score-chart series for the dashboard in two aggregate queries."""
+    cursor = conn.cursor()
+    cursor.execute(f'''
+        SELECT s.matchday, ps.player_id, p.name, p.position, sp.is_captain,
+               SUM({captain_score_sql()}) AS player_score
+        FROM squad s
+        JOIN squadplayer sp ON s.squad_id = sp.squad_id
+        JOIN player p ON sp.player_id = p.player_id
+        JOIN playerstat ps ON sp.player_id = ps.player_id
+        JOIN match m ON ps.match_id = m.match_id AND m.matchday = s.matchday
+        WHERE s.user_id = %s
+        GROUP BY s.matchday, ps.player_id, p.name, p.position, sp.is_captain
+        ORDER BY s.matchday ASC, p.name ASC
+    ''', (user_id,))
+    score_rows = cursor.fetchall()
+
+    cursor.execute('''
+        SELECT
+            s.matchday,
+            SUM(CASE WHEN sp.is_captain THEN
+                (CASE WHEN p.position IN ('FWD', 'MID') THEN COALESCE(ps.goals, 0) * 5
+                      WHEN p.position = 'DEF' THEN COALESCE(ps.goals, 0) * 7
+                      ELSE COALESCE(ps.goals, 0) * 6 END) * 2
+                ELSE CASE WHEN p.position IN ('FWD', 'MID') THEN COALESCE(ps.goals, 0) * 5
+                          WHEN p.position = 'DEF' THEN COALESCE(ps.goals, 0) * 7
+                          ELSE COALESCE(ps.goals, 0) * 6 END END) AS goals_pts,
+            SUM(CASE WHEN sp.is_captain THEN COALESCE(ps.assists, 0) * 6 ELSE COALESCE(ps.assists, 0) * 3 END) AS assist_pts,
+            SUM(CASE WHEN p.position IN ('DEF', 'GK') THEN
+                CASE WHEN sp.is_captain THEN COALESCE(ps.clean_sheet, 0) * 8 ELSE COALESCE(ps.clean_sheet, 0) * 4 END
+                ELSE 0 END) AS cs_pts,
+            SUM(CASE WHEN sp.is_captain THEN
+                CASE WHEN COALESCE(ps.minutes_played, 0) >= 60 THEN 4 WHEN COALESCE(ps.minutes_played, 0) > 0 THEN 2 ELSE 0 END
+                ELSE CASE WHEN COALESCE(ps.minutes_played, 0) >= 60 THEN 2 WHEN COALESCE(ps.minutes_played, 0) > 0 THEN 1 ELSE 0 END END) AS minute_pts,
+            SUM(CASE WHEN sp.is_captain THEN -2 * (COALESCE(ps.yellow_cards, 0) + COALESCE(ps.red_cards, 0) * 3)
+                ELSE -(COALESCE(ps.yellow_cards, 0) + COALESCE(ps.red_cards, 0) * 3) END) AS card_pts,
+            SUM(CASE WHEN p.position = 'GK' THEN CASE WHEN sp.is_captain THEN COALESCE(ps.saves, 0) * 2 ELSE COALESCE(ps.saves, 0) END ELSE 0 END) AS saves_pts,
+            SUM(CASE WHEN p.position = 'GK' THEN CASE WHEN sp.is_captain THEN COALESCE(ps.penalty_saves, 0) * 16 ELSE COALESCE(ps.penalty_saves, 0) * 8 END ELSE 0 END) AS psave_pts,
+            SUM(CASE WHEN p.position IN ('FWD', 'MID') THEN CASE WHEN sp.is_captain THEN COALESCE(ps.shots_on_target, 0) * 2 ELSE COALESCE(ps.shots_on_target, 0) END ELSE 0 END) AS sot_pts,
+            SUM(CASE WHEN sp.is_captain THEN COALESCE(ps.own_goals, 0) * -6 ELSE COALESCE(ps.own_goals, 0) * -3 END) AS own_goal_pts,
+            SUM(CASE WHEN sp.is_captain THEN COALESCE(ps.fouls_committed, 0) * -1 ELSE COALESCE(ps.fouls_committed, 0) * -0.5 END) AS foul_pts,
+            SUM(CASE WHEN sp.is_captain THEN COALESCE(ps.offsides, 0) * -0.5 ELSE COALESCE(ps.offsides, 0) * -0.25 END) AS offside_pts,
+            SUM(CASE WHEN p.position IN ('DEF', 'GK') THEN CASE WHEN sp.is_captain THEN COALESCE(ps.goals_conceded, 0) * -1 ELSE COALESCE(ps.goals_conceded, 0) * -0.5 END ELSE 0 END) AS gc_pts
+        FROM squad s
+        JOIN squadplayer sp ON s.squad_id = sp.squad_id
+        JOIN player p ON sp.player_id = p.player_id
+        JOIN playerstat ps ON sp.player_id = ps.player_id
+        JOIN match m ON ps.match_id = m.match_id AND m.matchday = s.matchday
+        WHERE s.user_id = %s
+        GROUP BY s.matchday
+        ORDER BY s.matchday ASC
+    ''', (user_id,))
+    composition_rows = cursor.fetchall()
+    cursor.close()
+
+    by_matchday = []
+    score_breakdowns = []
+    current_matchday = None
+    current_breakdown = []
+    current_total = 0
+
+    for row in score_rows:
+        matchday = row["matchday"]
+        if current_matchday is not None and matchday != current_matchday:
+            by_matchday.append({"matchday": current_matchday, "squad_score": current_total})
+            score_breakdowns.append({"matchday": current_matchday, "breakdown": current_breakdown})
+            current_breakdown = []
+            current_total = 0
+        current_matchday = matchday
+        player_score = float(row["player_score"] or 0)
+        current_total += player_score
+        current_breakdown.append({
+            "player_id": row["player_id"],
+            "player_name": row["name"],
+            "position": row["position"],
+            "player_score": player_score,
+            "is_captain": row["is_captain"],
+        })
+
+    if current_matchday is not None:
+        by_matchday.append({"matchday": current_matchday, "squad_score": current_total})
+        score_breakdowns.append({"matchday": current_matchday, "breakdown": current_breakdown})
+
+    compositions = []
+    for row in composition_rows:
+        composition = {"matchday": row["matchday"]}
+        total = 0
+        keys = [
+            "goals_pts", "assist_pts", "cs_pts", "minute_pts", "card_pts", "saves_pts",
+            "psave_pts", "sot_pts", "own_goal_pts", "foul_pts", "offside_pts", "gc_pts",
+        ]
+        for key in keys:
+            value = float(row[key] or 0)
+            composition[key] = value
+            total += value
+        composition["total"] = total
+        compositions.append(composition)
+
+    latest_matchday = None
+    if by_matchday:
+        latest_matchday = by_matchday[-1]["matchday"]
+
+    return {
+        "by_matchday": by_matchday,
+        "score_breakdowns": score_breakdowns,
+        "compositions": compositions,
+        "latest_matchday": latest_matchday,
+    }

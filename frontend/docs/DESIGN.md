@@ -26,7 +26,7 @@ The app has two main states: the login screen and the authenticated dashboard.
 
 A full-screen centered card with the brand mark, a welcome title, and an email-or-username login form. A signup toggle reveals a display name field. Google sign-in is available as an alternative. The submit button is the only lime element on this screen — everything else uses blue and neutral tones.
 
-After Google OAuth redirect, users without a local profile see a blocking modal asking them to choose a display name (2–30 characters) before the app loads.
+After Google OAuth redirect, users without a local profile see a blocking modal asking them to choose a display name (2–30 characters) before the app loads. Once sign-in begins, a blocking login-shell loading layer prevents duplicate input and explains that the matchday desk is loading until the app shell takes over.
 
 ### Authenticated Dashboard — UC-03 to UC-11
 
@@ -39,7 +39,7 @@ Six screens:
 
 1. **Squad** — Build and manage your 11-player squad on a visual pitch. (UC-03, UC-04, UC-05, UC-06)
 2. **Fixtures** — Browse match schedules, group standings, and knockout brackets. (UC-08)
-3. **Dashboard** — View your squad's score breakdown, rank trajectory, league comparison, player breakdown, and transfer history. (UC-09, UC-10)
+3. **Dashboard** — View your squad's score breakdown, non-cumulative round points and rank, cumulative league comparison, player breakdown, and transfer history. (UC-09, UC-10)
 4. **Top Stats** — See the tournament's top fantasy performers by category. (UC-10)
 5. **Leaderboard** — Compare your ranking against all active managers and see popular picks. (UC-11)
 6. **Account** — View account info (email, username, role, user ID), update display name, choose avatar, and sign out. (UC-14)
@@ -264,7 +264,9 @@ Components include match cards with team flags and scores, group standings table
 
 ### Dashboard — UC-09, UC-10, GR-08, GR-09
 
-Components: total points hero with budget gauge and score trajectory area chart, score composition (adds/deductions split), captain impact, rank trajectory, you vs league average comparison, player breakdown (per-stat point breakdown with raw stats), value for money scatter, position contribution donut, matchday insights (MVP/flop/transfer suggestion), and transfer history with expandable matchday groups.
+Components: total points hero with budget gauge and score trajectory area chart, score composition (adds/deductions split), captain impact, a non-cumulative leaderboard-rank line for each round, cumulative you vs league average comparison, player breakdown (per-stat point breakdown with raw stats), value for money scatter, position contribution donut, matchday insights (MVP/flop/transfer suggestion), and transfer history with expandable matchday groups.
+
+**Matchday selection:** Every historical round remains visible in score composition, captain impact, and the rank line. Selecting a matchday only highlights its marks and updates selected-round detail cards; it never collapses a historical chart to one round.
 
 Chart primary lines and series use blue. Lime is reserved for a single "this is you" data point or marker, if one exists.
 
@@ -276,7 +278,7 @@ The lead row gets stronger visual emphasis using soft blue. This screen has no p
 
 ### Leaderboard — UC-11, GR-08, GR-09
 
-Three modes: overall, matchday, and popular picks.
+Four modes: overall, cumulative by matchday, non-cumulative round points, and popular picks.
 
 Components: summary block, overall/matchday/popular toggle, matchday tab strip, ranking table, sticky current-user row, zone color coding, admin badge, and popular players panel with pick count, pick rate, and captain count.
 

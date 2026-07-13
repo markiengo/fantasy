@@ -701,6 +701,7 @@ function bindUpdateData() {
 
     try {
       const result = await Api.updateData();
+      Scores.invalidate();
       await refreshLiveData();
       subtitle.textContent = t("update.complete");
       Toast.show(t("toast.data_updated", result.inserted || 0, result.matches_updated || 0), "success");
@@ -824,8 +825,13 @@ function updateAuthMode(mode) {
 function showLoginScreen() {
   const login = document.getElementById("loginScreen");
   const app = document.getElementById("appScreen");
-  if (login) login.style.display = "";
+  const authLoading = document.getElementById("authLoading");
+  if (login) {
+    login.style.display = "";
+    login.removeAttribute("aria-busy");
+  }
   if (app) app.style.display = "none";
+  if (authLoading) authLoading.hidden = true;
   hideAuthOverlay();
 }
 
@@ -1113,12 +1119,18 @@ async function boot() {
   function setAuthLoading(loading) {
     const submitBtn = document.getElementById("authSubmitBtn");
     const googleBtn = document.getElementById("googleSignInBtn");
+    const authLoading = document.getElementById("authLoading");
+    const loginScreen = document.getElementById("loginScreen");
     if (loading) {
       if (submitBtn) { submitBtn.classList.add("btn--loading"); submitBtn.disabled = true; }
       if (googleBtn) { googleBtn.classList.add("btn--loading"); googleBtn.disabled = true; }
+      if (authLoading) authLoading.hidden = false;
+      if (loginScreen) loginScreen.setAttribute("aria-busy", "true");
     } else {
       if (submitBtn) { submitBtn.classList.remove("btn--loading"); submitBtn.disabled = false; }
       if (googleBtn) { googleBtn.classList.remove("btn--loading"); googleBtn.disabled = false; }
+      if (authLoading) authLoading.hidden = true;
+      if (loginScreen) loginScreen.removeAttribute("aria-busy");
     }
   }
 

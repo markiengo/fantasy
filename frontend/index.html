@@ -130,6 +130,12 @@
       </div>
     </div>
 
+    <div id="authLoading" class="auth-loading" role="status" aria-live="polite" aria-atomic="true" hidden>
+      <div class="auth-loading__spinner" aria-hidden="true"></div>
+      <p class="auth-loading__title" data-i18n="login.signing_in">Signing you in</p>
+      <p class="auth-loading__copy" data-i18n="login.loading_desk">Loading your matchday desk…</p>
+    </div>
+
     <!-- USERNAME MODAL (Google users without username) -->
     <div id="usernameModal" class="username-modal" style="display:none">
       <div class="username-modal__card panel">
@@ -513,22 +519,26 @@
               <div class="chart chart--area" id="scoreTrajectory"></div>
             </article>
 
-            <!-- ROW 2: Score Composition (left) + Captain Impact & Rank Trajectory (right, stacked) -->
+            <!-- ROW 2: Score Composition (left) + round-level performance (right, stacked) -->
             <div class="dash__row dash__row--asym">
-              <article class="panel viz-card chart-reveal chart-reveal--2">
+              <article class="panel viz-card composition-card chart-reveal chart-reveal--2">
                 <div class="dash-card__head">
                   <span class="dash-card__dot"></span>
                   <b class="list-card__title" data-i18n="dash.score_composition">Score composition</b>
                   <span class="panel__hint" data-i18n="dash.where_points">Where points come from</span>
                 </div>
-                <span class="comp-sub-label" data-i18n="dash.adds">Adds</span>
-                <div class="chart chart--composition" id="compositionChartPos"></div>
-                <div class="comp-legend" id="compositionLegendPos"></div>
-                <span class="comp-sub-label" data-i18n="dash.deductions">Deductions</span>
-                <div class="chart chart--composition" id="compositionChartNeg"></div>
-                <div class="comp-legend" id="compositionLegendNeg"></div>
+                <div class="comp-section comp-section--adds">
+                  <span class="comp-sub-label" data-i18n="dash.adds">Adds</span>
+                  <div class="chart chart--composition" id="compositionChartPos"></div>
+                  <div class="comp-legend" id="compositionLegendPos"></div>
+                </div>
+                <div class="comp-section comp-section--deductions">
+                  <span class="comp-sub-label comp-sub-label--deductions" data-i18n="dash.deductions">Deductions</span>
+                  <div class="chart chart--composition" id="compositionChartNeg"></div>
+                  <div class="comp-legend" id="compositionLegendNeg"></div>
+                </div>
               </article>
-              <div class="dash__col">
+              <div class="dash__col dash__col--overview">
                 <article class="panel viz-card chart-reveal chart-reveal--3">
                   <div class="dash-card__head">
                     <span class="dash-card__dot"></span>
@@ -540,10 +550,10 @@
                 <article class="panel viz-card chart-reveal chart-reveal--4">
                   <div class="dash-card__head">
                     <span class="dash-card__dot"></span>
-                    <b class="list-card__title" data-i18n="dash.rank_trajectory">Rank trajectory</b>
-                    <span class="panel__hint" data-i18n="dash.your_position">Your position across matchdays</span>
+                    <b class="list-card__title" data-i18n="dash.round_rank">Round rank</b>
+                    <span class="panel__hint" data-i18n="dash.your_round_rank">Your leaderboard position in each round</span>
                   </div>
-                  <div class="chart chart--rank" id="rankChart"></div>
+                  <div class="chart chart--round" id="roundPointsChart"></div>
                 </article>
                 <article class="panel viz-card chart-reveal chart-reveal--4">
                   <div class="dash-card__head">
@@ -633,10 +643,11 @@
               </div>
               <h2 class="lb-card__title" data-i18n="lb.title">Leaderboard</h2>
               <p class="lb-card__subtitle" data-i18n="lb.subtitle">See how you stack up against every manager.</p>
-              <div class="lb-toggle">
-                <button class="lb-toggle__btn is-active" type="button" data-mode="overall" data-i18n="lb.overall">Overall</button>
-                <button class="lb-toggle__btn" type="button" data-mode="matchday" data-i18n="lb.by_matchday">By Matchday</button>
-                <button class="lb-toggle__btn" type="button" data-mode="popular" data-i18n="lb.popular">Popular Picks</button>
+              <div class="lb-toggle" role="group" data-i18n-aria-label="lb.view_switcher" aria-label="Leaderboard views">
+                <button class="lb-toggle__btn is-active" type="button" data-mode="overall" data-i18n="lb.overall" aria-pressed="true">Overall</button>
+                <button class="lb-toggle__btn" type="button" data-mode="matchday" data-i18n="lb.by_matchday" aria-pressed="false">By Matchday</button>
+                <button class="lb-toggle__btn" type="button" data-mode="round" data-i18n="lb.round_points" aria-pressed="false">Round Points</button>
+                <button class="lb-toggle__btn" type="button" data-mode="popular" data-i18n="lb.popular" aria-pressed="false">Popular Picks</button>
               </div>
               <div class="lb-summary" id="lbSummary" aria-label="Leaderboard summary"></div>
               <div class="lb-md-strip" id="lbMdStrip" hidden></div>

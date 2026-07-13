@@ -10,7 +10,7 @@ const Scores = (() => {
   let _breakdownByMd = {};    // { md: { matchday, players: [...] } }
   let _cumulativeData = [];  // [{ matchday, score }]
   let _compositionByMd = {}; // { md: { goals_pts, ... } }
-  let _rankHistory = [];     // [{ matchday, rank, score, total_managers }]
+  let _roundPointsByMd = {}; // { md: { matchday, points, rank, total_managers } }
   let _leagueComparison = []; // [{ matchday, user_score, league_avg }]
   let _squadByMd = {};       // { md: squadObj }
   let _transfersByMd = {};   // { md: [transferObj, ...] }
@@ -18,6 +18,10 @@ const Scores = (() => {
   let _selectedMd = null;
   let _scoredMatchdays = []; // matchdays that have score data
   let _hiddenPositions = {}; // scatter legend toggle state
+  let _loadVersion = 0;
+  let _roundPointsLoading = false;
+  let _dashboardLoaded = false;
+  let _dashboardLoadPromise = null;
 
   const POS_COLORS = {
     GK: "var(--pos-GK)",
@@ -38,99 +42,117 @@ const Scores = (() => {
 
   /* ── Data loading ──────────────────────────────────────────────────────── */
 
+  function storeRoundPoints(matchday, leaderboard) {
+    if (!leaderboard || !leaderboard.entries) return;
+
+    let myEntry = null;
+    let totalManagers = 0;
+    for (let i = 0; i < leaderboard.entries.length; i++) {
+      const entry = leaderboard.entries[i];
+      if (!entry.is_admin) totalManagers = totalManagers + 1;
+      if (String(entry.user_id) === String(leaderboard.my_user_id)) {
+        myEntry = entry;
+      }
+    }
+
+    if (!myEntry) return;
+    _roundPointsByMd[matchday] = {
+      matchday: matchday,
+      points: Number(myEntry.squad_score) || 0,
+      rank: myEntry.rank,
+      total_managers: totalManagers,
+      is_admin: Boolean(myEntry.is_admin)
+    };
+  }
+  async function loadSelectedMatchday(matchday, loadVersion) {
+    const data = await Promise.all([
+      Api.getSquad(matchday).catch(function () { return null; }),
+      Api.getPlayerBreakdown(matchday).catch(function () { return null; })
+    ]);
+
+    if (loadVersion !== _loadVersion) return;
+    if (data[0]) _squadByMd[matchday] = data[0];
+    if (data[1]) _breakdownByMd[matchday] = data[1];
+  }
+
+  async function loadRoundRanks(matchdays, loadVersion) {
+    const requests = [];
+    for (let i = 0; i < matchdays.length; i++) {
+      const md = matchdays[i];
+      requests.push(
+        Api.getLeaderboard(md, false, false).then(function (result) {
+          if (loadVersion === _loadVersion) storeRoundPoints(md, result);
+        }).catch(function () {})
+      );
+    }
+
+    await Promise.all(requests);
+    if (loadVersion !== _loadVersion) return;
+    _roundPointsLoading = false;
+    renderRoundRank();
+  }
+
+  function storeTransfers(transfers) {
+    _allTransfers = transfers || [];
+    for (let i = 0; i < _allTransfers.length; i++) {
+      const transfer = _allTransfers[i];
+      const md = transfer.matchday;
+      if (!_transfersByMd[md]) _transfersByMd[md] = [];
+      _transfersByMd[md].push(transfer);
+    }
+  }
+
   async function loadAll() {
+    const loadVersion = _loadVersion + 1;
+    _loadVersion = loadVersion;
     _cumulativeData = [];
     _scoreByMd = {};
     _breakdownByMd = {};
     _compositionByMd = {};
-    _rankHistory = [];
+    _roundPointsByMd = {};
     _leagueComparison = [];
     _squadByMd = {};
     _transfersByMd = {};
     _allTransfers = [];
 
-    /* cumulative score */
-    try {
-      const scoreRes = await Api.getSquadScore();
-      if (scoreRes && scoreRes.by_matchday) {
-        _cumulativeData = scoreRes.by_matchday;
-        _scoredMatchdays = [];
-        for (let i = 0; i < scoreRes.by_matchday.length; i++) {
-          _scoredMatchdays.push(scoreRes.by_matchday[i].matchday);
-        }
-      }
-    } catch (e) { /* no data yet */ }
+    const dashboard = await Api.getDashboard();
+    if (loadVersion !== _loadVersion) return null;
 
-    /* rank history */
-    try {
-      const rankRes = await Api.getRankHistory();
-      if (rankRes && rankRes.rank_history) {
-        _rankHistory = rankRes.rank_history;
-      }
-    } catch (e) { /* no data yet */ }
-
-    /* league comparison */
-    try {
-      const leagueRes = await Api.getLeagueComparison();
-      if (leagueRes && leagueRes.comparison) {
-        _leagueComparison = leagueRes.comparison;
-      }
-    } catch (e) { /* no data yet */ }
-
-    /* per-matchday data: score breakdown, composition, squad — all in parallel */
-    const mds = _scoredMatchdays.slice();
-    const promises = [];
-    for (let i = 0; i < mds.length; i++) {
-      const md = mds[i];
-      promises.push(
-        Api.getSquadScore(md).then(function (r) { if (r) _scoreByMd[md] = r; }).catch(function () {})
-      );
-      promises.push(
-        Api.getComposition(md).then(function (r) { if (r) _compositionByMd[md] = r; }).catch(function () {})
-      );
-      promises.push(
-        Api.getSquad(md).then(function (r) { if (r) _squadByMd[md] = r; }).catch(function () {})
-      );
-      promises.push(
-        Api.getPlayerBreakdown(md).then(function (r) { if (r) _breakdownByMd[md] = r; }).catch(function () {})
-      );
-    }
-    await Promise.all(promises);
-
-    /* if no scored matchdays, load breakdown for latest squad matchday */
-    if (_scoredMatchdays.length === 0) {
-      try {
-        const bd = await Api.getPlayerBreakdown();
-        if (bd && bd.matchday) {
-          _breakdownByMd[bd.matchday] = bd;
-          _selectedMd = bd.matchday;
-          try {
-            const sq = await Api.getSquad(bd.matchday);
-            if (sq) _squadByMd[bd.matchday] = sq;
-          } catch (e) { /* skip */ }
-        }
-      } catch (e) { /* no squad yet */ }
+    _cumulativeData = dashboard.by_matchday || [];
+    _scoredMatchdays = [];
+    for (let i = 0; i < _cumulativeData.length; i++) {
+      _scoredMatchdays.push(_cumulativeData[i].matchday);
     }
 
-    /* transfers (all) */
-    try {
-      _allTransfers = await Api.getTransfers();
-      for (let i = 0; i < _allTransfers.length; i++) {
-        const t = _allTransfers[i];
-        const md = t.matchday;
-        if (!_transfersByMd[md]) _transfersByMd[md] = [];
-        _transfersByMd[md].push(t);
-      }
-    } catch (e) { /* skip */ }
+    const scoreBreakdowns = dashboard.score_breakdowns || [];
+    for (let i = 0; i < scoreBreakdowns.length; i++) {
+      const score = scoreBreakdowns[i];
+      _scoreByMd[score.matchday] = score;
+    }
 
-    /* default selected matchday = latest scored */
-    if (_scoredMatchdays.length > 0) {
+    const compositions = dashboard.compositions || [];
+    for (let i = 0; i < compositions.length; i++) {
+      const composition = compositions[i];
+      _compositionByMd[composition.matchday] = composition;
+    }
+
+    _leagueComparison = dashboard.league_comparison || [];
+    storeTransfers(dashboard.transfers);
+    _selectedMd = dashboard.selected_matchday;
+    if (_selectedMd == null && _scoredMatchdays.length > 0) {
       _selectedMd = _scoredMatchdays[_scoredMatchdays.length - 1];
     }
+    if (dashboard.selected_squad && _selectedMd != null) {
+      _squadByMd[_selectedMd] = dashboard.selected_squad;
+    }
+    if (dashboard.player_breakdown && dashboard.player_breakdown.matchday != null) {
+      _breakdownByMd[dashboard.player_breakdown.matchday] = dashboard.player_breakdown;
+    }
+
+    _roundPointsLoading = _scoredMatchdays.length > 0;
+    return { loadVersion: loadVersion, matchdays: _scoredMatchdays.slice() };
   }
-
-  /* ── Matchday nav ──────────────────────────────────────────────────────── */
-
+  /* Dashboard matchday navigation. */
   function renderMatchdayNav() {
     const nav = document.getElementById("dashMatchdayNav");
     if (!nav) return;
@@ -165,8 +187,15 @@ const Scores = (() => {
   }
 
   function selectMatchday(md) {
+    if (_scoredMatchdays.indexOf(md) === -1 || md === _selectedMd) return;
     _selectedMd = md;
     renderAll();
+
+    if (_squadByMd[md] && _breakdownByMd[md]) return;
+    const loadVersion = _loadVersion;
+    loadSelectedMatchday(md, loadVersion).then(function () {
+      if (loadVersion === _loadVersion && _selectedMd === md) renderAll();
+    });
   }
 
   /* ── Hero: total + budget + trajectory ─────────────────────────────────── */
@@ -311,18 +340,27 @@ const Scores = (() => {
 
   /* ── Rank trajectory ───────────────────────────────────────────────────── */
 
-  function renderRankTrajectory() {
-    const container = document.getElementById("rankChart");
+  function renderRoundRank() {
+    const container = document.getElementById("roundPointsChart");
     if (!container) return;
 
+    if (_roundPointsLoading) {
+      container.innerHTML = '<p class="empty-note">' + t("dash.loading_round_rank") + '</p>';
+      return;
+    }
+
     const chartData = [];
-    for (let i = 0; i < _rankHistory.length; i++) {
+    const mds = _scoredMatchdays.slice();
+    for (let i = 0; i < mds.length; i++) {
+      const md = mds[i];
+      const row = _roundPointsByMd[md];
+      if (!row || !row.rank || row.rank < 1) continue;
       chartData.push({
-        matchday: _rankHistory[i].matchday,
-        rank: _rankHistory[i].rank,
-        squad_score: _rankHistory[i].squad_score,
-        total_managers: _rankHistory[i].total_managers,
-        label: mdLabel(_rankHistory[i].matchday)
+        matchday: md,
+        rank: row.rank,
+        squad_score: row.points,
+        total_managers: row.total_managers,
+        label: mdLabel(md)
       });
     }
 
@@ -331,8 +369,6 @@ const Scores = (() => {
       onPointClick: selectMatchday
     });
   }
-
-  /* ── League comparison (cumulative) ────────────────────────────────────── */
 
   function renderLeagueComparison() {
     var container = document.getElementById("leagueChart");
@@ -759,7 +795,7 @@ const Scores = (() => {
     renderHero();
     renderCaptainImpact();
     renderComposition();
-    renderRankTrajectory();
+    renderRoundRank();
     renderLeagueComparison();
     renderPlayerBreakdown();
     renderValueScatter();
@@ -771,19 +807,37 @@ const Scores = (() => {
   /* ── Public API ────────────────────────────────────────────────────────── */
 
   async function init() {
-    Progress.start();
-    try {
-      await loadAll();
+    if (_dashboardLoaded) {
       renderAll();
-    } catch (e) {
-      console.error("Dashboard load error:", e);
-    } finally {
-      Progress.done();
+      return;
     }
+    if (_dashboardLoadPromise) return _dashboardLoadPromise;
+
+    _dashboardLoadPromise = (async function () {
+      Progress.start();
+      try {
+        const loadState = await loadAll();
+        renderAll();
+        if (loadState && loadState.matchdays.length > 0) {
+          _dashboardLoaded = true;
+          loadRoundRanks(loadState.matchdays, loadState.loadVersion);
+        }
+      } catch (e) {
+        console.error("Dashboard load error:", e);
+      } finally {
+        Progress.done();
+        _dashboardLoadPromise = null;
+      }
+    })();
+    return _dashboardLoadPromise;
   }
 
   function refresh() {
     return init();
+  }
+
+  function invalidate() {
+    _dashboardLoaded = false;
   }
 
   function retranslate() {
@@ -791,7 +845,7 @@ const Scores = (() => {
     renderAll();
   }
 
-  return { init: init, render: refresh, refresh: refresh, retranslate: retranslate };
+  return { init: init, render: refresh, refresh: refresh, retranslate: retranslate, invalidate: invalidate };
 })();
 
 

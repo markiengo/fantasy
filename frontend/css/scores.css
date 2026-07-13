@@ -103,6 +103,23 @@
   gap: 16px;
 }
 
+.dash__col--overview {
+  display: grid;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  min-height: 0;
+}
+
+.dash__col--overview .viz-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.dash__col--overview .chart {
+  flex: 1;
+  min-height: 160px;
+}
+
 /* ── Hero card ───────────────────────────────────────────────────────────── */
 
 .dashboard-hero {
@@ -242,7 +259,7 @@
 .chart--area { min-height: 120px; }
 .chart--captain { min-height: 160px; }
 .chart--composition { min-height: 120px; }
-.chart--rank { min-height: 160px; }
+.chart--round { min-height: 160px; }
 .chart--scatter { min-height: 200px; }
 
 /* ── SVG chart shared styles ─────────────────────────────────────────────── */
@@ -361,18 +378,95 @@
 
 /* ── Composition legend ──────────────────────────────────────────────────── */
 
-.comp-sub-label {
-  display: block;
+.composition-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.comp-section {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: 14px;
+  overflow: hidden;
+  border: 1px solid var(--stroke);
+  border-radius: var(--r-md);
+  background: var(--control-bg-soft);
+}
+
+.comp-section::before {
+  position: absolute;
+  z-index: -1;
+  inset: -42px -24px auto auto;
+  width: 150px;
+  height: 110px;
+  border-radius: 50%;
+  content: "";
+  filter: blur(20px);
+  opacity: .72;
+}
+
+.comp-section--adds {
+  border-color: rgba(var(--positive-rgb), .30);
+  background: linear-gradient(135deg, rgba(var(--positive-rgb), .12), rgba(var(--positive-rgb), .025) 58%);
+  box-shadow: inset 0 1px 0 rgba(var(--positive-rgb), .15), 0 12px 28px -22px rgba(var(--positive-rgb), .72);
+}
+
+.comp-section--adds::before {
+  background: rgba(var(--positive-rgb), .24);
+}
+
+.comp-section--deductions {
+  flex: 1.2;
+  margin-top: 16px;
+  border-color: rgba(var(--danger-rgb), .30);
+  background: linear-gradient(135deg, rgba(var(--danger-rgb), .12), rgba(var(--danger-rgb), .025) 58%);
+  box-shadow: inset 0 1px 0 rgba(var(--danger-rgb), .15), 0 12px 28px -22px rgba(var(--danger-rgb), .72);
+}
+
+.comp-section--deductions::before {
+  background: rgba(var(--danger-rgb), .24);
+}
+
+.comp-section .comp-sub-label {
+  display: flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding: 4px 8px;
+  border: 1px solid rgba(var(--positive-rgb), .26);
+  border-radius: var(--r-pill);
+  background: rgba(var(--positive-rgb), .12);
+  color: var(--positive);
   font-size: 12px;
   font-weight: 800;
   letter-spacing: .06em;
   text-transform: uppercase;
-  color: var(--muted);
-  margin-top: 14px;
-  margin-bottom: 4px;
 }
-.comp-sub-label:first-of-type { margin-top: 4px; }
 
+.comp-section .comp-sub-label::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+}
+
+.comp-sub-label--deductions {
+  border-color: rgba(var(--danger-rgb), .26) !important;
+  background: var(--danger-soft) !important;
+  color: var(--danger) !important;
+}
+
+.composition-card .chart--composition {
+  flex: 1;
+  min-height: 108px;
+}
 .comp-legend {
   display: flex;
   flex-wrap: wrap;
@@ -512,7 +606,8 @@
 /* ── Bars (existing, kept for compatibility) ─────────────────────────────── */
 
 .bars {
-  height: 180px;
+  height: 100%;
+  min-height: 128px;
   display: flex;
   align-items: flex-end;
   gap: 14px;
@@ -525,21 +620,39 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  gap: 7px;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
 }
 .bar__fill {
   width: min(100%, 70px);
   min-height: 3px;
   border-radius: 8px 8px 0 0;
-  background: linear-gradient(180deg, var(--accent), var(--accent-2));
+  background: var(--blue);
+  opacity: .62;
+  transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
 }
+.bar:hover .bar__fill,
+.bar:focus-visible .bar__fill,
+.bar.is-selected .bar__fill {
+  opacity: 1;
+  transform: scaleX(1.04);
+}
+.bar:focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; }
 .bar__val,
-.bar__label {
+.bar__label,
+.bar__detail {
   color: var(--ink-2);
   font-size: 11px;
   font-weight: 800;
 }
+.bar__detail,
 .bar__label { color: var(--muted-2); }
+.bar.is-selected .bar__val { color: var(--blue); }
 
 /* ── Delta badges ────────────────────────────────────────────────────────── */
 
@@ -800,6 +913,7 @@
   .dash__row--asym { grid-template-columns: 1fr; }
   .dash__row--breakdown { grid-template-columns: 1fr; }
   .dash__col { gap: 12px; }
+  .dash__col--overview { display: flex; }
 }
 
 @media (max-width: 760px) {

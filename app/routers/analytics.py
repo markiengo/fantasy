@@ -2,15 +2,42 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.database import get_db
 from app.auth import get_current_user
+from app.queries.squad import get_squad
+from app.queries.transfer import get_transfers
 from app.queries.analytics import (
     get_squad_score,
     get_squad_score_composition,
     get_rank_history,
     get_player_breakdown,
     get_league_comparison,
+    get_dashboard_score_data,
 )
 
 router = APIRouter()
+
+
+def _build_squad(rows):
+    if not rows:
+        return None
+    first = rows[0]
+    players = []
+    for row in rows:
+        players.append({
+            "player_id": row["player_id"],
+            "name": row["player_name"],
+            "position": row["position"],
+            "team_id": row["team_id"],
+            "team_name": row["team_name"],
+            "base_price": row["base_price"],
+            "is_captain": row["is_captain"],
+        })
+    return {
+        "squad_id": first["squad_id"],
+        "matchday": first["matchday"],
+        "budget_used": first["budget_used"],
+        "budget_remaining": first["budget_remaining"],
+        "players": players,
+    }
 
 # Without ?matchday= → cumulative score grouped by matchday.
 # With ?matchday=X   → per-player breakdown for that matchday (captain x2 applied).
@@ -92,3 +119,32 @@ def get_league_comparison_route(
 ):
     result = get_league_comparison(conn, current_user["user_id"])
     return {"comparison": result}
+
+# One response for the dashboard's initial render. Historical composition and
+# captain data are aggregated server-side so the browser does not fan out into
+# a request per matchday.
+@router.get("/analytics/dashboard")
+def get_dashboard_route(
+    conn = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    user_id = current_user["user_id"]
+    dashboard = get_dashboard_score_data(conn, user_id)
+    latest_matchday = dashboard["latest_matchday"]
+
+    selected_squad = None
+    player_breakdown = {"matchday": None, "players": []}
+    if latest_matchday is not None:
+        selected_squad = _build_squad(get_squad(conn, user_id, latest_matchday))
+        player_breakdown = get_player_breakdown(conn, user_id, latest_matchday)
+
+    return {
+        "by_matchday": dashboard["by_matchday"],
+        "score_breakdowns": dashboard["score_breakdowns"],
+        "compositions": dashboard["compositions"],
+        "selected_matchday": latest_matchday,
+        "selected_squad": selected_squad,
+        "player_breakdown": player_breakdown,
+        "league_comparison": get_league_comparison(conn, user_id),
+        "transfers": get_transfers(conn, user_id),
+    }

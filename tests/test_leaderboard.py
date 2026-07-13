@@ -380,3 +380,55 @@ def test_route_my_user_id_correct():
     assert data["my_user_id"] == 42
 
     teardown_client()
+
+def test_round_points_filter_passes_exact_matchday_params():
+    rows = [
+        {"user_id": 1, "username": "alice", "display_name": "Alice", "squad_score": 20},
+    ]
+    conn = FakeConn(rows)
+
+    from app.queries.leaderboard import get_leaderboard
+    result = get_leaderboard(conn, matchday=3, cumulative=False)
+
+    assert len(result) == 1
+    assert result[0]["delta"] is None
+    cursor = conn.last_cursor()
+    sql, params = cursor.executed[-1]
+    assert params == (3, 3)
+    assert "t.matchday = %s" in sql
+    assert "s.matchday = %s" in sql
+
+
+def test_route_200_round_points():
+    rows = [
+        {"user_id": 17, "username": "markiengo", "display_name": "Mark", "squad_score": 14},
+    ]
+    cursor_rows = [rows, [], []]
+    client = setup_client(rows, cursor_rows=cursor_rows)
+
+    response = client.get("/api/leaderboard?matchday=3&cumulative=false")
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["matchday"] == 3
+    assert len(data["entries"]) == 1
+    assert data["entries"][0]["squad_score"] == 14
+    assert data["entries"][0]["delta"] is None
+
+    teardown_client()
+
+
+def test_route_can_skip_optional_metadata():
+    rows = [
+        {"user_id": 17, "username": "markiengo", "display_name": "Mark", "squad_score": 31},
+    ]
+    client = setup_client(rows, cursor_rows=[rows])
+
+    response = client.get("/api/leaderboard?matchday=5&cumulative=false&include_meta=false")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "entries" in data
+    assert "available_matchdays" not in data
+    assert "popular_players" not in data
+    teardown_client()

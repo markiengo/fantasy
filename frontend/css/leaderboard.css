@@ -72,15 +72,20 @@
 }
 
 .lb-toggle {
-  display: flex;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
   margin-bottom: 12px;
+  padding: 6px;
+  border: 1px solid var(--stroke-soft);
+  border-radius: var(--r-md);
+  background: var(--control-bg-soft);
 }
 
 .lb-toggle__btn {
-  flex: 1;
   min-width: 0;
-  padding: 8px 16px;
+  min-height: 40px;
+  padding: 8px 12px;
   border: 1px solid var(--stroke);
   border-radius: var(--r-sm);
   background: transparent;
@@ -89,7 +94,8 @@
   font-size: var(--fs-sm);
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+  text-align: left;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
 }
 
 .lb-toggle__btn:hover,
@@ -103,6 +109,7 @@
   background: var(--control-bg-strong);
   color: var(--ink);
   border-color: var(--stroke-mid);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .lb-summary {

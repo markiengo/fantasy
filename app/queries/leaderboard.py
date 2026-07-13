@@ -25,6 +25,11 @@ _matchday_group_order = """
     ORDER BY squad_score DESC, tc.transfer_count ASC, md_tl.md_time_left DESC, u.user_id ASC
 """
 
+_round_group_order = """
+    GROUP BY u.user_id, u.username, u.display_name, u.role, s.time_left, tc.transfer_count
+    ORDER BY squad_score DESC, tc.transfer_count ASC, s.time_left DESC, u.user_id ASC
+"""
+
 
 def _cumulative_sql():
     return f"""
@@ -94,11 +99,34 @@ def _matchday_sql():
     """
 
 
-def _fetch_rows(conn, matchday):
+def _round_sql():
+    return f"""
+        WITH tc AS (
+            SELECT t.user_id, COUNT(*) AS transfer_count
+            FROM transfers t
+            WHERE t.matchday = %s
+            GROUP BY t.user_id
+        )
+        SELECT u.user_id, u.username, u.display_name, u.role, SUM(
+            {captain_score_sql()}
+        ) as squad_score,
+        s.time_left AS md_time_left,
+        COALESCE(tc.transfer_count, 0) AS transfer_count
+        {_joins}
+        LEFT JOIN tc ON tc.user_id = u.user_id
+        WHERE u.is_active = true AND s.matchday = %s
+        {_round_group_order}
+    """
+
+
+def _fetch_rows(conn, matchday, cumulative=True):
     cursor = conn.cursor()
     if matchday is not None:
-        prev_md = matchday - 1
-        cursor.execute(_matchday_sql(), (prev_md, matchday, matchday, matchday))
+        if cumulative:
+            prev_md = matchday - 1
+            cursor.execute(_matchday_sql(), (prev_md, matchday, matchday, matchday))
+        else:
+            cursor.execute(_round_sql(), (matchday, matchday))
     else:
         cursor.execute(_cumulative_sql())
     rows = cursor.fetchall()
@@ -142,8 +170,8 @@ def _format_entries(rows):
     return entries
 
 
-def get_leaderboard(conn, matchday=None):
-    rows = _fetch_rows(conn, matchday)
+def get_leaderboard(conn, matchday=None, cumulative=True):
+    rows = _fetch_rows(conn, matchday, cumulative=cumulative)
     return _format_entries(rows)
 
 

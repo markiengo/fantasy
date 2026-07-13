@@ -336,6 +336,7 @@ const Charts = (() => {
       { key: "foul_pts", label: t("chart.fouls"), color: "var(--chart-fouls, var(--faint))" },
       { key: "offside_pts", label: t("chart.offsides"), color: "var(--chart-offsides, var(--muted-2))" },
       { key: "gc_pts", label: t("chart.goals_conceded"), color: "var(--chart-goals-conceded, var(--blue))" },
+      { key: "manual_pts", label: t("chart.manual_adjustment"), color: "var(--danger)" },
     ];
 
     const segs = opts.segments === "negative" ? negSegments : posSegments;
@@ -496,9 +497,9 @@ const Charts = (() => {
       dot.addEventListener("mouseenter", function (e) {
         const rect = container.getBoundingClientRect();
         const html = '<div class="dash-tooltip__title">' + escapeHtml(data[i].label || "MD" + data[i].matchday) + "</div>" +
-          '<div class="dash-tooltip__row">Rank <b>#' + data[i].rank + "</b></div>" +
-          '<div class="dash-tooltip__row">Score <b>' + data[i].squad_score + "</b></div>" +
-          '<div class="dash-tooltip__row">Managers <b>' + data[i].total_managers + "</b></div>";
+          '<div class="dash-tooltip__row">' + t("lb.rank") + ' <b>#' + data[i].rank + "</b></div>" +
+          '<div class="dash-tooltip__row">' + t("lb.pts") + ' <b>' + data[i].squad_score + "</b></div>" +
+          '<div class="dash-tooltip__row">' + t("lb.managers") + ' <b>' + data[i].total_managers + "</b></div>";
         showTooltip(tip, rect.left + px(i), rect.top + py(data[i].rank), html);
       });
       dot.addEventListener("mouseleave", function () { hideTooltip(tip); });
@@ -655,8 +656,11 @@ const Charts = (() => {
 
   /* ── Existing: bars (kept for compatibility) ──────────────────────────── */
 
-  function bars(container, data) {
+  function bars(container, data, opts) {
     if (!container) return;
+    opts = opts || {};
+    const selectedMd = opts.selectedMatchday;
+    const onBarClick = opts.onBarClick;
     container.innerHTML = "";
     if (!data.length) {
       container.innerHTML = '<p class="empty-note">' + t("chart.no_data") + '</p>';
@@ -668,12 +672,26 @@ const Charts = (() => {
     }
     let html = "";
     for (let i = 0; i < data.length; i++) {
-      const pct = Math.max(3, Math.abs(data[i].value) / max * 100);
-      html += '<div class="bar"><div class="bar__fill" style="height:' + pct + '%"></div>' +
-        '<span class="bar__val">' + data[i].value + "</span>" +
-        '<span class="bar__label">' + escapeHtml(data[i].label) + "</span></div>";
+      const point = data[i];
+      const pct = Math.max(3, Math.abs(point.value) / max * 100);
+      const selected = point.matchday === selectedMd ? " is-selected" : "";
+      const valueLabel = point.valueLabel == null ? point.value : point.valueLabel;
+      const detailLabel = point.detailLabel ? '<span class="bar__detail">' + escapeHtml(point.detailLabel) + '</span>' : "";
+      const ariaLabel = point.ariaLabel || point.label + ": " + valueLabel;
+      html += '<button class="bar' + selected + '" type="button" data-matchday="' + point.matchday + '" aria-pressed="' + (point.matchday === selectedMd) + '" aria-label="' + escapeHtml(ariaLabel) + '"><span class="bar__fill" style="height:' + pct + '%"></span>' +
+        '<span class="bar__val">' + escapeHtml(valueLabel) + "</span>" + detailLabel +
+        '<span class="bar__label">' + escapeHtml(point.label) + "</span></button>";
     }
     container.innerHTML = html;
+
+    if (onBarClick) {
+      const bars = container.querySelectorAll(".bar");
+      for (let i = 0; i < bars.length; i++) {
+        bars[i].addEventListener("click", function () {
+          onBarClick(Number(bars[i].dataset.matchday));
+        });
+      }
+    }
   }
 
   /* ── Existing: donut (kept) ───────────────────────────────────────────── */
