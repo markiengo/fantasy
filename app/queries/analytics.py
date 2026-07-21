@@ -200,7 +200,7 @@ def get_squad_score(conn, user_id, matchday=None):
                 ON sp.squad_id = s.squad_id
             JOIN match m
                 ON ps.match_id = m.match_id AND m.matchday = s.matchday
-            WHERE s.user_id = %s
+            WHERE s.user_id = %s AND s.matchday >= 6
             GROUP BY s.matchday
             ORDER BY s.matchday ASC
         ''', (user_id,))
@@ -358,6 +358,7 @@ def get_rank_history(conn, user_id):
                 ON ps.match_id = m.match_id AND m.matchday = s.matchday
             JOIN users u
                 ON s.user_id = u.user_id AND u.is_active = true
+            WHERE s.matchday >= 6
             GROUP BY s.user_id, s.matchday
         ),
         cumulative AS (
@@ -427,6 +428,7 @@ def get_league_comparison(conn, user_id):
             JOIN users u
                 ON s.user_id = u.user_id AND u.is_active = true
                 AND (u.role != 'admin' OR s.user_id = %s)
+                AND s.matchday >= 6
             GROUP BY s.user_id, s.matchday
         ),
         cumulative AS (
@@ -471,7 +473,7 @@ def get_dashboard_score_data(conn, user_id):
         JOIN player p ON sp.player_id = p.player_id
         JOIN playerstat ps ON sp.player_id = ps.player_id
         JOIN match m ON ps.match_id = m.match_id AND m.matchday = s.matchday
-        WHERE s.user_id = %s
+        WHERE s.user_id = %s AND s.matchday >= 6
         GROUP BY s.matchday, ps.player_id, p.name, p.position, sp.is_captain
         ORDER BY s.matchday ASC, p.name ASC
     ''', (user_id,))
@@ -508,7 +510,7 @@ def get_dashboard_score_data(conn, user_id):
         JOIN player p ON sp.player_id = p.player_id
         JOIN playerstat ps ON sp.player_id = ps.player_id
         JOIN match m ON ps.match_id = m.match_id AND m.matchday = s.matchday
-        WHERE s.user_id = %s
+        WHERE s.user_id = %s AND s.matchday >= 6
         GROUP BY s.matchday
         ORDER BY s.matchday ASC
     ''', (user_id,))

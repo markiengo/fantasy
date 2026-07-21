@@ -404,6 +404,12 @@ const I18n = (() => {
       "override.close": "Close",
       "override.toast": "Admin override active — you can edit past matchdays",
 
+      /* ── Excluded matchday ── */
+      "excluded_md.label": "ROUND EXCLUDED",
+      "excluded_md.title": "Round of 16 is excluded",
+      "excluded_md.body": "The Round of 16 has been excluded from scoring. Only Quarterfinals onward count towards your total. Navigate to another round to view squads, fixtures, and stats.",
+      "excluded_md.dismiss": "Got it",
+
       /* ── Points ── */
       "points.pts": "{0} pts",
 
@@ -1007,6 +1013,12 @@ const I18n = (() => {
       "override.dismiss": "Đã hiểu",
       "override.close": "Đóng",
       "override.toast": "Admin override đang bật — bạn có thể chỉnh sửa các vòng đã qua",
+
+      /* ── Excluded matchday ── */
+      "excluded_md.label": "VÒNG LOẠI",
+      "excluded_md.title": "Vòng 1/16 bị loại",
+      "excluded_md.body": "Vòng 1/16 đã bị loại khỏi tính điểm. Chỉ từ Tứ kết trở đi mới được tính vào tổng điểm. Hãy chuyển sang vòng khác để xem đội hình, lịch thi đấu và thống kê.",
+      "excluded_md.dismiss": "Đã hiểu",
 
       /* ── Points ── */
       "points.pts": "{0} điểm",

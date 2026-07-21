@@ -179,6 +179,10 @@ const Scores = (() => {
     for (let i = 0; i < tabs.length; i++) {
       tabs[i].addEventListener("click", function () {
         const md = parseInt(tabs[i].dataset.md, 10);
+        if (window.isExcludedMd && isExcludedMd(md)) {
+          if (window.showExcludedMdOverlay) showExcludedMdOverlay();
+          return;
+        }
         if (_scoredMatchdays.indexOf(md) !== -1) {
           selectMatchday(md);
         }

@@ -442,9 +442,12 @@ function renderMatchdayStrip() {
   for (const round of _roundMeta) {
     const active = round.matchday === State.currentMatchday;
     const complete = round.matchday < State.currentMatchday;
+    const excluded = isExcludedMd(round.matchday);
     let sub = round.date ? `<span class="round__date">${fmtShortDate(round.date, round.firstKickoff)}</span>` : "";
 
-    if (active) {
+    if (excluded) {
+      sub = `<span class="round__sub round__sub--locked">${t("excluded_md.label")}</span>`;
+    } else if (active) {
       const allowed = isTransferAllowed(round.matchday);
       const open = isWindowOpen(round.matchday);
       sub = (allowed && open)
@@ -454,7 +457,7 @@ function renderMatchdayStrip() {
       sub = `<span class="pill pill--pts">${t("points.pts", _scoreByMd[round.matchday])}</span>`;
     }
 
-    html += `<button class="round ${active ? "is-active" : ""}" role="tab" aria-selected="${active}" data-md="${round.matchday}">
+    html += `<button class="round ${active ? "is-active" : ""} ${excluded ? "is-excluded" : ""}" role="tab" aria-selected="${active}" aria-disabled="${excluded}" data-md="${round.matchday}">
       <span class="round__name">${round.label}</span>
       ${sub}
     </button>`;
@@ -545,6 +548,7 @@ async function loadSquadForMatchday(md) {
 }
 
 async function selectMatchday(md) {
+  if (isExcludedMd(md)) { showExcludedMdOverlay(); return; }
   State.setMatchday(md);
   State.transfersUsed = 0;
   State.emit();
@@ -561,6 +565,7 @@ async function selectMatchday(md) {
 }
 
 function selectMatchdayLight(md) {
+  if (isExcludedMd(md)) { showExcludedMdOverlay(); return; }
   State.currentMatchday = md;
   State.currentSquad.matchday = md;
   State.save();
@@ -720,12 +725,16 @@ function bindUpdateData() {
 
 function bindMatchdayNav() {
   const goPrev = () => {
-    if (State.currentMatchday > 1) selectMatchday(State.currentMatchday - 1);
+    let md = State.currentMatchday - 1;
+    while (md > 1 && isExcludedMd(md)) md--;
+    if (md >= 1) selectMatchday(md);
   };
 
   const goNext = () => {
     const maxMd = _roundMeta.length ? _roundMeta[_roundMeta.length - 1].matchday : 8;
-    if (State.currentMatchday < maxMd) selectMatchday(State.currentMatchday + 1);
+    let md = State.currentMatchday + 1;
+    while (md < maxMd && isExcludedMd(md)) md++;
+    if (md <= maxMd) selectMatchday(md);
   };
 
   const ids = ["mdPrev", "mdNext", "mdPrevDesk", "mdNextDesk"];
@@ -1438,5 +1447,34 @@ function showOverrideOverlay(onClose) {
   }, { once: true });
 }
 window.showOverrideOverlay = showOverrideOverlay;
+
+const EXCLUDED_MATCHDAYS = [5];
+
+function isExcludedMd(md) {
+  return EXCLUDED_MATCHDAYS.indexOf(md) !== -1;
+}
+
+function showExcludedMdOverlay() {
+  const overlay = document.getElementById("excludedMdOverlay");
+  if (!overlay) return;
+  overlay.hidden = false;
+  requestAnimationFrame(() => overlay.classList.add("is-open"));
+  const closeBtn = document.getElementById("excludedMdClose");
+  const dismissBtn = document.getElementById("excludedMdDismiss");
+  var bound = false;
+  function close() {
+    if (bound) return;
+    bound = true;
+    overlay.classList.remove("is-open");
+    setTimeout(() => { overlay.hidden = true; }, 220);
+  }
+  if (closeBtn) closeBtn.addEventListener("click", close, { once: true });
+  if (dismissBtn) dismissBtn.addEventListener("click", close, { once: true });
+  overlay.addEventListener("click", function (e) {
+    if (e.target === overlay) close();
+  }, { once: true });
+}
+window.isExcludedMd = isExcludedMd;
+window.showExcludedMdOverlay = showExcludedMdOverlay;
 
 

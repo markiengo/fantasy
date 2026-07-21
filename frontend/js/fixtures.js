@@ -534,8 +534,10 @@ const Fixtures = (() => {
       const p = prev.cloneNode(true);
       prev.parentNode.replaceChild(p, prev);
       p.addEventListener("click", () => {
-        if (round > 1) {
-          selectMatchdayLight(round - 1);
+        let prev = round - 1;
+        while (prev > 1 && window.isExcludedMd && isExcludedMd(prev)) prev--;
+        if (prev >= 1) {
+          selectMatchdayLight(prev);
         }
       });
     }
@@ -543,8 +545,10 @@ const Fixtures = (() => {
       const n = next.cloneNode(true);
       next.parentNode.replaceChild(n, next);
       n.addEventListener("click", () => {
-        if (round < maxRound) {
-          selectMatchdayLight(round + 1);
+        let nxt = round + 1;
+        while (nxt < 8 && window.isExcludedMd && isExcludedMd(nxt)) nxt++;
+        if (nxt <= 8) {
+          selectMatchdayLight(nxt);
         }
       });
     }

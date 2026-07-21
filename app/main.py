@@ -51,7 +51,8 @@ app.include_router(me.router, prefix = "/api")
 app.include_router(leaderboard.router, prefix = "/api")
 app.include_router(auth_router.router, prefix = "/api")
 
-app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+if os.path.isdir("frontend"):
+    app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 
 @app.exception_handler(SquadValidationError)
 async def validation_error_handler(request: Request, exc: SquadValidationError):

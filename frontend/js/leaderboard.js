@@ -256,7 +256,12 @@ const Leaderboard = (() => {
 
     strip.querySelectorAll(".lb-md-tab").forEach(function (btn) {
       btn.addEventListener("click", function () {
-        _selectedMd = Number(btn.dataset.md);
+        const md = Number(btn.dataset.md);
+        if (window.isExcludedMd && isExcludedMd(md)) {
+          if (window.showExcludedMdOverlay) showExcludedMdOverlay();
+          return;
+        }
+        _selectedMd = md;
         render();
       });
     });

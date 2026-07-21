@@ -795,6 +795,25 @@
     </div>
   </div>
 
+  <div class="override-overlay overlay" id="excludedMdOverlay" role="dialog" aria-modal="true" aria-labelledby="excludedMdTitle" hidden>
+    <div class="override-overlay__panel">
+      <button class="override-overlay__close" id="excludedMdClose" type="button" data-i18n-aria-label="override.close" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18"><path d="M6 6l12 12M18 6 6 18" stroke-linecap="round" stroke-width="2"/></svg>
+      </button>
+      <div class="override-overlay__glow"></div>
+      <div class="override-overlay__icon">
+        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" width="56" height="56">
+          <circle cx="24" cy="24" r="20" stroke-width="1.5" stroke-dasharray="3 4" opacity="0.5"/>
+          <path d="M18 18l12 12M30 18L18 30" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="override-overlay__label" data-i18n="excluded_md.label">ROUND EXCLUDED</span>
+      <h2 class="override-overlay__title" id="excludedMdTitle" data-i18n="excluded_md.title">Round of 16 is excluded</h2>
+      <p class="override-overlay__body" data-i18n="excluded_md.body">The Round of 16 has been excluded from scoring. Only Quarterfinals onward count towards your total. Navigate to another round to view squads, fixtures, and stats.</p>
+      <button class="btn btn--primary override-overlay__btn" id="excludedMdDismiss" type="button" data-i18n="excluded_md.dismiss">Got it</button>
+    </div>
+  </div>
+
   <script src="js/i18n.js"></script>
   <script src="js/progress.js"></script>
   <script src="js/auth.js"></script>

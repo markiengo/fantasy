@@ -43,6 +43,7 @@ def _cumulative_sql():
         tc AS (
             SELECT t.user_id, COUNT(*) AS transfer_count
             FROM transfers t
+            WHERE t.matchday >= 6
             GROUP BY t.user_id
         )
         SELECT u.user_id, u.username, u.display_name, u.role, SUM(
@@ -52,7 +53,7 @@ def _cumulative_sql():
         {_joins}
         JOIN tl ON tl.user_id = u.user_id
         LEFT JOIN tc ON tc.user_id = u.user_id
-        WHERE u.is_active = true
+        WHERE u.is_active = true AND s.matchday >= 6
         {_group_order}
     """
 
@@ -70,7 +71,7 @@ def _matchday_sql():
                 ON sp2.player_id = ps2.player_id
             JOIN match m2
                 ON ps2.match_id = m2.match_id AND m2.matchday = s2.matchday
-            WHERE s2.matchday <= %s
+            WHERE s2.matchday <= %s AND s2.matchday >= 6
             GROUP BY s2.user_id
         ),
         md_tl AS (
@@ -81,7 +82,7 @@ def _matchday_sql():
         tc AS (
             SELECT t.user_id, COUNT(*) AS transfer_count
             FROM transfers t
-            WHERE t.matchday <= %s
+            WHERE t.matchday <= %s AND t.matchday >= 6
             GROUP BY t.user_id
         )
         SELECT u.user_id, u.username, u.display_name, u.role, SUM(
@@ -94,7 +95,7 @@ def _matchday_sql():
         LEFT JOIN prev ON prev.user_id = u.user_id
         LEFT JOIN md_tl ON md_tl.user_id = u.user_id
         LEFT JOIN tc ON tc.user_id = u.user_id
-        WHERE u.is_active = true AND s.matchday <= %s
+        WHERE u.is_active = true AND s.matchday <= %s AND s.matchday >= 6
         {_matchday_group_order}
     """
 
@@ -104,7 +105,7 @@ def _round_sql():
         WITH tc AS (
             SELECT t.user_id, COUNT(*) AS transfer_count
             FROM transfers t
-            WHERE t.matchday = %s
+            WHERE t.matchday = %s AND t.matchday >= 6
             GROUP BY t.user_id
         )
         SELECT u.user_id, u.username, u.display_name, u.role, SUM(
@@ -114,7 +115,7 @@ def _round_sql():
         COALESCE(tc.transfer_count, 0) AS transfer_count
         {_joins}
         LEFT JOIN tc ON tc.user_id = u.user_id
-        WHERE u.is_active = true AND s.matchday = %s
+        WHERE u.is_active = true AND s.matchday = %s AND s.matchday >= 6
         {_round_group_order}
     """
 
@@ -180,7 +181,7 @@ def get_leaderboard_matchdays(conn):
     cursor.execute(f"""
         SELECT DISTINCT s.matchday
         {_joins}
-        WHERE u.is_active = true
+        WHERE u.is_active = true AND s.matchday >= 6
         ORDER BY s.matchday ASC
     """)
     rows = cursor.fetchall()
@@ -215,6 +216,9 @@ def get_popular_players(conn, matchday, limit=10):
         return []
 
     cursor = conn.cursor()
+    if matchday < 6:
+        return []
+
     cursor.execute("""
         WITH total AS (
             SELECT COUNT(DISTINCT s.user_id) AS n
